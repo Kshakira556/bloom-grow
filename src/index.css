@@ -2,95 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* CUB Co-Parenting App - Design System
+   Warm, nurturing, child-friendly aesthetic
+   All colors in HSL format
 */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core brand colors - warm, nurturing palette */
+    --background: 40 33% 96%;
+    --foreground: 25 30% 20%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 40 40% 98%;
+    --card-foreground: 25 30% 20%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 40 40% 98%;
+    --popover-foreground: 25 30% 20%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Soft sage green (nurturing, growth) */
+    --primary: 145 35% 42%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Warm cream */
+    --secondary: 38 50% 92%;
+    --secondary-foreground: 25 30% 25%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted - Soft neutral */
+    --muted: 35 30% 90%;
+    --muted-foreground: 25 15% 50%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Soft coral/peach */
+    --accent: 20 80% 70%;
+    --accent-foreground: 25 30% 15%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Warning - Warm amber */
+    --warning: 38 92% 60%;
+    --warning-foreground: 25 30% 15%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Success - Fresh green */
+    --success: 145 50% 45%;
+    --success-foreground: 0 0% 100%;
 
-    --radius: 0.5rem;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --sidebar-background: 0 0% 98%;
+    --border: 35 25% 85%;
+    --input: 35 25% 88%;
+    --ring: 145 35% 42%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --radius: 1rem;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Sidebar - Warm cream tones */
+    --sidebar-background: 38 45% 95%;
+    --sidebar-foreground: 25 30% 25%;
+    --sidebar-primary: 145 35% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 38 50% 90%;
+    --sidebar-accent-foreground: 25 30% 20%;
+    --sidebar-border: 35 25% 85%;
+    --sidebar-ring: 145 35% 42%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Custom CUB colors */
+    --cub-cream: 40 40% 96%;
+    --cub-sage: 145 35% 42%;
+    --cub-sage-light: 145 30% 85%;
+    --cub-coral: 20 80% 70%;
+    --cub-coral-light: 20 70% 92%;
+    --cub-honey: 38 85% 65%;
+    --cub-honey-light: 38 70% 92%;
+    --cub-lavender: 270 40% 75%;
+    --cub-lavender-light: 270 35% 95%;
+    --cub-sky: 200 70% 65%;
+    --cub-sky-light: 200 60% 92%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Typography */
+    --font-display: 'Nunito', sans-serif;
+    --font-body: 'Quicksand', sans-serif;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 25 25% 10%;
+    --foreground: 40 30% 92%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 25 25% 14%;
+    --card-foreground: 40 30% 92%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 25 25% 14%;
+    --popover-foreground: 40 30% 92%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 145 40% 50%;
+    --primary-foreground: 25 25% 10%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 25 20% 20%;
+    --secondary-foreground: 40 30% 92%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 25 20% 18%;
+    --muted-foreground: 35 15% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 20 60% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 25 20% 22%;
+    --input: 25 20% 22%;
+    --ring: 145 40% 50%;
+
+    --sidebar-background: 25 25% 12%;
+    --sidebar-foreground: 40 30% 90%;
+    --sidebar-primary: 145 40% 50%;
+    --sidebar-primary-foreground: 25 25% 10%;
+    --sidebar-accent: 25 20% 18%;
+    --sidebar-accent-foreground: 40 30% 90%;
+    --sidebar-border: 25 20% 22%;
+    --sidebar-ring: 145 40% 50%;
+
+    --cub-cream: 25 25% 15%;
+    --cub-sage: 145 40% 50%;
+    --cub-sage-light: 145 25% 25%;
+    --cub-coral: 20 60% 55%;
+    --cub-coral-light: 20 40% 20%;
+    --cub-honey: 38 70% 55%;
+    --cub-honey-light: 38 50% 20%;
+    --cub-lavender: 270 35% 55%;
+    --cub-lavender-light: 270 25% 20%;
+    --cub-sky: 200 55% 50%;
+    --cub-sky-light: 200 40% 20%;
   }
 }
 
@@ -99,7 +139,154 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body antialiased;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Card variants */
+  .card-feature {
+    @apply bg-card rounded-2xl p-6 shadow-sm border border-border/50 transition-all duration-300;
+  }
+
+  .card-feature:hover {
+    @apply shadow-md -translate-y-1;
+  }
+
+  /* Hero section styles */
+  .hero-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--cub-cream)) 0%,
+      hsl(var(--cub-sage-light)) 50%,
+      hsl(var(--cub-honey-light)) 100%
+    );
+  }
+
+  /* Mood badges */
+  .mood-badge {
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-full text-xl cursor-pointer transition-all duration-200;
+  }
+
+  .mood-badge:hover {
+    @apply scale-110;
+  }
+
+  .mood-badge.selected {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+
+  /* Message bubbles */
+  .message-sent {
+    @apply bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2;
+  }
+
+  .message-received {
+    @apply bg-secondary text-secondary-foreground rounded-2xl rounded-bl-md px-4 py-2;
+  }
+
+  /* Navigation link styles */
+  .nav-link {
+    @apply relative px-4 py-2 text-muted-foreground font-medium transition-colors duration-200;
+  }
+
+  .nav-link:hover {
+    @apply text-foreground;
+  }
+
+  .nav-link.active {
+    @apply text-primary;
+  }
+
+  .nav-link.active::after {
+    content: '';
+    @apply absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary rounded-full;
+  }
+
+  /* Calendar event colors */
+  .event-mine {
+    @apply bg-cub-sage text-primary-foreground;
+  }
+
+  .event-theirs {
+    @apply bg-cub-coral text-accent-foreground;
+  }
+
+  /* Form input focus states */
+  .input-cub {
+    @apply bg-secondary/50 border-border rounded-xl px-4 py-3 transition-all duration-200;
+  }
+
+  .input-cub:focus {
+    @apply border-primary ring-2 ring-primary/20 outline-none;
+  }
+}
+
+@layer utilities {
+  /* Custom CUB colors as utilities */
+  .bg-cub-cream { background-color: hsl(var(--cub-cream)); }
+  .bg-cub-sage { background-color: hsl(var(--cub-sage)); }
+  .bg-cub-sage-light { background-color: hsl(var(--cub-sage-light)); }
+  .bg-cub-coral { background-color: hsl(var(--cub-coral)); }
+  .bg-cub-coral-light { background-color: hsl(var(--cub-coral-light)); }
+  .bg-cub-honey { background-color: hsl(var(--cub-honey)); }
+  .bg-cub-honey-light { background-color: hsl(var(--cub-honey-light)); }
+  .bg-cub-lavender { background-color: hsl(var(--cub-lavender)); }
+  .bg-cub-lavender-light { background-color: hsl(var(--cub-lavender-light)); }
+  .bg-cub-sky { background-color: hsl(var(--cub-sky)); }
+  .bg-cub-sky-light { background-color: hsl(var(--cub-sky-light)); }
+
+  .text-cub-sage { color: hsl(var(--cub-sage)); }
+  .text-cub-coral { color: hsl(var(--cub-coral)); }
+  .text-cub-honey { color: hsl(var(--cub-honey)); }
+  .text-cub-lavender { color: hsl(var(--cub-lavender)); }
+  .text-cub-sky { color: hsl(var(--cub-sky)); }
+
+  .border-cub-sage { border-color: hsl(var(--cub-sage)); }
+  .border-cub-coral { border-color: hsl(var(--cub-coral)); }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
   }
 }

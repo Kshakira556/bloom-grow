@@ -13,6 +13,7 @@ import Journal from "./pages/Journal";
 import Children from "./pages/Children";
 import Moderator from "./pages/Moderator";
 import NotFound from "./pages/NotFound";
+import { ProtectedRoute, RoleProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -26,12 +27,23 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/visits" element={<Visits />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/journal" element={<Journal />} />
-          <Route path="/children" element={<Children />} />
-          <Route path="/moderator" element={<Moderator />} />
+          {/* Protected pages */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> 
+          <Route path="/visits" element={<ProtectedRoute><Visits /></ProtectedRoute>} />
+          <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+          <Route path="/journal" element={<ProtectedRoute><Journal /></ProtectedRoute>} />
+          <Route path="/children" element={<ProtectedRoute><Children /></ProtectedRoute>} />
+
+          {/* Role-protected page */}
+          <Route 
+            path="/moderator" 
+            element={
+              <RoleProtectedRoute allowedRoles={["mediator", "admin"]}>
+                <Moderator />
+              </RoleProtectedRoute>
+            } 
+          />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

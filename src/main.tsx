@@ -1,5 +1,14 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { AuthProvider } from "./context/AuthContext.tsx";
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Get the root element
+const container = document.getElementById("root")!;
+
+// Create a root and render
+createRoot(container).render(
+  <AuthProvider>
+    <App />
+  </AuthProvider>
+);

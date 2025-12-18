@@ -1,74 +1,172 @@
-# Welcome to your Lovable project
+# CUB App
 
-## Project info
+CUB is a secure, privacy‑first parenting plan and co‑parenting support application designed to help parents manage custody, visitation, and communication in a structured, respectful, and legally‑aligned way.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+The app focuses on clarity, consistency, and child‑centric decision‑making, while reducing conflict and administrative friction between parents.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## ✨ Key Features
 
-**Use Lovable**
+* 🔐 **Authentication & Protected Routes**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+  * Centralized auth context
+  * Route protection for authenticated areas
+  * Secure token handling
 
-Changes made via Lovable will be committed automatically to this repo.
+* 🧠 **Parenting Plan Support**
 
-**Use your preferred IDE**
+  * Structured handling of visitation and parental responsibilities
+  * Designed with legal frameworks (e.g. South Africa’s Children’s Act) in mind
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+* 🌐 **API‑Driven Architecture**
 
-The only requirement is having Bun installed - [install Bun](https://bun.sh/docs/installation)
+  * Typed API layer
+  * Centralized HTTP client
+  * Clear separation between UI and data access
 
-Follow these steps:
+* ⚙️ **Security‑Focused Setup**
+
+  * Environment‑based configuration (`.env`)
+  * Explicit auth flow
+  * No hard‑coded secrets
+
+---
+
+## 🧱 Tech Stack
+
+* **Runtime**: Bun
+* **Frontend**: React 19 + TypeScript
+* **Build Tool**: Vite
+* **Styling**: Tailwind CSS + shadcn/ui
+* **State/Auth**: React Context + custom hooks
+
+---
+
+## 📁 Project Structure (Relevant Additions)
+
+bloom-grow-main/
+├─ .env
+├─ index.html
+├─ package.json
+├─ bun.lockb
+├─ tsconfig.json
+├─ tsconfig.node.json
+├─ vite.config.ts
+├─ postcss.config.js
+├─ tailwind.config.ts
+├─ eslint.config.js
+├─ components.json
+├─ README.md
+
+└─ src/
+   ├─ assets/
+   │  ├─ images/
+   │  ├─ logos/
+   │  └─ react.svg
+   │
+   ├─ components/
+   │  ├─ auth/
+   │  │  └─ ProtectedRoute.tsx
+   │  │
+   │  ├─ layout/
+   │  │  ├─ AppLayout.tsx
+   │  │  ├─ Footer.tsx
+   │  │  └─ Navbar.tsx
+   │  │
+   │  ├─ ui/
+   │  │  └─ (shadcn-ui components)
+   │  │
+   │  └─ ThemeToggle.tsx
+   │
+   ├─ context/
+   │  └─ AuthContext.tsx
+   │
+   ├─ hooks/
+   │  ├─ useAuth.ts
+   │  ├─ useMobile.tsx
+   │  └─ useToast.ts
+   │
+   ├─ lib/
+   │  ├─ api.ts
+   │  ├─ http.ts
+   │  └─ utils.ts
+   │
+   ├─ pages/
+   │  ├─ Index.tsx
+   │  ├─ Login.tsx
+   │  ├─ Register.tsx
+   │  ├─ Dashboard.tsx
+   │  ├─ Profile.tsx
+   │  ├─ Settings.tsx
+   │  ├─ NotFound.tsx
+   │  └─ (other route pages)
+   │
+   ├─ App.tsx
+   ├─ main.tsx
+   ├─ index.css
+   └─ vite-env.d.ts
+
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+* Bun installed → [https://bun.sh/docs/installation](https://bun.sh/docs/installation)
+
+### Local Development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+# Install dependencies
 bun install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start dev server
 bun run dev
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🔐 Environment Variables
 
-**Use GitHub Codespaces**
+Create a `.env` file at the root of the project:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```env
+VITE_API_BASE_URL=your_api_url_here
+```
 
-## What technologies are used for this project?
+> Do not commit `.env` files to version control.
 
-This project is built with:
+---
 
-- Bun 1.3.4
-- Vite 7.2.7
-- TypeScript
-- React 19.2.1
-- shadcn-ui
-- Tailwind CSS
+## 🛡 Security Notes
 
-## How can I deploy this project?
+* All authenticated routes are wrapped with `ProtectedRoute`
+* Auth state is managed centrally via `AuthContext`
+* API access is abstracted through a single HTTP client
+* Designed to pass basic frontend security scans
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+## 🧪 Status
 
-Yes, you can!
+* Frontend security review completed
+* Backend already passing tests
+* Ready for internal demos (local or deployed)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📌 Roadmap (High‑Level)
+
+* Demo‑ready parent flow
+* Business & pricing validation
+* Production deployment
+* Legal review alignment per region
+
+---
+
+## 📄 License
+
+Private / Proprietary – All rights reserved.

@@ -1,7 +1,8 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Menu, X, User } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -18,26 +19,22 @@ const authLinks = [
 // CUB Bear Logo Component
 function CubLogo({ className }: { className?: string }) {
   return (
-    <svg 
-      viewBox="0 0 48 48" 
-      className={className}
-      fill="none"
-    >
-      {/* Main face - light green */}
+    <svg viewBox="0 0 48 48" className={className} fill="none">
       <circle cx="24" cy="26" r="18" fill="hsl(145, 50%, 75%)" />
-      {/* Left ear */}
       <circle cx="10" cy="14" r="8" fill="hsl(145, 50%, 75%)" />
       <circle cx="10" cy="14" r="5" fill="hsl(145, 45%, 65%)" />
-      {/* Right ear */}
       <circle cx="38" cy="14" r="8" fill="hsl(145, 50%, 75%)" />
       <circle cx="38" cy="14" r="5" fill="hsl(145, 45%, 65%)" />
-      {/* Eyes */}
       <circle cx="18" cy="24" r="2.5" fill="hsl(170, 45%, 28%)" />
       <circle cx="30" cy="24" r="2.5" fill="hsl(170, 45%, 28%)" />
-      {/* Nose */}
       <ellipse cx="24" cy="30" rx="3" ry="2" fill="hsl(170, 45%, 28%)" />
-      {/* Mouth */}
-      <path d="M21 33 Q24 36 27 33" stroke="hsl(170, 45%, 28%)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path
+        d="M21 33 Q24 36 27 33"
+        stroke="hsl(170, 45%, 28%)"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -45,6 +42,13 @@ function CubLogo({ className }: { className?: string }) {
 export function Navbar() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/signin");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -72,24 +76,36 @@ export function Navbar() {
 
         {/* Auth Links + Profile */}
         <div className="hidden md:flex items-center gap-4">
-          {authLinks.map((link) => (
-            <Link
-              key={link.href}
-              to={link.href}
-              className={cn(
-                "nav-link",
-                location.pathname === link.href && "active"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link 
-            to="/dashboard" 
-            className="w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:opacity-90 transition-opacity"
-          >
-            <User className="w-5 h-5 text-primary-foreground" />
-          </Link>
+          {!isAuthenticated ? (
+            authLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={cn(
+                  "nav-link",
+                  location.pathname === link.href && "active"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))
+          ) : (
+            <>
+              <button
+                onClick={handleLogout}
+                className="nav-link text-red-500 hover:text-red-600"
+              >
+                Logout
+              </button>
+
+              <Link
+                to="/dashboard"
+                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:opacity-90 transition-opacity"
+              >
+                <User className="w-5 h-5 text-primary-foreground" />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -120,22 +136,36 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+
             <hr className="my-2 border-border" />
-            {authLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "px-4 py-3 rounded-xl transition-colors",
-                  location.pathname === link.href
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-secondary"
-                )}
+
+            {!isAuthenticated ? (
+              authLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "px-4 py-3 rounded-xl transition-colors",
+                    location.pathname === link.href
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-secondary"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))
+            ) : (
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setMobileMenuOpen(false);
+                }}
+                className="px-4 py-3 rounded-xl text-left text-red-500 hover:bg-secondary"
               >
-                {link.label}
-              </Link>
-            ))}
+                Logout
+              </button>
+            )}
           </nav>
         </div>
       )}

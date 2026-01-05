@@ -60,18 +60,19 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              to={link.href}
-              className={cn(
-                "nav-link",
-                location.pathname === link.href && "active"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {isAuthenticated &&
+            navLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={cn(
+                  "nav-link",
+                  location.pathname === link.href && "active"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
         </nav>
 
         {/* Auth Links + Profile */}
@@ -121,26 +122,8 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="md:hidden absolute top-16 left-0 right-0 bg-card border-b border-border shadow-lg animate-slide-up">
           <nav className="container mx-auto px-4 py-4 flex flex-col gap-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "px-4 py-3 rounded-xl transition-colors",
-                  location.pathname === link.href
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-secondary"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            <hr className="my-2 border-border" />
-
-            {!isAuthenticated ? (
-              authLinks.map((link) => (
+            {isAuthenticated &&
+              navLinks.map((link) => (
                 <Link
                   key={link.href}
                   to={link.href}
@@ -154,18 +137,37 @@ export function Navbar() {
                 >
                   {link.label}
                 </Link>
-              ))
-            ) : (
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setMobileMenuOpen(false);
-                }}
-                className="px-4 py-3 rounded-xl text-left text-red-500 hover:bg-secondary"
-              >
-                Logout
-              </button>
-            )}
+              ))}
+
+            <hr className="my-2 border-border" />
+
+            {!isAuthenticated
+              ? authLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "px-4 py-3 rounded-xl transition-colors",
+                      location.pathname === link.href
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-secondary"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                ))
+              : (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="px-4 py-3 rounded-xl text-left text-red-500 hover:bg-secondary"
+                >
+                  Logout
+                </button>
+              )}
           </nav>
         </div>
       )}

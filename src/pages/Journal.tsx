@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 
 const moods = ["😊", "😢", "😴", "🤒", "😤", "🥰"];
@@ -11,6 +10,10 @@ const moods = ["😊", "😢", "😴", "🤒", "😤", "🥰"];
 const Journal = () => {
   const [selectedMood, setSelectedMood] = useState<string>(""); 
   const [entryText, setEntryText] = useState(""); 
+  const [entryImage, setEntryImage] = useState<string | null>(null);
+  const [entries, setEntries] = useState<
+    { text: string; mood: string; image: string | null }[]
+  >([]);
   const maxChars = 2000;
 
   return (
@@ -29,6 +32,43 @@ const Journal = () => {
                 <h2 className="font-display font-bold text-xl">Journal</h2>
                 
                 <Input placeholder="Title (optional)" className="rounded-full bg-cub-mint-light border-0" />
+
+                {/* Image Upload */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm text-muted-foreground">Attach Image:</label>
+                  <input
+                    type="file"
+                    aria-label="Attach Image"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setEntryImage(reader.result as string); // save Base64 string
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="border rounded p-1"
+                  />
+                  {entryImage && (
+                    <div className="relative mt-2 border rounded-2xl overflow-hidden">
+                      <img
+                        src={entryImage}
+                        alt="Preview"
+                        className="max-h-48 w-full object-cover"
+                      />
+                      <button
+                        onClick={() => setEntryImage(null)}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center"
+                        aria-label="Remove Image"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
                 
                 <Textarea 
                   placeholder="Write your entry.. (autosaves as draft)" 
@@ -59,27 +99,53 @@ const Journal = () => {
                   </div>
                 </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{entryText.length}/{maxChars}</span>
-                <Button className="rounded-full">Add Entry</Button>
-              </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">{entryText.length}/{maxChars}</span>
+                  <Button
+                    className="rounded-full"
+                    onClick={() => {
+                      setEntries([...entries, { text: entryText, mood: selectedMood, image: entryImage }]);
+                      setEntryText("");
+                      setSelectedMood("");
+                      setEntryImage(null);
+                    }}
+                  >
+                    Add Entry
+                  </Button>
+                </div>
 
-                <p className="text-xs text-muted-foreground">
-                  • Export if you want backups.<br />
-                  Use Import to merge from other devices.
-                </p>
               </CardContent>
             </Card>
 
             {/* Entries List */}
             <Card className="rounded-3xl">
               <CardContent className="p-6">
-                <h2 className="font-display font-bold text-xl mb-4">Entries (0)</h2>
+                <h2 className="font-display font-bold text-xl mb-4">Entries ({entries.length})</h2>
                 
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>No entries found — add your first one above</p>
-                  <p className="text-sm mt-2">[selected entries will be viewed in the same format]</p>
-                </div>
+                {entries.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>No entries found — add your first one above</p>
+                    <p className="text-sm mt-2">[selected entries will be viewed in the same format]</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {entries.map((entry, idx) => (
+                      <Card key={idx} className="rounded-3xl">
+                        <CardContent className="p-4 space-y-2">
+                          {entry.mood && <div className="text-lg">{entry.mood}</div>}
+                          {entry.image && (
+                            <img
+                              src={entry.image}
+                              alt="Entry"
+                              className="max-h-48 rounded-2xl object-cover border"
+                            />
+                          )}
+                          <p className="whitespace-pre-wrap">{entry.text}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
 
                 <div className="mt-6 p-4 bg-cub-mint-light rounded-2xl">
                   <p className="font-display font-bold text-sm mb-2">Quick tips</p>

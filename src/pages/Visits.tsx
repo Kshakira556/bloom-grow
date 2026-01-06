@@ -43,6 +43,7 @@ const Visits = () => {
   const [plansOpen, setPlansOpen] = useState(false);
   const [activePlan, setActivePlan] = useState<Plan>(mockPlans[0]);
   const [selectedEvent, setSelectedEvent] = useState<VisitEvent | null>(null);
+  const [editEvent, setEditEvent] = useState<VisitEvent | null>(null);
 
   const visibleEvents = mockEvents.filter(
     (event) => event.planId === activePlan.id
@@ -278,13 +279,84 @@ const Visits = () => {
 
                     {/* Actions */}
                     <div className="mt-6 space-y-2">
-                      <Button className="w-full rounded-full" disabled>
-                        Edit (coming soon)
+                      <Button
+                        className="w-full rounded-full"
+                        onClick={() => setEditEvent(selectedEvent)}
+                      >
+                        Edit
                       </Button>
-                      <Button variant="outline" className="w-full rounded-full" disabled>
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-full"
+                        onClick={() => alert("Propose change feature coming soon")}
+                      >
                         Propose change
                       </Button>
                     </div>
+
+                    {/* Edit Modal */}
+                    {editEvent && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <div className="bg-card rounded-3xl w-full max-w-md p-6 shadow-xl">
+                          <div className="flex items-center justify-between mb-4">
+                            <h2 className="font-display text-xl font-bold text-primary">Edit Event</h2>
+                            <Button variant="ghost" size="icon" onClick={() => setEditEvent(null)}>✕</Button>
+                          </div>
+
+                          {/* Title */}
+                          <input
+                            type="text"
+                            aria-label="Event Title"
+                            className="w-full p-2 border rounded mb-4"
+                            value={editEvent.title}
+                            onChange={(e) => setEditEvent({ ...editEvent, title: e.target.value })}
+                          />
+
+                          {/* Day */}
+                          <label className="block mb-1 text-sm font-medium" htmlFor="edit-day">Day</label>
+                          <select
+                            id="edit-day"
+                            className="w-full p-2 border rounded mb-4"
+                            value={editEvent.day}
+                            onChange={(e) => setEditEvent({ ...editEvent, day: Number(e.target.value) })}
+                          >
+                            {daysOfWeek.map((day, index) => (
+                              <option key={day} value={index}>{day}</option>
+                            ))}
+                          </select>
+
+                          {/* Type */}
+                          <label className="block mb-1 text-sm font-medium" htmlFor="edit-type">Type</label>
+                          <select
+                            id="edit-type"
+                            className="w-full p-2 border rounded mb-4"
+                            value={editEvent.type}
+                            onChange={(e) => setEditEvent({ ...editEvent, type: e.target.value as VisitEvent["type"] })}
+                          >
+                            <option value="mine">My event</option>
+                            <option value="theirs">Their event</option>
+                            <option value="deleted">Deleted</option>
+                          </select>
+
+
+                          <Button
+                            className="w-full rounded-full"
+                            onClick={() => {
+                              // Update the main visible events array
+                              const index = mockEvents.findIndex((ev) => ev.id === editEvent.id);
+                              if (index !== -1) {
+                                mockEvents[index] = { ...editEvent };
+                              }
+
+                              setSelectedEvent(editEvent); // update modal
+                              setEditEvent(null); // close edit modal
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

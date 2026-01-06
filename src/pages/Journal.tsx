@@ -12,9 +12,15 @@ const Journal = () => {
   const [entryText, setEntryText] = useState(""); 
   const [entryImage, setEntryImage] = useState<string | null>(null);
   const [entries, setEntries] = useState<
-    { text: string; mood: string; image: string | null }[]
-  >([]);
+    { text: string; mood: string; image: string | null; type: "all" | "my" | "sent" }[]
+  >([
+    { text: "Morning walk with the dog", mood: "😊", image: null, type: "all" },
+    { text: "Sent a postcard to Grandma", mood: "🥰", image: null, type: "all" },
+    { text: "Read a book", mood: "😴", image: null, type: "my" },
+    { text: "Shared notes with friend", mood: "😢", image: null, type: "sent" },
+  ]);
   const maxChars = 2000;
+  const [viewMode, setViewMode] = useState<"all" | "my" | "sent">("all");
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -104,7 +110,7 @@ const Journal = () => {
                   <Button
                     className="rounded-full"
                     onClick={() => {
-                      setEntries([...entries, { text: entryText, mood: selectedMood, image: entryImage }]);
+                      setEntries([...entries, { text: entryText, mood: selectedMood, image: entryImage, type: "sent" }]);
                       setEntryText("");
                       setSelectedMood("");
                       setEntryImage(null);
@@ -121,7 +127,35 @@ const Journal = () => {
             <Card className="rounded-3xl">
               <CardContent className="p-6">
                 <h2 className="font-display font-bold text-xl mb-4">Entries ({entries.length})</h2>
-                
+
+                {/* Buttons: My Entries / Sent Entries */}
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant={viewMode === "all" ? "default" : "ghost"}
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setViewMode("all")}
+                  >
+                    All Entries
+                  </Button>
+                  <Button
+                    variant={viewMode === "my" ? "default" : "ghost"}
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setViewMode("my")}
+                  >
+                    My Entries
+                  </Button>
+                  <Button
+                    variant={viewMode === "sent" ? "default" : "ghost"}
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setViewMode("sent")}
+                  >
+                    Sent Entries
+                  </Button>
+                </div>
+
                 {entries.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <p>No entries found — add your first one above</p>
@@ -129,7 +163,7 @@ const Journal = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {entries.map((entry, idx) => (
+                    {entries.filter(entry => viewMode === "all" || entry.type === viewMode).map((entry, idx) => (
                       <Card key={idx} className="rounded-3xl">
                         <CardContent className="p-4 space-y-2">
                           {entry.mood && <div className="text-lg">{entry.mood}</div>}

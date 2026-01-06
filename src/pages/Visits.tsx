@@ -42,6 +42,7 @@ const Visits = () => {
   const [viewMode, setViewMode] = useState<"Month" | "Week">("Month");
   const [plansOpen, setPlansOpen] = useState(false);
   const [activePlan, setActivePlan] = useState<Plan>(mockPlans[0]);
+  const [selectedEvent, setSelectedEvent] = useState<VisitEvent | null>(null);
 
   const visibleEvents = mockEvents.filter(
     (event) => event.planId === activePlan.id
@@ -157,9 +158,10 @@ const Visits = () => {
 
                           <div className="mt-2 space-y-1">
                             {dayEvents.map((event) => (
-                              <span
+                              <button
                                 key={event.id}
-                                className={`block text-xs px-3 py-1 rounded-full ${
+                                onClick={() => setSelectedEvent(event)}
+                                className={`block w-full text-left text-xs px-3 py-1 rounded-full ${
                                   event.type === "mine"
                                     ? "bg-cub-blue text-primary-foreground"
                                     : event.type === "theirs"
@@ -168,7 +170,7 @@ const Visits = () => {
                                 }`}
                               >
                                 {event.title}
-                              </span>
+                              </button>
                             ))}
                           </div>
                         </div>
@@ -198,9 +200,10 @@ const Visits = () => {
                         ) : (
                           <div className="space-y-2">
                             {dayEvents.map((event) => (
-                              <div
+                              <button
                                 key={event.id}
-                                className={`px-4 py-2 rounded-xl text-sm ${
+                                onClick={() => setSelectedEvent(event)}
+                                className={`w-full text-left px-4 py-2 rounded-xl text-sm ${
                                   event.type === "mine"
                                     ? "bg-cub-blue text-primary-foreground"
                                     : event.type === "theirs"
@@ -209,7 +212,7 @@ const Visits = () => {
                                 }`}
                               >
                                 {event.title}
-                              </div>
+                              </button>
                             ))}
                           </div>
                         )}
@@ -234,6 +237,57 @@ const Visits = () => {
                   <span className="text-sm">Deleted</span>
                 </div>
               </div>
+              {selectedEvent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                  <div className="bg-card rounded-3xl w-full max-w-md p-6 shadow-xl">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="font-display text-xl font-bold text-primary">
+                        {selectedEvent.title}
+                      </h2>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSelectedEvent(null)}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+
+                    {/* Details */}
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Plan:</span>{" "}
+                        {activePlan.name}
+                      </div>
+
+                      <div>
+                        <span className="text-muted-foreground">Day:</span>{" "}
+                        {daysOfWeek[selectedEvent.day]}
+                      </div>
+
+                      <div>
+                        <span className="text-muted-foreground">Type:</span>{" "}
+                        {selectedEvent.type === "mine"
+                          ? "My event"
+                          : selectedEvent.type === "theirs"
+                          ? "Their event"
+                          : "Deleted"}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-6 space-y-2">
+                      <Button className="w-full rounded-full" disabled>
+                        Edit (coming soon)
+                      </Button>
+                      <Button variant="outline" className="w-full rounded-full" disabled>
+                        Propose change
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

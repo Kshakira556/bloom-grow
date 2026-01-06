@@ -4,10 +4,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 const moods = ["😊", "😢", "😴", "🤒", "😤", "🥰"];
 
 const Journal = () => {
+  const [selectedMood, setSelectedMood] = useState<string>(""); 
+  const [entryText, setEntryText] = useState(""); 
+  const maxChars = 2000;
+
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
@@ -28,36 +33,36 @@ const Journal = () => {
                 <Textarea 
                   placeholder="Write your entry.. (autosaves as draft)" 
                   className="min-h-[150px] rounded-2xl bg-cub-mint-light border-0 resize-none"
+                  value={entryText}
+                  onChange={(e) => setEntryText(e.target.value.slice(0, maxChars))}
                 />
 
                 <div className="flex items-center justify-between">
-                  <Select>
-                    <SelectTrigger className="w-40 rounded-full bg-cub-mint-light border-0">
-                      <SelectValue placeholder="Filter by mood" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {moods.map((mood) => (
-                        <SelectItem key={mood} value={mood}>{mood}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <span className="text-sm text-muted-foreground">Mood:</span>
                     <div className="flex gap-1">
                       {moods.map((mood) => (
-                        <button key={mood} className="text-lg hover:scale-125 transition-transform">
+                        <button
+                          key={mood}
+                          className={`text-lg p-1 rounded-full transition-transform ${
+                            selectedMood === mood ? "bg-cub-blue text-white" : "hover:scale-125"
+                          }`}
+                          onClick={() => setSelectedMood(mood)}
+                        >
                           {mood}
                         </button>
                       ))}
                     </div>
+                    {selectedMood && (
+                      <span className="ml-2 text-sm font-bold">Current Mood: {selectedMood}</span>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">0/2000</span>
-                  <Button className="rounded-full">Add Entry</Button>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">{entryText.length}/{maxChars}</span>
+                <Button className="rounded-full">Add Entry</Button>
+              </div>
 
                 <p className="text-xs text-muted-foreground">
                   • Export if you want backups.<br />

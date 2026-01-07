@@ -14,18 +14,23 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<SafeUser | null>(null);
+  const [user, setUser] = useState<SafeUser | null>(() => {
+    const stored = localStorage.getItem("user");
+    return stored ? JSON.parse(stored) : null;
+  });
 
   const login = useCallback(async (email: string, password: string) => {
     const { user, token } = await loginApi(email, password);
 
     setAuthToken(token);   // 🔐 token stays in memory only
     setUser(user);
+    localStorage.setItem("user", JSON.stringify(user)); // persist user
   }, []);
 
   const logout = useCallback(() => {
     setAuthToken(null);
     setUser(null);
+    localStorage.removeItem("user");
   }, []);
 
   return (

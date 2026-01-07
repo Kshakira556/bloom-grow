@@ -75,7 +75,10 @@ const Messages = () => {
                     onChange={(e) => setMessage(e.target.value)}
                     className="flex-1 rounded-full"
                   />
-                  <button className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground">
+                  <button
+                    aria-label="Send message"
+                    className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground"
+                  >
                     <Send className="w-5 h-5" />
                   </button>
                 </div>

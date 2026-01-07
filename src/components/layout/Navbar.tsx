@@ -4,19 +4,6 @@ import { Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
-const navLinks = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/visits", label: "Visits" },
-  { href: "/messages", label: "Messages" },
-  { href: "/journal", label: "Journal" },
-  { href: "/children", label: "Children" },
-];
-
-const authLinks = [
-  { href: "/register", label: "Register" },
-  { href: "/signin", label: "Sign In" },
-];
-
 // CUB Bear Logo Component
 function CubLogo({ className }: { className?: string }) {
   return (
@@ -42,9 +29,26 @@ function CubLogo({ className }: { className?: string }) {
 
 export function Navbar() {
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth(); // ✅ inside component
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Add Moderator link if user is a mediator
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/visits", label: "Visits" },
+    { href: "/messages", label: "Messages" },
+    { href: "/journal", label: "Journal" },
+    { href: "/children", label: "Children" },
+    ...(isAuthenticated && user?.role === "mediator"
+      ? [{ href: "/moderator", label: "Moderator" }]
+      : []),
+  ];
+
+  const authLinks = [
+    { href: "/register", label: "Register" },
+    { href: "/signin", label: "Sign In" },
+  ];
 
   const handleLogout = () => {
     logout();

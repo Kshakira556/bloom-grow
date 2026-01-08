@@ -222,12 +222,10 @@ const Messages = () => {
                   {mockMessages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex ${
-                        msg.sender === "me" ? "justify-end" : "justify-start"
-                      }`}
+                      className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[70%] p-3 rounded-xl ${
+                        className={`max-w-[70%] p-3 rounded-xl relative ${
                           msg.sender === "me"
                             ? "bg-primary text-primary-foreground self-end"
                             : "bg-muted text-muted-foreground self-start"
@@ -241,7 +239,7 @@ const Messages = () => {
                         {/* Message Text */}
                         <p className="mt-1">{msg.text}</p>
 
-                        {/* Attachments (new) */}
+                        {/* Attachments */}
                         {msg.attachments && msg.attachments.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {msg.attachments.map((att) => (
@@ -262,11 +260,20 @@ const Messages = () => {
                         )}
 
                         {/* Time + Status */}
-                        <div className="mt-1 text-xs opacity-70 flex justify-between">
+                        <div className="mt-1 text-xs opacity-70 flex justify-between items-center">
                           <span>{msg.time}</span>
                           {msg.sender === "me" && msg.status && (
                             <span className="italic">{msg.status}</span>
                           )}
+
+                          {/* Flag Button */}
+                          <button
+                            onClick={() => console.log("Flagged message ID:", msg.id)}
+                            className="ml-2 text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 transition"
+                            title="Flag message"
+                          >
+                            ⚑ Flag
+                          </button>
                         </div>
                       </div>
                     </div>

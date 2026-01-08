@@ -3,6 +3,21 @@ import { Input } from "@/components/ui/input";
 import { Search, Send } from "lucide-react";
 import { useState } from "react";
 
+type MessagePurpose =
+  | "General"
+  | "Legal"
+  | "Medical"
+  | "Safety"
+  | "Emergency";
+
+type Message = {
+  id: number;
+  sender: "me" | "them";
+  text: string;
+  time: string;
+  purpose: MessagePurpose;
+};
+
 const conversations = [
   {
     id: 1,
@@ -39,11 +54,35 @@ const conversations = [
   },
 ];
 
-const mockMessages = [
-  { id: 1, sender: "them", text: "The message", time: "13:56" },
-  { id: 2, sender: "me", text: "The message", time: "13:59" },
-  { id: 3, sender: "them", text: "The message", time: "14:04" },
-  { id: 4, sender: "me", text: "The message", time: "14:16" },
+const mockMessages: Message[] = [
+  {
+    id: 1,
+    sender: "them",
+    text: "Please remember to bring her school uniform tomorrow.",
+    time: "13:56",
+    purpose: "General",
+  },
+  {
+    id: 2,
+    sender: "me",
+    text: "Noted. I’ll drop it off before 8am.",
+    time: "13:59",
+    purpose: "General",
+  },
+  {
+    id: 3,
+    sender: "them",
+    text: "Doctor confirmed Sophie needs to continue medication.",
+    time: "14:04",
+    purpose: "Medical",
+  },
+  {
+    id: 4,
+    sender: "me",
+    text: "Understood. Please upload the prescription when you can.",
+    time: "14:16",
+    purpose: "Medical",
+  },
 ];
 
 const Messages = () => {
@@ -158,7 +197,13 @@ const Messages = () => {
                             : "message-received"
                         }`}
                       >
+                        {/* Purpose Tag */}
+                        <span className="mb-1 inline-block text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                          {msg.purpose}
+                        </span>
+
                         <p>{msg.text}</p>
+
                         <p className="text-xs opacity-70 mt-1">{msg.time}</p>
                       </div>
                     </div>

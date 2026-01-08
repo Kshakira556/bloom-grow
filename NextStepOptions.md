@@ -75,41 +75,6 @@
 
 
 # 📬 CUB Messages System – Build Scope (Consolidated)
-
-## 3. Audit & Oversight Banner
-
-Visible notice that communication is structured and auditable.
-
-* “This conversation is logged and auditable for mediation purposes”
-* Reinforces trust, accountability, and seriousness
-
----
-
-## 4. Professional Read States
-
-Replace social-chat language with legal-appropriate states:
-
-* Sent
-* Delivered
-* Read / Acknowledged
-
-Supports dispute resolution and accountability.
-
----
-
-## 5. Structured Attachments
-
-Attach files with **intent**, not just files:
-
-* Documents
-* Medical notes
-* Court orders
-* Reports
-
-Attachments are part of the record.
-
----
-
 ## 6. Message Composer Guidance
 
 The message input reinforces responsibility:

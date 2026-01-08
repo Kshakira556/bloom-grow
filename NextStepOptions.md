@@ -72,3 +72,177 @@
    * [ ] Wired pages load correctly with test accounts.
    * [ ] Role-specific views render correctly.
    * [ ] No broken links or console errors.
+
+
+# 📬 CUB Messages System – Build Scope (Consolidated)
+
+## 1. Conversation Context Header
+
+Each conversation clearly shows **why it exists**.
+
+* Participant name(s)
+* Case / topic reference (e.g. Parenting Plan, School Pickup)
+* Child name (optional)
+* Date context
+
+> *Purpose-driven communication, not casual chat*
+
+---
+
+## 2. Message Categorisation (Purpose Tags)
+
+Messages can be tagged as:
+
+* General
+* Legal
+* Medical
+* Safety
+* Emergency
+
+Used for:
+
+* Filtering
+* Flagging
+* Mediator review
+
+---
+
+## 3. Audit & Oversight Banner
+
+Visible notice that communication is structured and auditable.
+
+* “This conversation is logged and auditable for mediation purposes”
+* Reinforces trust, accountability, and seriousness
+
+---
+
+## 4. Professional Read States
+
+Replace social-chat language with legal-appropriate states:
+
+* Sent
+* Delivered
+* Read / Acknowledged
+
+Supports dispute resolution and accountability.
+
+---
+
+## 5. Structured Attachments
+
+Attach files with **intent**, not just files:
+
+* Documents
+* Medical notes
+* Court orders
+* Reports
+
+Attachments are part of the record.
+
+---
+
+## 6. Message Composer Guidance
+
+The message input reinforces responsibility:
+
+* Clear guidance text
+* Character limit indicator
+* Send disabled when empty
+
+Prevents impulsive or unclear communication.
+
+---
+
+## 7. Mediator Actions (Handled Elsewhere)
+
+Moderator-only actions live in the **Moderator Dashboard**, not Messages:
+
+* Review flagged messages
+* Lock threads
+* Add private mediator notes
+* Summarise conversations
+
+(Messages page remains neutral and safe.)
+
+---
+
+## 8. Intentional Empty States
+
+Clear, purposeful empty states:
+
+* No conversation selected
+* No messages yet
+* No contacts yet
+
+Avoids “unfinished app” feeling.
+
+---
+
+## 9. Flag Communication
+
+Any participant can flag a message:
+
+* Reason required (e.g. safety, escalation, inappropriate)
+* Message becomes visible in Moderator Dashboard
+* Non-destructive (message remains visible)
+
+---
+
+## 10. Trust & Purpose Banner (Key Differentiator)
+
+A short, powerful statement explaining *why* this messaging system exists:
+
+> “Communication here is structured, auditable, and linked to parenting plans.”
+
+This is your **demo mic-drop**.
+
+---
+
+## 11. Contact System
+
+Messaging is based on **approved contacts**, not free-form chat:
+
+* Parent
+* Mediator
+* Lawyer
+* Counselor / Professional
+
+No random users, no DMs without context.
+
+---
+
+## 12. Date Grouping in Chat
+
+Messages are grouped by date:
+
+* “Today”
+* “Yesterday”
+* Specific dates
+
+Improves readability and legal clarity.
+
+---
+
+## 🚫 Explicitly Excluded (By Design)
+
+To protect the seriousness of the platform:
+
+* Emojis / reactions
+* GIFs
+* Typing indicators
+* Online presence
+* Ephemeral messages
+
+This is **communication for records**, not social chatter.
+
+---
+
+## 🎯 What This Achieves
+
+* Clear legal & mediation positioning
+* Strong demo narrative
+* Aligned with your backend domain (legal, medical, safety)
+* Scales cleanly into audits, reports, and court exports
+
+---
+

@@ -73,14 +73,66 @@
    * [ ] Role-specific views render correctly.
    * [ ] No broken links or console errors.
 
+## 3️⃣ Gracefully handle long texts in text bubbles
 
-# 📬 CUB Messages System – Build Scope (Consolidated)
-## 8. Intentional Empty States
+**Problem:** Long messages currently might overflow or be hard to read.
 
-Clear, purposeful empty states:
+**Plan:**
 
-* No conversation selected
-* No messages yet
-* No contacts yet
+* **Max width:** Already set to 70%; maybe reduce slightly on smaller screens.
+* **Word wrap:** Ensure `break-words` and `whitespace-pre-wrap`.
+* **Collapsible/expandable messages:** For very long texts, show the first ~200 chars and a “Show more” button.
 
-Avoids “unfinished app” feeling.
+---
+
+## 4️⃣ Add “Export Conversation” button
+
+**Goal:** Allow user to export conversation as PDF or CSV.
+
+**Plan:**
+
+* Place a button near the conversation header.
+* When clicked:
+
+  1. Gather all messages for the selected conversation.
+  2. Format as structured JSON → CSV / PDF.
+  3. Trigger browser download.
+
+**Implementation example:**
+
+```tsx
+<button
+  onClick={() => exportConversation(selectedConversation.id)}
+  className="ml-auto px-3 py-1 bg-primary text-white rounded-full text-sm hover:bg-primary-dark"
+>
+  Export Conversation
+</button>
+```
+
+**Tech Choices:**
+
+* CSV: `papaparse` or native CSV generation
+* PDF: `jsPDF` or `pdfmake`
+
+---
+
+## 5️⃣ Optional Refinements / Nice-to-Have
+
+* **Sticky date headers:** While scrolling, the current date header sticks at top.
+* **Attachment previews:** Show icons or thumbnails for PDFs/images.
+* **Accessibility:** Ensure all buttons have `aria-label`.
+* **Keyboard navigation:** Tab between messages and input.
+
+---
+
+### ✅ Next Steps / Roadmap
+
+| Task                                   | Priority | Notes                               |
+| -------------------------------------- | -------- | ----------------------------------- |
+| Draft message model & purpose selector | High     | Required for proper bubble matching |
+| Improve header layout for long text    | High     | Truncate + tooltip + wrap           |
+| Handle long messages gracefully        | High     | Collapsible bubbles + break-words   |
+| Add Export Conversation button         | Medium   | CSV / PDF download                  |
+| Optional refinements                   | Low      | Sticky headers, attachment previews |
+
+---

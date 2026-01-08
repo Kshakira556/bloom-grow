@@ -75,31 +75,6 @@
 
 
 # 📬 CUB Messages System – Build Scope (Consolidated)
-## 6. Message Composer Guidance
-
-The message input reinforces responsibility:
-
-* Clear guidance text
-* Character limit indicator
-* Send disabled when empty
-
-Prevents impulsive or unclear communication.
-
----
-
-## 7. Mediator Actions (Handled Elsewhere)
-
-Moderator-only actions live in the **Moderator Dashboard**, not Messages:
-
-* Review flagged messages
-* Lock threads
-* Add private mediator notes
-* Summarise conversations
-
-(Messages page remains neutral and safe.)
-
----
-
 ## 8. Intentional Empty States
 
 Clear, purposeful empty states:

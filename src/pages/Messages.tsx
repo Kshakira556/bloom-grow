@@ -273,20 +273,30 @@ const Messages = () => {
                   ))}
                 </div>
 
-                {/* Input */}
-                <div className="p-4 border-t flex items-center gap-3">
-                  <Input
-                    placeholder="Type a message..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="flex-1 rounded-full"
-                  />
-                  <button
-                    aria-label="Send message"
-                    className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground"
-                  >
-                    <Send className="w-5 h-5" />
-                  </button>
+                {/* Input with guidance remains unchanged */}
+                <div className="p-4 border-t flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <Input
+                      placeholder="Type a message..."
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      className="flex-1 rounded-full"
+                    />
+                    <button
+                      aria-label="Send message"
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground ${
+                        message.trim() === "" ? "bg-muted cursor-not-allowed" : "bg-primary"
+                      }`}
+                      disabled={message.trim() === ""}
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Guidance and character count */}
+                  <div className="flex justify-between text-xs text-muted-foreground px-2">
+                    <span>Type a clear, professional message.</span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -2,6 +2,25 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Input } from "@/components/ui/input";
 import { Search, Send } from "lucide-react";
 import { useState } from "react";
+import { format, isToday, isYesterday } from "date-fns";
+
+const groupMessagesByDate = (messages: Message[]) => {
+  const groups: Record<string, Message[]> = {};
+  messages.forEach((msg) => {
+    const date = new Date();
+    // For demonstration, assume all messages are today; replace with msg.date if available
+    const msgDate = new Date();
+    let key = format(msgDate, "yyyy-MM-dd");
+
+    if (isToday(msgDate)) key = "Today";
+    else if (isYesterday(msgDate)) key = "Yesterday";
+    else key = format(msgDate, "MMM dd, yyyy");
+
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(msg);
+  });
+  return groups;
+};
 
 type MessagePurpose =
   | "General"
@@ -217,65 +236,80 @@ const Messages = () => {
                   ⚠️ This conversation is logged and auditable for mediation purposes.
                 </div>
 
+                {/* Trust & Purpose Banner */}
+                <div className="w-full bg-cub-mint-light border-l-4 border-primary text-primary px-6 py-2 mt-2 mb-4 text-sm font-medium rounded-r-lg shadow-sm">
+                  💬 Communication here is structured, auditable, and linked to parenting plans.
+                </div>
+
                 {/* Messages */}
-                <div className="flex-1 p-6 space-y-4">
-                  {mockMessages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[70%] p-3 rounded-xl relative ${
-                          msg.sender === "me"
-                            ? "bg-primary text-primary-foreground self-end"
-                            : "bg-muted text-muted-foreground self-start"
-                        }`}
-                      >
-                        {/* Purpose Tag */}
-                        <span className="mb-1 inline-block text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                          {msg.purpose}
-                        </span>
-
-                        {/* Message Text */}
-                        <p className="mt-1">{msg.text}</p>
-
-                        {/* Attachments */}
-                        {msg.attachments && msg.attachments.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {msg.attachments.map((att) => (
-                              <a
-                                key={att.id}
-                                href={att.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-2 p-2 border rounded text-sm hover:bg-muted/20"
-                              >
-                                <span className="font-medium">{att.name}</span>
-                                <span className="px-1 py-0.5 text-xs bg-secondary rounded">
-                                  {att.type}
-                                </span>
-                              </a>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Time + Status */}
-                        <div className="mt-1 text-xs opacity-70 flex justify-between items-center">
-                          <span>{msg.time}</span>
-                          {msg.sender === "me" && msg.status && (
-                            <span className="italic">{msg.status}</span>
-                          )}
-
-                          {/* Flag Button */}
-                          <button
-                            onClick={() => console.log("Flagged message ID:", msg.id)}
-                            className="ml-2 text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 transition"
-                            title="Flag message"
-                          >
-                            ⚑ Flag
-                          </button>
-                        </div>
+                <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+                  {Object.entries(groupMessagesByDate(mockMessages)).map(([dateLabel, msgs]) => (
+                    <div key={dateLabel}>
+                      {/* Date Header */}
+                      <div className="text-center text-xs text-muted-foreground my-4">
+                        {dateLabel}
                       </div>
+
+                      {/* Messages */}
+                      {msgs.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[70%] p-3 rounded-xl relative ${
+                              msg.sender === "me"
+                                ? "bg-primary text-primary-foreground self-end"
+                                : "bg-muted text-muted-foreground self-start"
+                            }`}
+                          >
+                            {/* Purpose Tag */}
+                            <span className="mb-1 inline-block text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                              {msg.purpose}
+                            </span>
+
+                            {/* Message Text */}
+                            <p className="mt-1">{msg.text}</p>
+
+                            {/* Attachments */}
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                {msg.attachments.map((att) => (
+                                  <a
+                                    key={att.id}
+                                    href={att.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-2 border rounded text-sm hover:bg-muted/20"
+                                  >
+                                    <span className="font-medium">{att.name}</span>
+                                    <span className="px-1 py-0.5 text-xs bg-secondary rounded">
+                                      {att.type}
+                                    </span>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Time + Status */}
+                            <div className="mt-1 text-xs opacity-70 flex justify-between items-center">
+                              <span>{msg.time}</span>
+                              {msg.sender === "me" && msg.status && (
+                                <span className="italic">{msg.status}</span>
+                              )}
+
+                              {/* Flag Button */}
+                              <button
+                                onClick={() => console.log("Flagged message ID:", msg.id)}
+                                className="ml-2 text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 transition"
+                                title="Flag message"
+                              >
+                                ⚑ Flag
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>

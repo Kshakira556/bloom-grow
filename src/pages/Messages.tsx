@@ -50,6 +50,12 @@ type Message = {
   attachments?: Attachment[]; 
 };
 
+type DraftMessage = {
+  text: string;
+  purpose: MessagePurpose; 
+  attachments?: Attachment[];
+};
+
 const mockMessages: Message[] = [
   {
     id: 1,
@@ -138,8 +144,13 @@ const conversations = [
 ];
 
 const Messages = () => {
-  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [selectedConversation, setSelectedConversation] = useState(conversations[0]);
+  const [draft, setDraft] = useState<DraftMessage>({
+    text: "",
+    purpose: "General",
+    attachments: [],
+  });
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -243,7 +254,7 @@ const Messages = () => {
 
                 {/* Messages */}
                 <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                  {Object.entries(groupMessagesByDate(mockMessages)).map(([dateLabel, msgs]) => (
+                  {Object.entries(groupMessagesByDate(messages)).map(([dateLabel, msgs]) => (
                     <div key={dateLabel}>
                       {/* Date Header */}
                       <div className="text-center text-xs text-muted-foreground my-4">
@@ -317,18 +328,79 @@ const Messages = () => {
                 {/* Input with guidance remains unchanged */}
                 <div className="p-4 border-t flex flex-col gap-2">
                   <div className="flex items-center gap-3">
+                    {/* Purpose selector */}
+                    <select
+                      aria-label="Draft"
+                      value={draft.purpose}
+                      onChange={(e) =>
+                        setDraft((prev) => ({ ...prev, purpose: e.target.value as MessagePurpose }))
+                      }
+                      className="rounded-full border px-3 py-1 text-sm bg-muted"
+                    >
+                      <option value="General">General</option>
+                      <option value="Legal">Legal</option>
+                      <option value="Medical">Medical</option>
+                      <option value="Safety">Safety</option>
+                      <option value="Emergency">Emergency</option>
+                    </select>
+
+                    {/* Text input */}
                     <Input
                       placeholder="Type a message..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
+                      value={draft.text}
+                      onChange={(e) =>
+                        setDraft((prev) => ({ ...prev, text: e.target.value }))
+                      }
                       className="flex-1 rounded-full"
                     />
+
+                    {/* Optional attachment uploader */}
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []).map((file, idx) => ({
+                          id: `att-${Date.now()}-${idx}`,
+                          name: file.name,
+                          type: "Document" as AttachmentType, // simplify for now
+                          url: URL.createObjectURL(file),
+                        }));
+                        setDraft((prev) => ({
+                          ...prev,
+                          attachments: [...(prev.attachments || []), ...files],
+                        }));
+                      }}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="cursor-pointer px-3 py-2 bg-secondary rounded-full text-sm hover:bg-secondary/80"
+                    >
+                      Attach
+                    </label>
+
+                    {/* Send button */}
                     <button
                       aria-label="Send message"
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground ${
-                        message.trim() === "" ? "bg-muted cursor-not-allowed" : "bg-primary"
+                        draft.text.trim() === "" ? "bg-muted cursor-not-allowed" : "bg-primary"
                       }`}
-                      disabled={message.trim() === ""}
+                      disabled={draft.text.trim() === ""}
+                      onClick={() => {
+                        const newMsg: Message = {
+                          id: Date.now(),
+                          sender: "me",
+                          text: draft.text,
+                          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                          purpose: draft.purpose,
+                          status: "Sent",
+                          attachments: draft.attachments,
+                        };
+
+                        setMessages((prev) => [...prev, newMsg]);
+                        setDraft({ text: "", purpose: "General", attachments: [] });
+                      }}
                     >
                       <Send className="w-5 h-5" />
                     </button>
@@ -337,6 +409,7 @@ const Messages = () => {
                   {/* Guidance and character count */}
                   <div className="flex justify-between text-xs text-muted-foreground px-2">
                     <span>Type a clear, professional message.</span>
+                    <span>{draft.text.length} / 500</span>
                   </div>
                 </div>
               </div>

@@ -76,37 +76,6 @@
 
 # 📬 CUB Messages System – Build Scope (Consolidated)
 
-## 1. Conversation Context Header
-
-Each conversation clearly shows **why it exists**.
-
-* Participant name(s)
-* Case / topic reference (e.g. Parenting Plan, School Pickup)
-* Child name (optional)
-* Date context
-
-> *Purpose-driven communication, not casual chat*
-
----
-
-## 2. Message Categorisation (Purpose Tags)
-
-Messages can be tagged as:
-
-* General
-* Legal
-* Medical
-* Safety
-* Emergency
-
-Used for:
-
-* Filtering
-* Flagging
-* Mediator review
-
----
-
 ## 3. Audit & Oversight Banner
 
 Visible notice that communication is structured and auditable.

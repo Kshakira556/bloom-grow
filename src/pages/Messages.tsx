@@ -10,13 +10,77 @@ type MessagePurpose =
   | "Safety"
   | "Emergency";
 
+type MessageStatus = "Sent" | "Delivered" | "Read";
+
+type AttachmentType = "Document" | "Medical Note" | "Court Order" | "Report";
+
+type Attachment = {
+  id: string;
+  name: string;
+  type: AttachmentType;
+  url: string;
+};
+
 type Message = {
   id: number;
   sender: "me" | "them";
   text: string;
   time: string;
   purpose: MessagePurpose;
+  status?: MessageStatus;
+  attachments?: Attachment[]; 
 };
+
+const mockMessages: Message[] = [
+  {
+    id: 1,
+    sender: "them",
+    text: "Please remember to bring her school uniform tomorrow.",
+    time: "13:56",
+    purpose: "General",
+    status: "Delivered",
+  },
+  {
+    id: 2,
+    sender: "me",
+    text: "Noted. I’ll drop it off before 8am.",
+    time: "13:59",
+    purpose: "General",
+    status: "Read",
+  },
+  {
+    id: 3,
+    sender: "them",
+    text: "Here is the doctor’s note for Sophie.",
+    time: "14:04",
+    purpose: "Medical",
+    status: "Delivered",
+    attachments: [
+      {
+        id: "att-001",
+        name: "Sophie_MedicalNote.pdf",
+        type: "Medical Note",
+        url: "/mock-files/Sophie_MedicalNote.pdf",
+      },
+    ],
+  },
+  {
+    id: 4,
+    sender: "me",
+    text: "Received. Uploading the signed consent form.",
+    time: "14:16",
+    purpose: "Legal",
+    status: "Sent",
+    attachments: [
+      {
+        id: "att-002",
+        name: "ConsentForm_Signed.pdf",
+        type: "Court Order",
+        url: "/mock-files/ConsentForm_Signed.pdf",
+      },
+    ],
+  },
+];
 
 const conversations = [
   {
@@ -51,37 +115,6 @@ const conversations = [
     lastMessage: "The message preview",
     time: "",
     createdAt: "2026-01-03",
-  },
-];
-
-const mockMessages: Message[] = [
-  {
-    id: 1,
-    sender: "them",
-    text: "Please remember to bring her school uniform tomorrow.",
-    time: "13:56",
-    purpose: "General",
-  },
-  {
-    id: 2,
-    sender: "me",
-    text: "Noted. I’ll drop it off before 8am.",
-    time: "13:59",
-    purpose: "General",
-  },
-  {
-    id: 3,
-    sender: "them",
-    text: "Doctor confirmed Sophie needs to continue medication.",
-    time: "14:04",
-    purpose: "Medical",
-  },
-  {
-    id: 4,
-    sender: "me",
-    text: "Understood. Please upload the prescription when you can.",
-    time: "14:16",
-    purpose: "Medical",
   },
 ];
 
@@ -178,6 +211,11 @@ const Messages = () => {
                     </p>
                   </div>
                 </div>
+                
+                {/* Audit & Oversight Banner */}
+                <div className="w-full bg-red-100 border-l-4 border-red-500 text-red-700 px-6 py-2 mt-2 text-sm">
+                  ⚠️ This conversation is logged and auditable for mediation purposes.
+                </div>
 
                 {/* Messages */}
                 <div className="flex-1 p-6 space-y-4">
@@ -185,16 +223,14 @@ const Messages = () => {
                     <div
                       key={msg.id}
                       className={`flex ${
-                        msg.sender === "me"
-                          ? "justify-end"
-                          : "justify-start"
+                        msg.sender === "me" ? "justify-end" : "justify-start"
                       }`}
                     >
                       <div
-                        className={`max-w-[70%] ${
+                        className={`max-w-[70%] p-3 rounded-xl ${
                           msg.sender === "me"
-                            ? "message-sent"
-                            : "message-received"
+                            ? "bg-primary text-primary-foreground self-end"
+                            : "bg-muted text-muted-foreground self-start"
                         }`}
                       >
                         {/* Purpose Tag */}
@@ -202,9 +238,36 @@ const Messages = () => {
                           {msg.purpose}
                         </span>
 
-                        <p>{msg.text}</p>
+                        {/* Message Text */}
+                        <p className="mt-1">{msg.text}</p>
 
-                        <p className="text-xs opacity-70 mt-1">{msg.time}</p>
+                        {/* Attachments (new) */}
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {msg.attachments.map((att) => (
+                              <a
+                                key={att.id}
+                                href={att.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 p-2 border rounded text-sm hover:bg-muted/20"
+                              >
+                                <span className="font-medium">{att.name}</span>
+                                <span className="px-1 py-0.5 text-xs bg-secondary rounded">
+                                  {att.type}
+                                </span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Time + Status */}
+                        <div className="mt-1 text-xs opacity-70 flex justify-between">
+                          <span>{msg.time}</span>
+                          {msg.sender === "me" && msg.status && (
+                            <span className="italic">{msg.status}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

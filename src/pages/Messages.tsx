@@ -3,6 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Search, Send } from "lucide-react";
 import { useState } from "react";
 import { format, isToday, isYesterday } from "date-fns";
+import jsPDF from "jspdf";
+import { Document, Packer, Paragraph, TextRun } from "docx";
+import { saveAs } from "file-saver";
 
 const groupMessagesByDate = (messages: Message[]) => {
   const groups: Record<string, Message[]> = {};
@@ -27,7 +30,8 @@ type MessagePurpose =
   | "Legal"
   | "Medical"
   | "Safety"
-  | "Emergency";
+  | "Emergency"
+  | "Financial";
 
 type MessageStatus = "Sent" | "Delivered" | "Read";
 
@@ -144,13 +148,138 @@ const conversations = [
 ];
 
 const Messages = () => {
+  const [expandedMessages, setExpandedMessages] = useState<Record<number, boolean>>({});
   const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const [purposeFilter, setPurposeFilter] = useState<MessagePurpose | "All">("All");
   const [selectedConversation, setSelectedConversation] = useState(conversations[0]);
   const [draft, setDraft] = useState<DraftMessage>({
     text: "",
     purpose: "General",
     attachments: [],
   });
+
+  const getSenderName = (sender: "me" | "them") => {
+    return sender === "me" ? "You" : selectedConversation.name;
+  };
+
+  const exportConversationPDF = () => {
+    const exportedMessages =
+      purposeFilter === "All"
+        ? messages
+        : messages.filter((m) => m.purpose === purposeFilter);
+
+    const doc = new jsPDF();
+    let y = 10;
+
+    doc.setFontSize(14);
+    doc.text("Conversation Export", 10, y);
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.text(`Exported: ${new Date().toLocaleString()}`, 10, y);
+    y += 6;
+    doc.text(`Participant: ${selectedConversation.name}`, 10, y);
+    y += 6;
+    doc.text(`Role: ${selectedConversation.role}`, 10, y);
+    y += 6;
+    doc.text(`Case: ${selectedConversation.caseRef}`, 10, y);
+    y += 6;
+
+    if (selectedConversation.childName) {
+      doc.text(`Child: ${selectedConversation.childName}`, 10, y);
+      y += 6;
+    }
+
+    doc.text(`Filter: ${purposeFilter}`, 10, y);
+    y += 10;
+
+    exportedMessages.forEach((msg) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 10;
+      }
+
+      doc.setFont(undefined, "bold");
+      doc.text(
+        `${msg.time} • ${getSenderName(msg.sender)} • ${msg.purpose}`,
+        10,
+        y
+      );
+      y += 6;
+
+      doc.setFont(undefined, "normal");
+      const lines = doc.splitTextToSize(msg.text, 180);
+      doc.text(lines, 10, y);
+      y += lines.length * 5 + 4;
+
+      msg.attachments?.forEach((att) => {
+        doc.text(`• Attachment: ${att.name} (${att.type})`, 14, y);
+        y += 5;
+      });
+
+      y += 4;
+    });
+
+    doc.save(`conversation-${selectedConversation.id}.pdf`);
+  };
+
+  const exportConversationDOCX = async () => {
+    const exportedMessages =
+      purposeFilter === "All"
+        ? messages
+        : messages.filter((m) => m.purpose === purposeFilter);
+
+    const doc = new Document({
+      sections: [
+        {
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Conversation Export",
+                  bold: true,
+                  size: 28,
+                }),
+              ],
+            }),
+            new Paragraph(`Exported: ${new Date().toLocaleString()}`),
+            new Paragraph(`Participant: ${selectedConversation.name}`),
+            new Paragraph(`Role: ${selectedConversation.role}`),
+            new Paragraph(`Case: ${selectedConversation.caseRef}`),
+            ...(selectedConversation.childName
+              ? [new Paragraph(`Child: ${selectedConversation.childName}`)]
+              : []),
+            new Paragraph(`Filter: ${purposeFilter}`),
+            new Paragraph(" "),
+            ...exportedMessages.flatMap((msg) => [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `${msg.time} • ${getSenderName(msg.sender)} • ${msg.purpose}`,
+                    bold: true,
+                  }),
+                ],
+              }),
+              new Paragraph(msg.text),
+              ...(msg.attachments || []).map(
+                (att) =>
+                  new Paragraph(`Attachment: ${att.name} (${att.type})`)
+              ),
+              new Paragraph(" "),
+            ]),
+          ],
+        },
+      ],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `conversation-${selectedConversation.id}.docx`);
+  };
+
+  const exportConversation = (format: "pdf" | "docx") => {
+    if (format === "pdf") exportConversationPDF();
+    else exportConversationDOCX();
+  };
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -201,19 +330,37 @@ const Messages = () => {
                 {/* Conversation Context Header */}
                 <div className="border-b px-6 py-4 bg-muted/30">
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-display font-bold text-lg">
-                        {selectedConversation.name}
-                      </h2>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                        {selectedConversation.role}
-                      </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-display font-bold text-lg">
+                          {selectedConversation.name}
+                        </h2>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                          {selectedConversation.role}
+                        </span>
+                      </div>
+
+                      <button onClick={() => exportConversation("pdf")}>Export PDF</button>
+                      <button onClick={() => exportConversation("docx")}>Export DOCX</button>
                     </div>
 
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium">Topic:</span>{" "}
-                      {selectedConversation.topic}
-                    </p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {(["All", "General", "Legal", "Medical", "Safety", "Emergency", "Financial"] as const).map(
+                        (p) => (
+                          <button
+                            key={p}
+                            onClick={() => setPurposeFilter(p)}
+                            className={`text-xs px-3 py-1 rounded-full border transition ${
+                              purposeFilter === p
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-muted-foreground hover:bg-secondary/70"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )}
+                    </div>
 
                     <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-1">
                       <span>
@@ -254,7 +401,13 @@ const Messages = () => {
 
                 {/* Messages */}
                 <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                  {Object.entries(groupMessagesByDate(messages)).map(([dateLabel, msgs]) => (
+                  {Object.entries(
+                    groupMessagesByDate(
+                      purposeFilter === "All"
+                        ? messages
+                        : messages.filter((m) => m.purpose === purposeFilter)
+                    )
+                  ).map(([dateLabel, msgs]) => (
                     <div key={dateLabel}>
                       {/* Date Header */}
                       <div className="text-center text-xs text-muted-foreground my-4">
@@ -268,7 +421,7 @@ const Messages = () => {
                           className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
                         >
                           <div
-                            className={`max-w-[70%] p-3 rounded-xl relative ${
+                            className={`max-w-[85%] sm:max-w-[70%] p-3 rounded-xl relative break-words whitespace-pre-wrap ${
                               msg.sender === "me"
                                 ? "bg-primary text-primary-foreground self-end"
                                 : "bg-muted text-muted-foreground self-start"
@@ -342,6 +495,7 @@ const Messages = () => {
                       <option value="Medical">Medical</option>
                       <option value="Safety">Safety</option>
                       <option value="Emergency">Emergency</option>
+                      <option value="Financial">Financial</option>
                     </select>
 
                     {/* Text input */}

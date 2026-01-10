@@ -40,9 +40,9 @@ export function Navbar() {
     { href: "/messages", label: "Messages" },
     { href: "/journal", label: "Journal" },
     { href: "/children", label: "Children" },
-    ...(isAuthenticated && user?.role === "mediator"
-      ? [{ href: "/moderator", label: "Moderator" }]
-      : []),
+    ...(isAuthenticated && (user?.role === "mediator" || user?.role === "admin")
+        ? [{ href: "/admin/moderator", label: "Moderator" }]
+        : []),
   ];
 
   const authLinks = [

@@ -1,27 +1,19 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  Baby,
-  LayoutDashboard,
-  Calendar,
-  BookOpen,
-  Users,
-  MessageSquare,
-  Shield,
-  Settings,
-  LogOut,
-  Menu,
-} from "lucide-react";
+import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
+  Shield, Settings, LogOut, Menu, FileText } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const sidebarLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/visits", label: "Visits", icon: Calendar },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
-  { href: "/journal", label: "Journal", icon: BookOpen },
-  { href: "/children", label: "Children", icon: Users },
-  { href: "/moderator", label: "Moderator", icon: Shield },
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/clients", label: "Clients", icon: Users },
+  { href: "/admin/children", label: "Children", icon: Users },
+  { href: "/admin/plans", label: "Plans", icon: Calendar },
+  { href: "/admin/messages", label: "Messages", icon: MessageSquare },
+  { href: "/admin/proposals", label: "Pending Changes", icon: FileText },
+  { href: "/admin/audit", label: "Audit / History", icon: BookOpen },
+  { href: "/admin/moderator", label: "Moderator", icon: Shield },
 ];
 
 interface DashboardLayoutProps {
@@ -54,6 +46,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            aria-label="Toggle sidebar"
           >
             <Menu className="w-5 h-5" />
           </button>

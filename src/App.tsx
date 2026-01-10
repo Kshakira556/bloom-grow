@@ -27,22 +27,15 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/register" element={<Register />} />
-          {/* Protected pages */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> 
-          <Route path="/visits" element={<ProtectedRoute><Visits /></ProtectedRoute>} />
-          <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-          <Route path="/journal" element={<ProtectedRoute><Journal /></ProtectedRoute>} />
-          <Route path="/children" element={<ProtectedRoute><Children /></ProtectedRoute>} />
 
-          {/* Role-protected page */}
-          <Route 
-            path="/moderator" 
-            element={
-              <RoleProtectedRoute allowedRoles={["mediator", "admin"]}>
-                <Moderator />
-              </RoleProtectedRoute>
-            } 
-          />
+          {/* Client (parent-only) pages */}
+          <Route path="/dashboard" element={ <RoleProtectedRoute allowedRoles={["parent"]}> <Dashboard /> </RoleProtectedRoute> } />
+          <Route path="/visits" element={ <RoleProtectedRoute allowedRoles={["parent"]}> <Visits /> </RoleProtectedRoute> } /> 
+          <Route path="/messages" element={ <RoleProtectedRoute allowedRoles={["parent"]}> <Messages /> </RoleProtectedRoute> } /> 
+          <Route path="/journal" element={ <RoleProtectedRoute allowedRoles={["parent"]}> <Journal /> </RoleProtectedRoute> } />
+          <Route path="/children" element={ <RoleProtectedRoute allowedRoles={["parent"]}> <Children /> </RoleProtectedRoute> } /> 
+          {/* Mediator / Admin page */}
+          <Route path="/moderator" element={ <RoleProtectedRoute allowedRoles={["mediator", "admin"]}> <Moderator /> </RoleProtectedRoute> } />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -5,7 +5,7 @@ import { setAuthToken } from "@/lib/http";
 type AuthContextValue = {
   user: SafeUser | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<SafeUser>;
   logout: () => void;
 };
 
@@ -22,9 +22,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = useCallback(async (email: string, password: string) => {
     const { user, token } = await loginApi(email, password);
 
-    setAuthToken(token);   // 🔐 token stays in memory only
+    setAuthToken(token);
     setUser(user);
-    localStorage.setItem("user", JSON.stringify(user)); // persist user
+    localStorage.setItem("user", JSON.stringify(user));
+
+    return user; 
   }, []);
 
   const logout = useCallback(() => {

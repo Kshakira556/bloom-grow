@@ -14,13 +14,18 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
-      await login(email, password);
-      navigate("/dashboard");
+      const loggedInUser = await login(email, password);
+
+      if (loggedInUser.role === "mediator" || loggedInUser.role === "admin") {
+        navigate("/moderator");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError((err as Error).message || "Login failed");
     }

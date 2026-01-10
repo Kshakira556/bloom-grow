@@ -44,12 +44,32 @@ const App = () => (
           <Route path="/signin" element={<SignIn />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Client-protected routes */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> 
-          <Route path="/visits" element={<ProtectedRoute><Visits /></ProtectedRoute>} />
-          <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-          <Route path="/journal" element={<ProtectedRoute><Journal /></ProtectedRoute>} />
-          <Route path="/children" element={<ProtectedRoute><Children /></ProtectedRoute>} />
+          {/* Client (parent-only) pages */}
+          <Route path="/dashboard" element={
+            <RoleProtectedRoute allowedRoles={["parent"]}>
+              <Dashboard />
+            </RoleProtectedRoute>
+          } />
+          <Route path="/visits" element={
+            <RoleProtectedRoute allowedRoles={["parent"]}>
+              <Visits />
+            </RoleProtectedRoute>
+          } /> 
+          <Route path="/messages" element={
+            <RoleProtectedRoute allowedRoles={["parent"]}>
+              <Messages />
+            </RoleProtectedRoute>
+          } /> 
+          <Route path="/journal" element={
+            <RoleProtectedRoute allowedRoles={["parent"]}>
+              <Journal />
+            </RoleProtectedRoute>
+          } />
+          <Route path="/children" element={
+            <RoleProtectedRoute allowedRoles={["parent"]}>
+              <Children />
+            </RoleProtectedRoute>
+          } /> 
 
           {/* Admin / Moderator protected routes */}
           <Route path="/admin/dashboard" element={
@@ -93,6 +113,7 @@ const App = () => (
             </RoleProtectedRoute>
           } />
 
+          {/* Legacy / short route for moderator (optional redirect) */}
           <Route path="/moderator" element={<Navigate to="/admin/moderator" replace />} />
 
           {/* Catch-all */}

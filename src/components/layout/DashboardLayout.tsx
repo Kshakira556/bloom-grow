@@ -1,20 +1,10 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
-  Shield, Settings, LogOut, Menu, FileText } from "lucide-react";
+  Shield, Settings, LogOut, Menu, FileText } from "lucide-react"; 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-
-const sidebarLinks = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/clients", label: "Clients", icon: Users },
-  { href: "/admin/children", label: "Children", icon: Users },
-  { href: "/admin/plans", label: "Plans", icon: Calendar },
-  { href: "/admin/messages", label: "Messages", icon: MessageSquare },
-  { href: "/admin/proposals", label: "Pending Changes", icon: FileText },
-  { href: "/admin/audit", label: "Audit / History", icon: BookOpen },
-  { href: "/admin/moderator", label: "Moderator", icon: Shield },
-];
+import { useAuth } from "@/hooks/useAuth";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -22,7 +12,41 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const sidebarLinks = [
+    // Admin / Moderator links
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/clients", label: "Clients", icon: Users },
+    { href: "/admin/children", label: "Children", icon: Users },
+    { href: "/admin/plans", label: "Plans", icon: Calendar },
+    { href: "/admin/messages", label: "Messages", icon: MessageSquare },
+    { href: "/admin/proposals", label: "Pending Changes", icon: FileText },
+    { href: "/admin/audit", label: "Audit / History", icon: BookOpen },
+    { href: "/admin/moderator", label: "Moderator", icon: Shield },
+    ...(user?.role === "mediator" || user?.role === "admin"
+        ? [
+            { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+            { href: "/visits", label: "Visits", icon: Calendar },
+            { href: "/messages", label: "Messages", icon: MessageSquare },
+            { href: "/journal", label: "Journal", icon: BookOpen },
+            { href: "/children", label: "Children", icon: Users },
+          ]
+        : []),
+  ];
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const initials =
+    user?.full_name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase() ?? "";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/signin", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -44,9 +68,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             )}
           </Link>
           <button
+            aria-label="Toggle sidebar"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg hover:bg-secondary transition-colors"
-            aria-label="Toggle sidebar"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -85,7 +109,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Settings className="w-5 h-5" />
               {sidebarOpen && <span className="font-medium">Settings</span>}
             </Link>
-            <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors w-full">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors w-full"
+            >
               <LogOut className="w-5 h-5" />
               {sidebarOpen && <span className="font-medium">Log Out</span>}
             </button>
@@ -107,7 +134,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </h1>
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-cub-coral-light flex items-center justify-center">
-              <span className="font-display font-bold text-cub-coral">JD</span>
+              <span className="font-display font-bold text-cub-coral">
+                {initials}
+              </span>
             </div>
           </div>
         </header>

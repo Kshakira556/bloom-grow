@@ -16,6 +16,7 @@ import Visits from "./pages/Visits";
 import Messages from "./pages/Messages";
 import Journal from "./pages/Journal";
 import Children from "./pages/Children";
+import Admin from "./pages/admin/System";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -73,45 +74,53 @@ const App = () => (
 
           {/* Admin / Moderator protected routes */}
           <Route path="/admin/dashboard" element={
-            <RoleProtectedRoute allowedRoles={["admin", "mediator"]}>
+            <RoleProtectedRoute allowedRoles={["mediator"]}>
               <AdminDashboard />
             </RoleProtectedRoute>
           } />
           <Route path="/admin/clients" element={
-            <RoleProtectedRoute allowedRoles={["admin", "mediator"]}>
+            <RoleProtectedRoute allowedRoles={["mediator"]}>
               <AdminClients />
             </RoleProtectedRoute>
           } />
           <Route path="/admin/children" element={
-            <RoleProtectedRoute allowedRoles={["admin", "mediator"]}>
+            <RoleProtectedRoute allowedRoles={["mediator"]}>
               <AdminChildren />
             </RoleProtectedRoute>
           } />
           <Route path="/admin/plans" element={
-            <RoleProtectedRoute allowedRoles={["admin", "mediator"]}>
+            <RoleProtectedRoute allowedRoles={["mediator"]}>
               <AdminPlans />
             </RoleProtectedRoute>
           } />
           <Route path="/admin/messages" element={
-            <RoleProtectedRoute allowedRoles={["admin", "mediator"]}>
+            <RoleProtectedRoute allowedRoles={["mediator"]}>
               <AdminMessages />
             </RoleProtectedRoute>
           } />
           <Route path="/admin/proposals" element={
-            <RoleProtectedRoute allowedRoles={["admin", "mediator"]}>
+            <RoleProtectedRoute allowedRoles={["mediator"]}>
               <AdminProposals />
             </RoleProtectedRoute>
           } />
           <Route path="/admin/audit" element={
-            <RoleProtectedRoute allowedRoles={["admin", "mediator"]}>
+            <RoleProtectedRoute allowedRoles={["mediator"]}>
               <AdminAudit />
             </RoleProtectedRoute>
           } />
           <Route path="/admin/moderator" element={
-            <RoleProtectedRoute allowedRoles={["admin", "mediator"]}>
+            <RoleProtectedRoute allowedRoles={["mediator"]}>
               <Moderator />
             </RoleProtectedRoute>
           } />
+          <Route
+            path="/admin/system"
+            element={
+              <RoleProtectedRoute allowedRoles={["admin"]}>
+                <Admin />
+              </RoleProtectedRoute>
+            }
+          />
 
           {/* Legacy / short route for moderator (optional redirect) */}
           <Route path="/moderator" element={<Navigate to="/admin/moderator" replace />} />

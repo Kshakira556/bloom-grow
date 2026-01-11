@@ -1,3 +1,6 @@
+// ClientLayout
+// Used ONLY by parents/end-users
+
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
@@ -6,34 +9,23 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
-interface DashboardLayoutProps {
+interface ClientLayoutProps {
   children: React.ReactNode;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function ClientLayout({ children }: ClientLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
   const sidebarLinks = [
-    // Admin / Moderator links
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/admin/clients", label: "Clients", icon: Users },
-    { href: "/admin/children", label: "Children", icon: Users },
-    { href: "/admin/plans", label: "Plans", icon: Calendar },
-    { href: "/admin/messages", label: "Messages", icon: MessageSquare },
-    { href: "/admin/proposals", label: "Pending Changes", icon: FileText },
-    { href: "/admin/audit", label: "Audit / History", icon: BookOpen },
-    { href: "/admin/moderator", label: "Moderator", icon: Shield },
-    ...(user?.role === "mediator" || user?.role === "admin"
-        ? [
-            { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-            { href: "/visits", label: "Visits", icon: Calendar },
-            { href: "/messages", label: "Messages", icon: MessageSquare },
-            { href: "/journal", label: "Journal", icon: BookOpen },
-            { href: "/children", label: "Children", icon: Users },
-          ]
-        : []),
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/visits", label: "Visits", icon: Calendar },
+    { href: "/messages", label: "Messages", icon: MessageSquare },
+    { href: "/journal", label: "Journal", icon: BookOpen },
+    { href: "/children", label: "Children", icon: Users },
   ];
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const initials =

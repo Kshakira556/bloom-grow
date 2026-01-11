@@ -1,24 +1,24 @@
-
 # **Moderator / Admin System Checklist (Updated)**
 
 ### **Roles**
 
 * [✅] Moderator / Mediator – manages disputes, plans, messages, and client relationships with **final say on flagged content and plan approvals**
-* [❌] Admin – can manage moderators, global settings, and audit logs
-    [❌] Admin – full system oversight, including:
 
-    Manage moderators (create, edit, deactivate, assign to clients/plans)
+* [✅] Admin – can manage moderators, global settings, and audit logs
+  [✅] Admin – full system oversight, including:
 
-    Configure global settings (app-wide rules, email templates, system preferences)
+  Manage moderators (create, edit, deactivate, assign to clients/plans) ✅ implemented
 
-    Access audit logs for all user, moderator, and system actions
+  Configure global settings (app-wide rules, email templates, system preferences) ❌ partially implemented
 
-    Review system reports (e.g., flagged content trends, usage metrics)
+  Access audit logs for all user, moderator, and system actions ✅ basic audit trails
 
-    Override moderator decisions if needed
+  Review system reports (e.g., flagged content trends, usage metrics) ✅ partial stats
 
-    Assign roles and permissions to users and moderators
-    
+  Override moderator decisions if needed ✅ UI scaffolded
+
+  Assign roles and permissions to users and moderators ❌ not fully functional
+
 * [✅] User / Parent – end-user of the app. May be linked to **one or more plans, multiple children, multiple parents supported**
 
 ---
@@ -31,23 +31,34 @@
 * [✅] Visit / Event – scheduling **with parent permissions**, coordinated across plans (some moderation pending)
 * [✅] Messages – plan-based, **flagging & moderation workflow exists**
 * [❌] Attachments / Files – UI exists partially, actions not fully handled; includes vault docs, medical, legal, safety, emergency contact files
-* [❌] Audit Logs – displayed partially via Recent Actions; **full filtering, export, and tracking of all actions pending**
+* [✅] Audit Logs – basic trails exist; full filtering/export pending
 
 ---
 
 ## **2️⃣ Moderator/Admin Pages**
 
-### **A. Dashboard**
+### **A. Dashboard / Overview**
 
-* [✅] Overview page with header
-* [✅] Quick stats cards (messages reviewed, flags, upcoming sessions)
+* [✅] Admin Dashboard page now uses **AdminLayout**
+* [✅] Overview page with header and stats cards
 * [✅] Recent activity feed (partial audit trail)
 * [❌] Pending moderation summary – counts mostly static placeholders
 * [❌] Quick search by plan ID / child / message ID / vault ID
 
 ---
 
-### **B. Client / Profile Management**
+### **B. Moderator Page**
+
+* [✅] Moderator / Mediator dashboard uses **ModeratorLayout**
+* [✅] Quick stats cards (messages reviewed, flags, clients, plans, children)
+* [✅] Flagged messages & proposed changes tabs functional in UI
+* [✅] Recent moderator activity feed
+* [✅] Quick access buttons for each tab
+* [❌] Full approve/reject workflow + comment + audit logging partially implemented
+
+---
+
+### **C. Client / Profile Management**
 
 * [✅] Client List (search input + example client)
 * [✅] Client Profile basic structure (partial)
@@ -55,7 +66,7 @@
 
 ---
 
-### **C. Children / Dependents**
+### **D. Children / Dependents**
 
 * [✅] Child List (example data)
 * [✅] Child Profile basic display
@@ -65,7 +76,7 @@
 
 ---
 
-### **D. Plan Management**
+### **E. Plan Management**
 
 * [✅] Plan List with example
 * [✅] Plan Detail basic structure
@@ -77,7 +88,7 @@
 
 ---
 
-### **E. Visit / Event Moderation**
+### **F. Visit / Event Moderation**
 
 * [❌] Approve/reject proposed visit changes (UI placeholders exist, full workflow not integrated)
 * [❌] History of past edits with context
@@ -85,7 +96,7 @@
 
 ---
 
-### **F. Messages & Attachments Moderation**
+### **G. Messages & Attachments Moderation**
 
 * [✅] Messages list display + flag badge
 * [❌] Approve/reject + moderator notes integration
@@ -93,7 +104,7 @@
 
 ---
 
-### **G. Dispute / Proposed Change Management**
+### **H. Dispute / Proposed Change Management**
 
 * [✅] Pending Changes tab UI
 * [❌] Approve/reject/comment/escalate fully functional
@@ -101,7 +112,7 @@
 
 ---
 
-### **H. Audit / History**
+### **I. Audit / History**
 
 * [❌] Full audit log filtering and exporting
 * [❌] Action types beyond recent activity (account changes, plan edits, message/attachment moderation)
@@ -109,7 +120,7 @@
 
 ---
 
-### **I. Settings / Admin Features**
+### **J. Settings / Admin Features**
 
 * [❌] Manage moderators
 * [❌] Role management
@@ -145,6 +156,4 @@
 * [❌] Dynamic data integration for most pages
 * [✅] Vault pages for each child (docs, medical, legal, safety, emergency contacts)
 * [✅] Multi-child/multi-parent plans reflected in UI and moderation pages
-
----
 

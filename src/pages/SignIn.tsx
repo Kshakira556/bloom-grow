@@ -24,7 +24,7 @@ export default function SignIn() {
       if (loggedInUser.role === "admin") {
         navigate("/admin/system", { replace: true });
       } else if (loggedInUser.role === "mediator") {
-        navigate("/admin/dashboard", { replace: true });
+        navigate("/admin/moderator", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
       }

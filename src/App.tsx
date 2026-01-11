@@ -74,7 +74,7 @@ const App = () => (
 
           {/* Admin / Moderator protected routes */}
           <Route path="/admin/dashboard" element={
-            <RoleProtectedRoute allowedRoles={["mediator"]}>
+            <RoleProtectedRoute allowedRoles={["admin"]}>
               <AdminDashboard />
             </RoleProtectedRoute>
           } />

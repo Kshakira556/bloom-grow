@@ -1,11 +1,11 @@
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Eye } from "lucide-react";
 
 const AdminMessages = () => {
   return (
-    <DashboardLayout>
+    <ModeratorLayout>
       <div className="space-y-6">
         <h1 className="font-display text-2xl font-bold flex items-center gap-2">
           <MessageSquare className="w-6 h-6 text-primary" />
@@ -31,7 +31,7 @@ const AdminMessages = () => {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </ModeratorLayout>
   );
 };
 

@@ -10,6 +10,11 @@ export interface SafeUser {
   phone?: string;
 }
 
+export interface Moderator extends SafeUser {
+  isActive: boolean;
+  assignedClients: string[];
+}
+
 type LoginResponse = {
   user: SafeUser;
   token: string;
@@ -27,3 +32,7 @@ export const getUsers = async (): Promise<SafeUser[]> => {
   return res.users;
 };
 
+export const getModerators = async (): Promise<Moderator[]> => {
+  const res = await http<{ moderators: Moderator[] }>("/admin/moderators", "GET");
+  return res.moderators;
+};

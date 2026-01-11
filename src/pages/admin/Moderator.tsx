@@ -1,4 +1,4 @@
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,7 +91,7 @@ const Moderator = () => {
         const [activeTab, setActiveTab] = useState("flagged");
         
   return (
-    <DashboardLayout>
+    <ModeratorLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -380,7 +380,7 @@ const Moderator = () => {
 
         </div>
       </div>
-    </DashboardLayout>
+    </ModeratorLayout>
   );
 };
 

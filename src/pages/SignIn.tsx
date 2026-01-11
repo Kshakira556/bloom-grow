@@ -21,10 +21,12 @@ export default function SignIn() {
     try {
       const loggedInUser = await login(email, password);
 
-      if (loggedInUser.role === "mediator" || loggedInUser.role === "admin") {
-        navigate("/moderator");
+      if (loggedInUser.role === "admin") {
+        navigate("/admin/system", { replace: true });
+      } else if (loggedInUser.role === "mediator") {
+        navigate("/admin/dashboard", { replace: true });
       } else {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
     } catch (err) {
       setError((err as Error).message || "Login failed");

@@ -5,6 +5,20 @@
 
 * [✅] Moderator / Mediator – manages disputes, plans, messages, and client relationships with **final say on flagged content and plan approvals**
 * [❌] Admin – can manage moderators, global settings, and audit logs
+    [❌] Admin – full system oversight, including:
+
+    Manage moderators (create, edit, deactivate, assign to clients/plans)
+
+    Configure global settings (app-wide rules, email templates, system preferences)
+
+    Access audit logs for all user, moderator, and system actions
+
+    Review system reports (e.g., flagged content trends, usage metrics)
+
+    Override moderator decisions if needed
+
+    Assign roles and permissions to users and moderators
+    
 * [✅] User / Parent – end-user of the app. May be linked to **one or more plans, multiple children, multiple parents supported**
 
 ---

@@ -1,4 +1,4 @@
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Eye, User } from "lucide-react";
 
 const AdminChildren = () => {
   return (
-    <DashboardLayout>
+    <ModeratorLayout>
       <div className="space-y-6">
         <h1 className="font-display text-2xl font-bold flex items-center gap-2">
           <User className="w-6 h-6 text-primary" />
@@ -33,7 +33,7 @@ const AdminChildren = () => {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </ModeratorLayout>
   );
 };
 

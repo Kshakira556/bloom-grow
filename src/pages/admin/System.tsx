@@ -2,6 +2,12 @@ import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import Moderators from "./tabs/Moderators";
+import Roles from "./tabs/Roles";
+import Audit from "./tabs/Audit";
+import Reports from "./tabs/Reports";
+import SettingsTab from "./tabs/Settings";
+import Overrides from "./tabs/Overrides";
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("moderators");
@@ -13,54 +19,19 @@ const Admin = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="flex-wrap gap-2">
             <TabsTrigger value="moderators">Moderators</TabsTrigger>
-            <TabsTrigger value="settings">Global Settings</TabsTrigger>
+            <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
             <TabsTrigger value="audit">Audit Logs</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="settings">Global Settings</TabsTrigger>
             <TabsTrigger value="overrides">Overrides</TabsTrigger>
-            <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="moderators">
-            <Card>
-              <CardHeader><CardTitle>Manage Moderators</CardTitle></CardHeader>
-              <CardContent>Coming soon...</CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader><CardTitle>Global Settings</CardTitle></CardHeader>
-              <CardContent>Coming soon...</CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="audit">
-            <Card>
-              <CardHeader><CardTitle>Audit Logs</CardTitle></CardHeader>
-              <CardContent>Coming soon...</CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <Card>
-              <CardHeader><CardTitle>System Reports</CardTitle></CardHeader>
-              <CardContent>Coming soon...</CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="overrides">
-            <Card>
-              <CardHeader><CardTitle>Override Decisions</CardTitle></CardHeader>
-              <CardContent>Coming soon...</CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="roles">
-            <Card>
-              <CardHeader><CardTitle>Roles & Permissions</CardTitle></CardHeader>
-              <CardContent>Coming soon...</CardContent>
-            </Card>
-          </TabsContent>
+          <TabsContent value="moderators"><Moderators /></TabsContent>
+          <TabsContent value="roles"><Roles /></TabsContent>
+          <TabsContent value="audit"><Audit /></TabsContent>
+          <TabsContent value="reports"><Reports /></TabsContent>
+          <TabsContent value="settings"><SettingsTab /></TabsContent>
+          <TabsContent value="overrides"><Overrides /></TabsContent>
         </Tabs>
       </div>
     </AdminLayout>

@@ -6,14 +6,8 @@ import { User, Eye } from "lucide-react";
 import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem
 } from "@/components/ui/command";
-
-type Moderator = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  privileges?: string[];
-};
+import { useModeratorsStore } from "../store/useModeratorsStore";
+import type { Moderator } from "../store/useModeratorsStore";
 
 type Parent = {
   id: number;
@@ -38,13 +32,8 @@ type Plan = {
 const PRIVILEGES = ["View Messages", "Approve Plans", "Manage Users"];
 const FUP_LIMIT_GB = 50; 
 
-const initialModerators: Moderator[] = [
-  { id: 1, name: "Sarah Mitchell", email: "sarah.mitchell@mediator.com", role: "Family Mediator", privileges: ["View Messages", "Approve Plans"] },
-  { id: 2, name: "John Doe", email: "john.doe@mediator.com", role: "Moderator", privileges: ["View Messages"] },
-];
-
 const Moderators = () => {
-  const [moderators, setModerators] = useState(initialModerators);
+  const { moderators, setModerators } = useModeratorsStore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
@@ -90,7 +79,7 @@ const Moderators = () => {
     if (!name || !email || !role) return alert("Please fill all fields");
 
     const newMod: Moderator = {
-      id: moderators.length + 1,
+      id: Date.now(),
       name,
       email,
       role,

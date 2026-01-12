@@ -166,6 +166,114 @@ const Children = () => {
 
   return (  
     <div className="min-h-screen gradient-bg flex flex-col">
+      <style>
+        {`
+        @media print {
+          @page {
+            size: A4;
+            margin: 12mm 14mm;
+          }
+
+          body {
+            font-family: "Times New Roman", Georgia, serif;
+            color: #000;
+            background: #fff;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          #print-area,
+          #print-area * {
+            visibility: visible;
+          }
+
+          #print-area {
+            position: relative;
+            width: 100%;
+          }
+
+          /* Remove app visuals */
+          .rounded-2xl,
+          .rounded-3xl,
+          .shadow-sm,
+          .bg-card,
+          .bg-card\\/50,
+          .bg-cub-mint-light {
+            background: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
+
+          /* Section headings */
+          h2, h3 {
+            border-bottom: 1px solid #000;
+            padding-bottom: 4px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 14px;
+          }
+
+          /* Text */
+          p, span, div {
+            font-size: 12px;
+            line-height: 1.5;
+          }
+
+          /* Tables for legal look */
+          .legal-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+          }
+
+          .legal-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            vertical-align: top;
+          }
+
+          .legal-label {
+            width: 35%;
+            font-weight: bold;
+          }
+
+          .no-print {
+            display: none !important;
+          }
+
+          @media print {
+            main {
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+
+            .container {
+              max-width: 100% !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+          }
+          @media print {
+            .card,
+            .card-content {
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+
+            .p-6,
+            .py-8,
+            .px-4 {
+              padding: 0 !important;
+            }
+          }
+        }
+        `}
+        </style>
+
       <Navbar />
 
       <main className="flex-1 py-8 px-4">
@@ -200,462 +308,471 @@ const Children = () => {
             <div className="lg:col-span-9">
               <Card className="rounded-3xl">
                 <CardContent className="p-6 space-y-6">
-                  {/* Basic Info */}
-                  <div>
-                    <div className="flex justify-between items-start mb-4">
-                      <h2 className="font-display font-bold text-xl">
-                        {selectedChild.name} ({selectedChild.nickname})
-                      </h2>
-                      <button
-                        className="p-2 rounded-full hover:bg-card/50"
-                        onClick={() => setEditMode(!editMode)}
-                        title={editMode ? "View Mode" : "Edit Mode"}
-                      >
-                        <Edit3 className="w-5 h-5 text-primary" />
-                      </button>
+                  <div id="print-area">
+                    <div style={{ marginBottom: "16px" }}>
+                      <h1 style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold" }}>
+                        CHILD INFORMATION & LEGAL RECORD
+                      </h1>
+
+                      <p style={{ textAlign: "center", fontSize: "12px" }}>
+                        This document is generated for official family, medical, and legal use.
+                      </p>
+
+                      <p style={{ textAlign: "center", fontSize: "11px", marginTop: "4px" }}>
+                        Generated on: {new Date().toLocaleDateString()}
+                      </p>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">DOB:</span>{" "}
-                        {editMode ? (
-                          <Input
-                            value={selectedChild.dob}
-                            onChange={(e) =>
-                              setSelectedChild({ ...selectedChild, dob: e.target.value })
-                            }
-                          />
-                        ) : (
-                          selectedChild.dob
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">ID:</span>{" "}
-                        {editMode ? (
-                          <Input
-                            value={selectedChild.idNo}
-                            onChange={(e) =>
-                              setSelectedChild({ ...selectedChild, idNo: e.target.value })
-                            }
-                          />
-                        ) : (
-                          selectedChild.idNo
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {editMode ? (
-                        <Input
-                          value={selectedChild.address}
-                          onChange={(e) =>
-                            setSelectedChild({ ...selectedChild, address: e.target.value })
-                          }
-                        />
-                      ) : (
-                        selectedChild.address
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Guardian Info */}
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {selectedChild.guardians.map((g, idx) => (
-                      <div
-                        key={idx}
-                        className="p-4 bg-cub-mint-light rounded-2xl"
-                      >
-                        <p className="font-display font-bold mb-2">
-                          Guardian {idx + 1}
-                        </p>
-
-                        {editMode ? (
-                          <>
-                            <Input
-                              value={g.name}
-                              onChange={(e) => {
-                                const newGuardians = [...selectedChild.guardians];
-                                newGuardians[idx].name = e.target.value;
-                                setSelectedChild({ ...selectedChild, guardians: newGuardians });
-                              }}
-                              placeholder="Name"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={g.cell}
-                              onChange={(e) => {
-                                const newGuardians = [...selectedChild.guardians];
-                                newGuardians[idx].cell = e.target.value;
-                                setSelectedChild({ ...selectedChild, guardians: newGuardians });
-                              }}
-                              placeholder="Cell"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={g.work}
-                              onChange={(e) => {
-                                const newGuardians = [...selectedChild.guardians];
-                                newGuardians[idx].work = e.target.value;
-                                setSelectedChild({ ...selectedChild, guardians: newGuardians });
-                              }}
-                              placeholder="Work"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm text-muted-foreground">{g.name}</p>
-                            <p className="text-sm text-muted-foreground">Cell: {g.cell}</p>
-                            <p className="text-sm text-muted-foreground">Work: {g.work}</p>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Sections Grid */}
-                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Basic Info */}
                     <div>
-                      <h3 className="font-display font-bold mb-3">Legal</h3>
-                      <div className="space-y-2 text-sm">
-                        {editMode ? (
-                          <>
-                            <Input
-                              value={selectedChild.legal.custody}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  legal: { ...selectedChild.legal, custody: e.target.value },
-                                })
-                              }
-                              placeholder="Custody"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={selectedChild.legal.courtRef}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  legal: { ...selectedChild.legal, courtRef: e.target.value },
-                                })
-                              }
-                              placeholder="Court order ref"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={selectedChild.legal.validUntil}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  legal: { ...selectedChild.legal, validUntil: e.target.value },
-                                })
-                              }
-                              placeholder="Valid until"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={selectedChild.legal.restricted}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  legal: { ...selectedChild.legal, restricted: e.target.value },
-                                })
-                              }
-                              placeholder="Names legally restricted"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <p>
-                              <span className="text-muted-foreground">Custody:</span>{" "}
-                              {selectedChild.legal.custody}
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">Court order ref:</span>{" "}
-                              {selectedChild.legal.courtRef}
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">Valid until:</span>{" "}
-                              {selectedChild.legal.validUntil}
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">Names legally restricted:</span>{" "}
-                              {selectedChild.legal.restricted}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-display font-bold mb-3">Medical</h3>
-                      <div className="space-y-2 text-sm">
-                        {editMode ? (
-                          <>
-                            <Input
-                              value={selectedChild.medical.blood}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  medical: { ...selectedChild.medical, blood: e.target.value },
-                                })
-                              }
-                              placeholder="Blood type"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={selectedChild.medical.allergies}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  medical: { ...selectedChild.medical, allergies: e.target.value },
-                                })
-                              }
-                              placeholder="Allergies"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={selectedChild.medical.medication}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  medical: { ...selectedChild.medical, medication: e.target.value },
-                                })
-                              }
-                              placeholder="Medication"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={selectedChild.medical.doctor}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  medical: { ...selectedChild.medical, doctor: e.target.value },
-                                })
-                              }
-                              placeholder="Doctor contact"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <p>
-                              <span className="text-muted-foreground">Blood type:</span>{" "}
-                              {selectedChild.medical.blood}
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">Allergies:</span>{" "}
-                              {selectedChild.medical.allergies}
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">Medication:</span>{" "}
-                              {selectedChild.medical.medication}
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">Doctor contact:</span>{" "}
-                              {selectedChild.medical.doctor}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-display font-bold mb-3">
-                        Safety & Pick-up
-                      </h3>
-                      <div className="space-y-2 text-sm">
-                        {editMode ? (
-                          <>
-                            <Input
-                              value={selectedChild.safety.allowed}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  safety: { ...selectedChild.safety, allowed: e.target.value },
-                                })
-                              }
-                              placeholder="Approved pick-up persons"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={selectedChild.safety.notAllowed}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  safety: { ...selectedChild.safety, notAllowed: e.target.value },
-                                })
-                              }
-                              placeholder="Not allowed persons"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <p>
-                              <span className="text-muted-foreground">Approved pick-up persons:</span>{" "}
-                              {selectedChild.safety.allowed}
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">NOT allowed:</span>{" "}
-                              {selectedChild.safety.notAllowed}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-display font-bold mb-3">
-                        Emergency Contacts
-                      </h3>
-                      <div className="space-y-2 text-sm">
-                        {editMode ? (
-                          <>
-                            <Input
-                              value={selectedChild.emergency.one}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  emergency: { ...selectedChild.emergency, one: e.target.value },
-                                })
-                              }
-                              placeholder="Emergency contact 1"
-                              className="mb-1"
-                            />
-                            <Input
-                              value={selectedChild.emergency.two}
-                              onChange={(e) =>
-                                setSelectedChild({
-                                  ...selectedChild,
-                                  emergency: { ...selectedChild.emergency, two: e.target.value },
-                                })
-                              }
-                              placeholder="Emergency contact 2"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <p>
-                              <span className="text-muted-foreground">Emergency 1:</span>{" "}
-                              {selectedChild.emergency.one}
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">Emergency 2:</span>{" "}
-                              {selectedChild.emergency.two}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Documents */}
-                  <div>
-                    <h3 className="font-display font-bold mb-3">
-                      Child Documents
-                    </h3>
-
-                    {/* Dropdowns + Export */}
-                    <div className="flex flex-col md:flex-row gap-4 mb-4 items-center">
-                      {/* Main Category */}
-                      <select
-                        aria-label="Document Category"
-                        value={selectedCategory}
-                        onChange={(e) => {
-                          setSelectedCategory(e.target.value);
-                          setSelectedSubcategory(""); 
-                        }}
-                        className="p-2 rounded-lg border bg-cub-mint-light text-sm"
-                      >
-                        <option value="">Select Category</option>
-                        {Object.keys(categories).map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-
-                      {/* Subcategory */}
-                      <select
-                        aria-label="Document Subcategory"
-                        value={selectedSubcategory}
-                        onChange={(e) => setSelectedSubcategory(e.target.value)}
-                        disabled={!selectedCategory}
-                        className="p-2 rounded-lg border bg-cub-mint-light text-sm"
-                      >
-                        <option value="">Select Subcategory</option>
-                        {selectedCategory &&
-                          categories[selectedCategory].map((sub) => (
-                            <option key={sub} value={sub}>{sub}</option>
-                          ))
-                        }
-                      </select>
-
-                      {/* Upload / Export conditional */}
-                      {editMode ? (
-                        <label className="flex items-center gap-2 px-4 py-2 bg-cub-mint-light rounded-lg cursor-pointer text-sm">
-                          <Upload className="w-4 h-4 text-primary" />
-                          <span>
-                            {uploadedFiles.filter(
-                              f => f.category === selectedCategory && f.subcategory === selectedSubcategory
-                            ).length > 0
-                              ? `${uploadedFiles.filter(
-                                  f => f.category === selectedCategory && f.subcategory === selectedSubcategory
-                                ).length} file(s) uploaded`
-                              : "Upload files"}
-                          </span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            multiple
-                            onChange={(e) => handleFileUpload(e.target.files)}
-                          />
-
-                        </label>
-                      ) : (
-                        <Button
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm"
-                          disabled={filteredFiles.length === 0}
-                          onClick={() => downloadFiles(filteredFiles)}
+                      <div className="flex justify-between items-start mb-4">
+                        <h2 className="font-display font-bold text-xl">
+                          {selectedChild.name} ({selectedChild.nickname})
+                        </h2>
+                        <button
+                          className="p-2 rounded-full hover:bg-card/50"
+                          onClick={() => setEditMode(!editMode)}
+                          title={editMode ? "View Mode" : "Edit Mode"}
                         >
-                          <Download className="w-4 h-4" /> Download
-                        </Button>
-                      )}
+                          <Edit3 className="w-5 h-5 text-primary" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">DOB:</span>{" "}
+                          {editMode ? (
+                            <Input
+                              value={`DOB: ${selectedChild.dob}`}
+                              onChange={(e) =>
+                                setSelectedChild({ ...selectedChild, dob: e.target.value })
+                              }
+                            />
+                          ) : (
+                            selectedChild.dob
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">ID:</span>{" "}
+                          {editMode ? (
+                            <Input
+                              value={`ID: ${selectedChild.idNo}`}
+                              onChange={(e) =>
+                                setSelectedChild({ ...selectedChild, idNo: e.target.value })
+                              }
+                            />
+                          ) : (
+                            selectedChild.idNo
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {editMode ? (
+                          <Input
+                            value={selectedChild.address}
+                            onChange={(e) =>
+                              setSelectedChild({ ...selectedChild, address: e.target.value })
+                            }
+                          />
+                        ) : (
+                          selectedChild.address
+                        )}
+                      </p>
                     </div>
 
-                    {/* Display uploaded files */}
-                    <div className="space-y-2">
-                      {editMode ? (
-                        <>
+                    {/* Guardian Info */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {selectedChild.guardians.map((g, idx) => (
+                        <div
+                          key={idx}
+                          className="p-4 bg-cub-mint-light rounded-2xl"
+                        >
+                          <p className="font-display font-bold mb-2">
+                            Guardian {idx + 1}
+                          </p>
 
-                          {/* Show files already uploaded */}
-                          {uploadedFiles
-                            .filter(
-                              (f) =>
-                                (!selectedCategory || f.category === selectedCategory) &&
-                                (!selectedSubcategory || f.subcategory === selectedSubcategory)
-                            )
-                            .map((file, idx) => (
-                              <div
-                                key={idx}
-                                className="p-2 bg-cub-mint-light rounded-xl flex items-center gap-2 text-xs"
-                              >
-                                <FileText className="w-4 h-4 text-primary" />
-                                <span className="flex-1">{file.category} → {file.subcategory}: {file.file.name}</span>
-                              </div>
+                          {editMode ? (
+                            <>
+                              <Input
+                                value={g.name}
+                                onChange={(e) => {
+                                  const newGuardians = [...selectedChild.guardians];
+                                  newGuardians[idx].name = e.target.value;
+                                  setSelectedChild({ ...selectedChild, guardians: newGuardians });
+                                }}
+                                placeholder="Name"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={g.cell}
+                                onChange={(e) => {
+                                  const newGuardians = [...selectedChild.guardians];
+                                  newGuardians[idx].cell = e.target.value;
+                                  setSelectedChild({ ...selectedChild, guardians: newGuardians });
+                                }}
+                                placeholder="Cell"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={g.work}
+                                onChange={(e) => {
+                                  const newGuardians = [...selectedChild.guardians];
+                                  newGuardians[idx].work = e.target.value;
+                                  setSelectedChild({ ...selectedChild, guardians: newGuardians });
+                                }}
+                                placeholder="Work"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-muted-foreground">{g.name}</p>
+                              <p className="text-sm text-muted-foreground">Cell: {g.cell}</p>
+                              <p className="text-sm text-muted-foreground">Work: {g.work}</p>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Sections Grid */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <h3 className="font-display font-bold mb-3">Legal</h3>
+                        <div className="space-y-2 text-sm">
+                          {editMode ? (
+                            <>
+                              <Input
+                                value={selectedChild.legal.custody}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    legal: { ...selectedChild.legal, custody: e.target.value },
+                                  })
+                                }
+                                placeholder="Custody"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={selectedChild.legal.courtRef}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    legal: { ...selectedChild.legal, courtRef: e.target.value },
+                                  })
+                                }
+                                placeholder="Court order ref"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={selectedChild.legal.validUntil}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    legal: { ...selectedChild.legal, validUntil: e.target.value },
+                                  })
+                                }
+                                placeholder="Valid until"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={selectedChild.legal.restricted}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    legal: { ...selectedChild.legal, restricted: e.target.value },
+                                  })
+                                }
+                                placeholder="Names legally restricted"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <table className="legal-table">
+                                <tbody>
+                                  <tr>
+                                    <td className="legal-label">Custody Arrangement</td>
+                                    <td>{selectedChild.legal.custody}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="legal-label">Court Reference Number</td>
+                                    <td>{selectedChild.legal.courtRef}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="legal-label">Valid Until</td>
+                                    <td>{selectedChild.legal.validUntil}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="legal-label">Legally Restricted Persons</td>
+                                    <td>{selectedChild.legal.restricted}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <p>
+                                <span className="text-muted-foreground">Valid until:</span>{" "}
+                                {selectedChild.legal.validUntil}
+                              </p>
+                              <p>
+                                <span className="text-muted-foreground">Names legally restricted:</span>{" "}
+                                {selectedChild.legal.restricted}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="font-display font-bold mb-3">Medical</h3>
+                        <div className="space-y-2 text-sm">
+                          {editMode ? (
+                            <>
+                              <Input
+                                value={selectedChild.medical.blood}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    medical: { ...selectedChild.medical, blood: e.target.value },
+                                  })
+                                }
+                                placeholder="Blood type"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={selectedChild.medical.allergies}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    medical: { ...selectedChild.medical, allergies: e.target.value },
+                                  })
+                                }
+                                placeholder="Allergies"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={selectedChild.medical.medication}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    medical: { ...selectedChild.medical, medication: e.target.value },
+                                  })
+                                }
+                                placeholder="Medication"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={selectedChild.medical.doctor}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    medical: { ...selectedChild.medical, doctor: e.target.value },
+                                  })
+                                }
+                                placeholder="Doctor contact"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <p>
+                                <span className="text-muted-foreground">Blood type:</span>{" "}
+                                {selectedChild.medical.blood}
+                              </p>
+                              <p>
+                                <span className="text-muted-foreground">Allergies:</span>{" "}
+                                {selectedChild.medical.allergies}
+                              </p>
+                              <p>
+                                <span className="text-muted-foreground">Medication:</span>{" "}
+                                {selectedChild.medical.medication}
+                              </p>
+                              <p>
+                                <span className="text-muted-foreground">Doctor contact:</span>{" "}
+                                {selectedChild.medical.doctor}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="font-display font-bold mb-3">
+                          Safety & Pick-up
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          {editMode ? (
+                            <>
+                              <Input
+                                value={selectedChild.safety.allowed}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    safety: { ...selectedChild.safety, allowed: e.target.value },
+                                  })
+                                }
+                                placeholder="Approved pick-up persons"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={selectedChild.safety.notAllowed}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    safety: { ...selectedChild.safety, notAllowed: e.target.value },
+                                  })
+                                }
+                                placeholder="Not allowed persons"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <p>
+                                <span className="text-muted-foreground">Approved pick-up persons:</span>{" "}
+                                {selectedChild.safety.allowed}
+                              </p>
+                              <p>
+                                <span className="text-muted-foreground">NOT allowed:</span>{" "}
+                                {selectedChild.safety.notAllowed}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="font-display font-bold mb-3">
+                          Emergency Contacts
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          {editMode ? (
+                            <>
+                              <Input
+                                value={selectedChild.emergency.one}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    emergency: { ...selectedChild.emergency, one: e.target.value },
+                                  })
+                                }
+                                placeholder="Emergency contact 1"
+                                className="mb-1"
+                              />
+                              <Input
+                                value={selectedChild.emergency.two}
+                                onChange={(e) =>
+                                  setSelectedChild({
+                                    ...selectedChild,
+                                    emergency: { ...selectedChild.emergency, two: e.target.value },
+                                  })
+                                }
+                                placeholder="Emergency contact 2"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <p>
+                                <span className="text-muted-foreground">Emergency 1:</span>{" "}
+                                {selectedChild.emergency.one}
+                              </p>
+                              <p>
+                                <span className="text-muted-foreground">Emergency 2:</span>{" "}
+                                {selectedChild.emergency.two}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Documents */}
+                    <div>
+                      <h3 className="font-display font-bold mb-3">
+                        Child Documents
+                      </h3>
+
+                      {/* Dropdowns + Export */}
+                      {editMode && (
+                        <div className="flex flex-col md:flex-row gap-4 mb-4 items-center">
+                          {/* Main Category */}
+                          <select
+                            aria-label="Document Category"
+                            value={selectedCategory}
+                            onChange={(e) => {
+                              setSelectedCategory(e.target.value);
+                              setSelectedSubcategory("");
+                            }}
+                            className="p-2 rounded-lg border bg-cub-mint-light text-sm"
+                          >
+                            <option value="">Select Category</option>
+                            {Object.keys(categories).map((cat) => (
+                              <option key={cat} value={cat}>{cat}</option>
                             ))}
-                        </>
-                      ) : (
-                        <>
-                          {uploadedFiles
-                            .filter(
-                              (f) =>
-                                (!selectedCategory || f.category === selectedCategory) &&
-                                (!selectedSubcategory || f.subcategory === selectedSubcategory)
-                            )
-                            .map((file, idx) => (
+                          </select>
+
+                          {/* Subcategory */}
+                          <select
+                            aria-label="Document Subcategory"
+                            value={selectedSubcategory}
+                            onChange={(e) => setSelectedSubcategory(e.target.value)}
+                            disabled={!selectedCategory}
+                            className="p-2 rounded-lg border bg-cub-mint-light text-sm"
+                          >
+                            <option value="">Select Subcategory</option>
+                            {selectedCategory &&
+                              categories[selectedCategory].map((sub) => (
+                                <option key={sub} value={sub}>{sub}</option>
+                              ))
+                            }
+                          </select>
+
+                          {/* Upload */}
+                          <label className="flex items-center gap-2 px-4 py-2 bg-cub-mint-light rounded-lg cursor-pointer text-sm">
+                            <Upload className="w-4 h-4 text-primary" />
+                            <span>Upload files</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              multiple
+                              onChange={(e) => handleFileUpload(e.target.files)}
+                            />
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Display uploaded files */}
+                      <div className="space-y-2">
+                        {editMode ? (
+                          <>
+
+                            {/* Show files already uploaded */}
+                            {uploadedFiles
+                              .filter(
+                                (f) =>
+                                  (!selectedCategory || f.category === selectedCategory) &&
+                                  (!selectedSubcategory || f.subcategory === selectedSubcategory)
+                              )
+                              .map((file, idx) => (
+                                <div
+                                  key={idx}
+                                  className="p-2 bg-cub-mint-light rounded-xl flex items-center gap-2 text-xs"
+                                >
+                                  <FileText className="w-4 h-4 text-primary" />
+                                  <span className="flex-1">{file.category} → {file.subcategory}: {file.file.name}</span>
+                                </div>
+                              ))}
+                          </>
+                        ) : (
+                          <>
+                            {uploadedFiles.map((file, idx) => (
                               <div
                                 key={idx}
                                 className="p-2 bg-cub-mint-light rounded-xl flex items-center gap-2 text-xs"
                               >
                                 <FileText className="w-4 h-4 text-primary" />
-                                <span className="flex-1">{file.category} → {file.subcategory}: {file.file.name}</span>
+
+                                <span className="flex-1">
+                                  <span className="font-semibold">{file.category}</span>
+                                  {" → "}
+                                  {file.subcategory}: {file.file.name}
+                                </span>
+
                                 <button
                                   className="p-1 rounded hover:bg-card/50"
                                   onClick={() => {
@@ -668,17 +785,38 @@ const Children = () => {
                                 </button>
                               </div>
                             ))}
-                          {uploadedFiles.length === 0 && (
-                            <p className="text-xs text-muted-foreground">No documents uploaded.</p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
 
-                    <Button className="w-full rounded-full">
+                            {uploadedFiles.length === 0 && (
+                              <p className="text-xs text-muted-foreground">No documents uploaded.</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <p style={{ marginTop: "40px", fontSize: "10px", borderTop: "1px solid #000", paddingTop: "8px" }}>
+                      This record reflects information provided by the legal guardian(s) at the time
+                      of generation and is intended for official reference only.
+                    </p>
+
+                  </div>
+                  {editMode ? (
+                    <Button
+                      className="w-full rounded-full no-print"
+                      onClick={() => {
+                        // TODO: persist changes
+                        setEditMode(false);
+                      }}
+                    >
+                      Save Changes
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full rounded-full no-print"
+                      onClick={() => window.print()}
+                    >
                       Export to PDF
                     </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -690,3 +828,4 @@ const Children = () => {
 };
 
 export default Children;
+

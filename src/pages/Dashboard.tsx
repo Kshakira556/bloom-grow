@@ -1,6 +1,12 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Link } from "react-router-dom";
 import { Lock, Car, ClipboardList, Star, Bookmark } from "lucide-react";
+import { mockEvents, mockPlans } from "@/lib/mocks/visits";
+import { mockJournalEntries } from "@/types/journal";
+
+
+const remainingVisitsCount = mockEvents.length;
+const journalEntriesCount = mockJournalEntries.length;
 
 const quickLinks = [
   {
@@ -13,7 +19,7 @@ const quickLinks = [
   },
   {
     icon: Car,
-    number: 18,
+    number: remainingVisitsCount,
     href: "/visits",
     description: "takes you to the visits page",
     bgColor: "bg-cub-green",
@@ -21,7 +27,7 @@ const quickLinks = [
   },
   {
     icon: ClipboardList,
-    number: 6,
+    number: mockPlans.length,
     href: "/visits",
     description: "takes you to your list of plans",
     bgColor: "bg-cub-mint",
@@ -29,7 +35,7 @@ const quickLinks = [
   },
   {
     icon: Star,
-    number: 2,
+    number: journalEntriesCount,
     href: "/journal",
     description: "takes you to the journal page",
     bgColor: "bg-cub-teal-light",
@@ -41,10 +47,14 @@ const unreadMessages = [
   {
     message: "Please remember to fetch her from school today",
     time: "12:02",
+    href: "/messages",
+    description: "Unread Messages"
   },
   {
     message: "I found her forms in the cupboard",
     time: "12:00",
+    href: "/messages",
+    description: "Unread Messages"
   },
 ];
 
@@ -72,14 +82,31 @@ export default function Dashboard() {
                 <Link
                   key={link.label || link.number}
                   to={link.href}
-                  className={`${link.bgColor} rounded-3xl p-6 flex flex-col items-center justify-center aspect-square hover:opacity-90 transition-opacity shadow-sm`}
+                  className={`group relative ${link.bgColor} rounded-3xl p-6 flex flex-col items-center justify-center aspect-square shadow-sm transition-all`}
                 >
-                  <Icon className={`w-12 h-12 ${link.iconColor} mb-2`} />
+                  <Icon
+                    className={`w-12 h-12 ${link.iconColor} mb-2 transition-transform group-hover:scale-110`}
+                  />
+
                   {link.number !== undefined && (
-                    <span className={`text-3xl font-display font-bold ${link.iconColor}`}>
+                    <span
+                      className={`text-3xl font-display font-bold ${link.iconColor} transition-opacity group-hover:opacity-20`}
+                    >
                       {link.number}
                     </span>
                   )}
+
+                  {/* Hover Label moved down towards bottom */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center opacity-0 translate-y-2 transition-all group-hover:opacity-100 group-hover:translate-y-0">
+                    {link.label && (
+                      <p className="font-display font-bold text-base text-primary-foreground">
+                        {link.label}
+                      </p>
+                    )}
+                    <p className="text-xs text-primary-foreground/80 mt-1 px-2">
+                      {link.description}
+                    </p>
+                  </div>
                 </Link>
               );
             })}
@@ -97,6 +124,7 @@ export default function Dashboard() {
 
             {/* Unread Messages / Last Message Preview */}
             <div className="bg-card rounded-3xl p-6 shadow-sm">
+              <Link to="/messages">
               <h2 className="font-display font-bold text-lg mb-4">Unread Messages</h2>
               <div className="space-y-3">
                 {unreadMessages.map((msg, idx) => (
@@ -106,6 +134,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
+              </Link>
             </div>
           </div>
         </div>

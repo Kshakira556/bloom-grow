@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { JournalEntry, mockJournalEntries } from "@/types/journal";
 
 const moods = ["😊", "😢", "😴", "🤒", "😤", "🥰"];
 
@@ -12,18 +13,8 @@ const Journal = () => {
   const [entryTitle, setEntryTitle] = useState("");
   const [entryText, setEntryText] = useState(""); 
   const [entryImage, setEntryImage] = useState<string | null>(null);
-
-  const [entries, setEntries] = useState<
-    { title?: string; text: string; mood: string; image: string | null; type: "all" | "received" | "sent" }[]
-  >([
-    { title: "Morning", text: "Morning walk with the dog", mood: "😊", image: null, type: "all" },
-    { title: "Postcard", text: "Sent a postcard to Grandma", mood: "🥰", image: null, type: "all" },
-    { title: "Book Reading", text: "Read a book", mood: "😴", image: null, type: "received" },
-    { title: "Notes with friends", text: "Shared notes with friend", mood: "😢", image: null, type: "sent" },
-  ]);
-
+  const [entries, setEntries] = useState<JournalEntry[]>(mockJournalEntries);
   const [selectedEntryIndex, setSelectedEntryIndex] = useState<number | null>(null);
-
   const maxChars = 2000;
   const [viewMode, setViewMode] = useState<"all" | "received" | "sent">("all");
 

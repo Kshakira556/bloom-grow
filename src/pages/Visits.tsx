@@ -197,81 +197,117 @@ const Visits = () => {
 
                   {/* Month Grid */}
                   <div className="grid grid-cols-7 min-h-[300px]">
-                    {[...Array(7)].map((_, i) => {
-                      const dayEvents = visibleEvents.filter(
-                        (event) => event.day === i
-                      );
+                    {(() => {
+                      if (!activePlan) return null;
 
-                      return (
-                        <div
-                          key={i}
-                          className="border-r border-b last:border-r-0 p-2 min-h-[100px]"
-                        >
-                          <span className="text-sm text-muted-foreground">{i + 3}</span>
+                      const today = new Date();
+                      const year = today.getFullYear();
+                      const month = today.getMonth(); // current month
+                      const firstDay = new Date(year, month, 1).getDay(); // 0=Sun, 1=Mon
+                      const lastDate = new Date(year, month + 1, 0).getDate();
 
-                          <div className="mt-2 space-y-1">
-                            {dayEvents.map((event) => (
-                              <button
-                                key={event.id}
-                                onClick={() => setSelectedEvent(event)}
-                                className={`block w-full text-left text-xs px-3 py-1 rounded-full ${
-                                  event.type === "mine"
-                                    ? "bg-cub-blue text-primary-foreground"
-                                    : event.type === "theirs"
-                                    ? "bg-cub-green text-primary-foreground"
-                                    : "bg-gray-400 text-white"
-                                }`}
-                              >
-                                {event.title}
-                              </button>
-                            ))}
+                      // Offset for Monday as first day
+                      const offset = (firstDay + 6) % 7;
+
+                      const daysArray = Array.from({ length: offset + lastDate }, (_, i) => {
+                        const dayNumber = i - offset + 1;
+                        return dayNumber > 0 ? dayNumber : null;
+                      });
+
+                      return daysArray.map((dayNumber, i) => {
+                        const dayEvents = visibleEvents.filter(
+                          (event) => new Date(event.start_time).getDate() === dayNumber
+                        );
+
+                        return (
+                          <div
+                            key={i}
+                            className="border-r border-b last:border-r-0 p-2 min-h-[100px]"
+                          >
+                            {dayNumber && (
+                              <>
+                                <span className="text-sm text-muted-foreground">{dayNumber}</span>
+
+                                <div className="mt-2 space-y-1">
+                                  {dayEvents.map((event) => (
+                                    <button
+                                      key={event.id}
+                                      onClick={() => setSelectedEvent(event)}
+                                      className={`block w-full text-left text-xs px-3 py-1 rounded-full ${
+                                        event.type === "mine"
+                                          ? "bg-cub-blue text-primary-foreground"
+                                          : event.type === "theirs"
+                                          ? "bg-cub-green text-primary-foreground"
+                                          : "bg-gray-400 text-white"
+                                      }`}
+                                    >
+                                      {event.title}
+                                    </button>
+                                  ))}
+                                </div>
+                              </>
+                            )}
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               )}
 
               {viewMode === "Week" && (
                 <div className="border rounded-2xl divide-y">
-                  {daysOfWeek.map((day, i) => {
-                    const dayEvents = visibleEvents.filter(
-                      (event) => event.day === i
-                    );
+                  {(() => {
+                    const startOfWeek = (() => {
+                      const today = new Date();
+                      const day = today.getDay(); // 0 = Sun
+                      const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+                      return new Date(today.setDate(diff));
+                    })();
 
-                    return (
-                      <div key={day} className="p-4">
-                        <h3 className="font-display font-bold text-primary mb-2">
-                          {day}
-                        </h3>
+                    return daysOfWeek.map((dayName, i) => {
+                      const currentDay = new Date(startOfWeek);
+                      currentDay.setDate(startOfWeek.getDate() + i);
 
-                        {dayEvents.length === 0 ? (
-                          <span className="text-sm text-muted-foreground">
-                            No events
-                          </span>
-                        ) : (
-                          <div className="space-y-2">
-                            {dayEvents.map((event) => (
-                              <button
-                                key={event.id}
-                                onClick={() => setSelectedEvent(event)}
-                                className={`w-full text-left px-4 py-2 rounded-xl text-sm ${
-                                  event.type === "mine"
-                                    ? "bg-cub-blue text-primary-foreground"
-                                    : event.type === "theirs"
-                                    ? "bg-cub-green text-primary-foreground"
-                                    : "bg-gray-400 text-white"
-                                }`}
-                              >
-                                {event.title}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                      const dayEvents = visibleEvents.filter(
+                        (event) =>
+                          new Date(event.start_time).toDateString() ===
+                          currentDay.toDateString()
+                      );
+
+                      return (
+                        <div key={i} className="p-4">
+                          <h3 className="font-display font-bold text-primary mb-1">
+                            {dayName} <span className="text-sm text-muted-foreground">{currentDay.getDate()}</span>
+                          </h3>
+
+                          {dayEvents.length === 0 ? (
+                            <span className="text-sm text-muted-foreground">
+                              No events
+                            </span>
+                          ) : (
+                            <div className="space-y-2">
+                              {dayEvents.map((event) => (
+                                <button
+                                  key={event.id}
+                                  onClick={() => setSelectedEvent(event)}
+                                  className={`w-full text-left px-4 py-2 rounded-xl text-sm ${
+                                    event.type === "mine"
+                                      ? "bg-cub-blue text-primary-foreground"
+                                      : event.type === "theirs"
+                                      ? "bg-cub-green text-primary-foreground"
+                                      : "bg-gray-400 text-white"
+                                  }`}
+                                >
+                                  {event.title}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
 

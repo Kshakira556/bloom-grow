@@ -3,34 +3,12 @@ import { cn } from "@/lib/utils";
 import { Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-
-// CUB Bear Logo Component
-function CubLogo({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" className={className} fill="none">
-      <circle cx="24" cy="26" r="18" fill="hsl(145, 50%, 75%)" />
-      <circle cx="10" cy="14" r="8" fill="hsl(145, 50%, 75%)" />
-      <circle cx="10" cy="14" r="5" fill="hsl(145, 45%, 65%)" />
-      <circle cx="38" cy="14" r="8" fill="hsl(145, 50%, 75%)" />
-      <circle cx="38" cy="14" r="5" fill="hsl(145, 45%, 65%)" />
-      <circle cx="18" cy="24" r="2.5" fill="hsl(170, 45%, 28%)" />
-      <circle cx="30" cy="24" r="2.5" fill="hsl(170, 45%, 28%)" />
-      <ellipse cx="24" cy="30" rx="3" ry="2" fill="hsl(170, 45%, 28%)" />
-      <path
-        d="M21 33 Q24 36 27 33"
-        stroke="hsl(170, 45%, 28%)"
-        strokeWidth="1.5"
-        fill="none"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+import CubLogoPng from "@/assets/images/cub logo.png";
 
 export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth(); // ✅ inside component
+  const { isAuthenticated, user, logout } = useAuth(); 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Add Moderator link if user is a mediator
@@ -56,11 +34,15 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full">
+    <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <CubLogo className="w-10 h-10" />
+          <img
+            src={CubLogoPng}
+            alt="CUB Logo"
+            className="w-12 h-12 object-contain"
+          />
         </Link>
 
         {/* Desktop Navigation */}

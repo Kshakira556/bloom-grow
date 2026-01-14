@@ -1,5 +1,8 @@
 import { http } from "./http";
 
+// --------------------
+// User/Auth
+// --------------------
 export type UserRole = "parent" | "mediator" | "admin";
 
 export interface SafeUser {
@@ -20,6 +23,23 @@ type LoginResponse = {
   token: string;
 };
 
+type RegisterPayload = {
+  full_name: string;
+  email: string;
+  password: string;
+};
+
+type RegisterResponse = {
+  user: SafeUser;
+  token: string;
+};
+
+export const register = async (
+  payload: RegisterPayload
+): Promise<RegisterResponse> => {
+  return http<RegisterResponse>("/users/register", "POST", payload);
+};
+
 export const login = async (
   email: string,
   password: string
@@ -35,4 +55,108 @@ export const getUsers = async (): Promise<SafeUser[]> => {
 export const getModerators = async (): Promise<Moderator[]> => {
   const res = await http<{ moderators: Moderator[] }>("/admin/moderators", "GET");
   return res.moderators;
+};
+
+// --------------------
+// Plans
+// --------------------
+export interface Plan {
+  id: string;
+  title: string;
+}
+
+export interface PlanInvitePayload {
+  planId: number;
+  email: string;
+}
+
+export interface PlanInvite {
+  id: string;
+  plan_id: string;
+  email: string;
+  status: "pending" | "accepted" | "declined";
+  created_at: string;
+}
+
+export interface FullPlan extends Plan {
+  description: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  created_by: string;
+  created_at: string;
+  invites: PlanInvite[];
+}
+
+export async function getPlans(): Promise<{ plans: Plan[] }> {
+  try {
+    return await http<{ plans: Plan[] }>("/plans", "GET"); 
+  } catch (err) {
+    console.error("Failed to fetch plans:", err);
+    return { plans: [] }; 
+  }
+}
+
+export const createPlan = async (name: string): Promise<Plan> => {
+  return http<Plan>("/plans", "POST", { name });
+};
+
+export const getPlanById = async (id: string): Promise<{ plan: FullPlan }> => {
+  return http<{ plan: FullPlan }>(`/plans/${id}`, "GET");
+};
+
+export const inviteToPlan = async (payload: PlanInvitePayload) => {
+  return http("/plans/invite", "POST", payload);
+};
+
+export const acceptPlanInvite = async (planId: number) => {
+  return http("/plans/accept", "POST", { planId });
+};
+
+// --------------------
+// Visits
+// --------------------
+export type VisitType = "mine" | "theirs" | "deleted";
+
+export interface ApiVisit {
+  id: string;
+  plan_id: string;
+  child_id: string;
+  parent_id: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  notes: string;
+  status: "scheduled" | "completed" | "cancelled";
+}
+
+export async function getVisitsByPlan(
+  planId: string
+): Promise<{ success: boolean; data: ApiVisit[] }> {
+  return http(`/visits/plan/${planId}`, "GET");
+}
+
+export const createVisit = async (payload: {
+  plan_id: string;
+  start_time: string;
+  end_time: string;
+}) => {
+  return http<ApiVisit>("/visits", "POST", payload);
+};
+
+export const updateVisit = async (
+  id: string,
+  payload: Partial<{
+    start_time: string;
+    end_time: string;
+    location: string;
+    notes: string;
+    status: string;
+  }>
+) => {
+  return http<ApiVisit>(`/visits/${id}`, "PUT", payload);
+};
+
+export const deleteVisit = async (id: string) => {
+  return http<void>(`/visits/${id}`, "DELETE");
 };

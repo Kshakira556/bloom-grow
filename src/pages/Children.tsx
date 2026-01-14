@@ -171,17 +171,19 @@ const Children = () => {
         @media print {
           @page {
             size: A4;
-            margin: 12mm 14mm;
+            margin: 10mm 12mm;
           }
 
           body {
             font-family: "Times New Roman", Georgia, serif;
             color: #000;
             background: #fff;
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
-          body * {
-            visibility: hidden;
+          header {
+            display: none !important;
           }
 
           #print-area,
@@ -192,9 +194,23 @@ const Children = () => {
           #print-area {
             position: relative;
             width: 100%;
+            margin: 0 !important;
+            padding: 0 !important;
+            top: 0 !important;
           }
 
-          /* Remove app visuals */
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
+            min-height: auto !important;
+          }
+
+          .container {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
           .rounded-2xl,
           .rounded-3xl,
           .shadow-sm,
@@ -206,28 +222,25 @@ const Children = () => {
             border-radius: 0 !important;
           }
 
-          /* Section headings */
           h2, h3 {
             border-bottom: 1px solid #000;
             padding-bottom: 4px;
-            margin-top: 24px;
-            margin-bottom: 12px;
+            margin-top: 20px;
+            margin-bottom: 10px;
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 14px;
+            font-size: 13px;
           }
 
-          /* Text */
           p, span, div {
             font-size: 12px;
-            line-height: 1.5;
+            line-height: 1.45;
           }
 
-          /* Tables for legal look */
           .legal-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
+            margin-top: 6px;
           }
 
           .legal-table td {
@@ -245,34 +258,20 @@ const Children = () => {
             display: none !important;
           }
 
-          @media print {
-            main {
-              padding: 0 !important;
-              margin: 0 !important;
-            }
-
-            .container {
-              max-width: 100% !important;
-              padding: 0 !important;
-              margin: 0 !important;
-            }
-          }
-          @media print {
-            .card,
-            .card-content {
-              padding: 0 !important;
-              margin: 0 !important;
-            }
-
-            .p-6,
-            .py-8,
-            .px-4 {
-              padding: 0 !important;
-            }
+          .mt-6,
+          .mt-8,
+          .mb-6,
+          .mb-8,
+          .py-6,
+          .py-8,
+          .p-6 {
+            margin: 0 !important;
+            padding: 0 !important;
           }
         }
         `}
         </style>
+
 
       <Navbar />
 

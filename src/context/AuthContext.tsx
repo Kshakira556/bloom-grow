@@ -1,11 +1,16 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { login as loginApi, SafeUser } from "@/lib/api";
+import { login as loginApi, register as registerApi, SafeUser } from "@/lib/api";
 import { setAuthToken } from "@/lib/http";
 
 type AuthContextValue = {
   user: SafeUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<SafeUser>;
+  register: (data: {
+    full_name: string;
+    email: string;
+    password: string;
+  }) => Promise<SafeUser>;
   logout: () => void;
 };
 
@@ -29,6 +34,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return user; 
   }, []);
 
+  const register = useCallback(
+  async (data: { full_name: string; email: string; password: string }) => {
+    const { user, token } = await registerApi(data);
+
+    setAuthToken(token);
+    setUser(user);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    return user;
+  },
+  []
+);
+
   const logout = useCallback(() => {
     setAuthToken(null);
     setUser(null);
@@ -41,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user,
         isAuthenticated: Boolean(user),
         login,
+        register,
         logout,
       }}
     >

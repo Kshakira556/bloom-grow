@@ -2,52 +2,73 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Plus, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import * as api from "@/lib/api";
+import type { VisitEvent } from "@/types/visits";
+import type { ApiVisit } from "@/lib/api";
 
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
-
-type VisitEvent = {
-  id: number;
-  title: string;
-  day: number; // 0–6 (Mon–Sun)
-  type: "mine" | "theirs" | "deleted";
-  planId: number;
+const mapVisitsToEvents = (rows: ApiVisit[]): VisitEvent[] => {
+  return rows.map((v) => ({
+    id: v.id,
+    title: v.notes || "Visit",
+    day: (new Date(v.start_time).getDay() + 6) % 7,
+    type: "mine", 
+    planId: v.plan_id,
+    start_time: v.start_time,
+    end_time: v.end_time,
+    location: v.location,
+    status: v.status,
+  }));
 };
-
-const mockEvents: VisitEvent[] = [
-  // Weekday / Weekend Split
-  { id: 1, title: "Pick up Sophie", day: 0, type: "mine", planId: 1 },
-  { id: 2, title: "Drop off Sophie", day: 4, type: "theirs", planId: 1 },
-
-  // Alternating Weeks
-  { id: 3, title: "Week with Mom", day: 1, type: "mine", planId: 2 },
-  { id: 4, title: "Week with Dad", day: 5, type: "theirs", planId: 2 },
-
-  // School Term Only
-  { id: 5, title: "School Pickup", day: 2, type: "mine", planId: 3 },
-];
-
-type Plan = {
-  id: number;
-  name: string;
-};
-
-const mockPlans: Plan[] = [
-  { id: 1, name: "Weekday / Weekend Split" },
-  { id: 2, name: "Alternating Weeks" },
-  { id: 3, name: "School Term Only" },
-];
 
 const Visits = () => {
   const [viewMode, setViewMode] = useState<"Month" | "Week">("Month");
   const [plansOpen, setPlansOpen] = useState(false);
-  const [activePlan, setActivePlan] = useState<Plan>(mockPlans[0]);
   const [selectedEvent, setSelectedEvent] = useState<VisitEvent | null>(null);
   const [editEvent, setEditEvent] = useState<VisitEvent | null>(null);
 
-  const visibleEvents = mockEvents.filter(
-    (event) => event.planId === activePlan.id
-  );
+  const [plans, setPlans] = useState<api.Plan[]>([]);
+  const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
+
+  const [events, setEvents] = useState<VisitEvent[]>([]);
+
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const { plans } = await api.getPlans();
+        setPlans(plans);
+
+        if (plans[0]) {
+          // Fetch full plan for the first plan
+          const { plan: fullPlan } = await api.getPlanById(plans[0].id);
+          setActivePlan(fullPlan);
+        } else {
+          setActivePlan(null);
+        }
+      } catch (err) {
+        console.error("Failed to load plans:", err);
+        alert("Unable to load plans. Please refresh or login again.");
+      }
+    };
+
+    fetchPlans();
+  }, []);
+
+  useEffect(() => {
+  if (!activePlan) return;
+
+  const fetchVisits = async () => {
+    const { data } = await api.getVisitsByPlan(activePlan.id);
+    setEvents(mapVisitsToEvents(data));
+  };
+
+  fetchVisits();
+}, [activePlan]);
+
+  // Compute visible events for calendar
+  const visibleEvents = events.filter(event => event.planId === activePlan?.id);
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -103,27 +124,58 @@ const Visits = () => {
                   className="rounded-full flex items-center gap-2"
                   onClick={() => setPlansOpen((prev) => !prev)}
                 >
-                  <span>{activePlan.name}</span>
+                  <span>{activePlan?.title || "Select Plan"}</span>
                   <Check className="w-4 h-4 text-primary" />
                 </Button>
 
-                {plansOpen && (
+                {plansOpen && Array.isArray(plans) && plans.length > 0 && (
                   <div className="absolute top-12 left-0 z-10 w-64 bg-card border rounded-2xl shadow-lg overflow-hidden">
-                    {mockPlans.map((plan) => (
+                    {plans.map((plan) => (
                       <button
                         key={plan.id}
-                        onClick={() => {
-                          setActivePlan(plan);
+                        onClick={async () => {
                           setPlansOpen(false);
+
+                          try {
+                            const { plan: fullPlan } = await api.getPlanById(plan.id);
+                            setActivePlan(fullPlan);
+                          } catch (err) {
+                            console.error("Failed to fetch full plan:", err);
+                            alert("Unable to fetch full plan details. Showing basic plan info.");
+                            setActivePlan({
+                              ...plan,
+                              description: "",
+                              start_date: "",
+                              end_date: "",
+                              status: "",
+                              created_by: "",
+                              created_at: "",
+                              invites: [],
+                            });
+                          }
                         }}
-                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted text-left"
+                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-muted text-left ${
+                          activePlan?.id === plan.id ? "bg-muted" : ""
+                        }`}
                       >
-                        <span className="text-sm">{plan.name}</span>
-                        {activePlan.id === plan.id && (
+                        <span className="text-sm">{plan.title}</span>
+                        {activePlan?.id === plan.id && (
                           <Check className="w-4 h-4 text-primary" />
                         )}
                       </button>
                     ))}
+                    {activePlan && activePlan.invites.length > 0 && (
+                      <div className="mt-2 p-2 text-sm text-muted-foreground border rounded-lg bg-card-light">
+                        <strong>Invites:</strong>
+                        <ul className="list-disc list-inside">
+                          {activePlan.invites.map((invite) => (
+                            <li key={invite.id}>
+                              {invite.email} — {invite.status}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -259,12 +311,29 @@ const Visits = () => {
                     <div className="space-y-3 text-sm">
                       <div>
                         <span className="text-muted-foreground">Plan:</span>{" "}
-                        {activePlan.name}
+                        {activePlan?.title}
                       </div>
 
                       <div>
                         <span className="text-muted-foreground">Day:</span>{" "}
                         {daysOfWeek[selectedEvent.day]}
+                      </div>
+
+                      <div>
+                        <span className="text-muted-foreground">Title / Notes:</span>{" "}
+                        {selectedEvent.title}
+                      </div>
+
+                      {selectedEvent.location && (
+                        <div>
+                          <span className="text-muted-foreground">Location:</span>{" "}
+                          {selectedEvent.location}
+                        </div>
+                      )}
+
+                      <div>
+                        <span className="text-muted-foreground">Status:</span>{" "}
+                        {selectedEvent.status}
                       </div>
 
                       <div>
@@ -338,22 +407,35 @@ const Visits = () => {
                             <option value="deleted">Deleted</option>
                           </select>
 
-
                           <Button
                             className="w-full rounded-full"
-                            onClick={() => {
-                              // Update the main visible events array
-                              const index = mockEvents.findIndex((ev) => ev.id === editEvent.id);
-                              if (index !== -1) {
-                                mockEvents[index] = { ...editEvent };
-                              }
+                            onClick={async () => {
+                              if (!editEvent) return;
 
-                              setSelectedEvent(editEvent); // update modal
-                              setEditEvent(null); // close edit modal
+                              try {
+                                await api.updateVisit(editEvent.id, {
+                                  start_time: editEvent.start_time,
+                                  end_time: editEvent.end_time,
+                                  location: editEvent.location,
+                                  notes: editEvent.title, 
+                                  status: editEvent.status,
+                                });
+
+                                // Update UI
+                                setEvents((prev) =>
+                                  prev.map((ev) => (ev.id === editEvent.id ? editEvent : ev))
+                                );
+                                setSelectedEvent(editEvent);
+                                setEditEvent(null);
+                              } catch (err) {
+                                console.error("Failed to update visit:", err);
+                                alert("Failed to update visit. Please try again.");
+                              }
                             }}
                           >
                             Save
                           </Button>
+
                         </div>
                       </div>
                     )}
@@ -365,7 +447,47 @@ const Visits = () => {
 
           {/* Add Button */}
           <div className="fixed bottom-8 right-8">
-            <Button size="lg" className="rounded-full w-14 h-14 shadow-lg">
+            <Button
+              size="lg"
+              className="rounded-full w-14 h-14 shadow-lg"
+              onClick={async () => {
+                if (!activePlan) return;
+
+                // Set start/end times
+                const start = new Date();
+                start.setHours(9, 0, 0, 0);
+
+                const end = new Date(start);
+                end.setHours(10, 0, 0, 0);
+
+                try {
+                  const created = await api.createVisit({
+                    plan_id: activePlan.id,
+                    start_time: start.toISOString(),
+                    end_time: end.toISOString(),
+                  });
+
+                  // Add to UI
+                  setEvents((prev) => [
+                    ...prev,
+                    {
+                      id: created.id,
+                      title: created.notes || "Visit",
+                      day: (new Date(created.start_time).getDay() + 6) % 7,
+                      type: "mine",
+                      planId: created.plan_id,
+                      start_time: created.start_time,
+                      end_time: created.end_time,
+                      location: created.location || "",
+                      status: created.status || "scheduled",
+                    },
+                  ]);
+                } catch (err) {
+                  console.error("Failed to create visit:", err);
+                  alert("Failed to create visit. Please try again.");
+                }
+              }}
+            >
               <Plus className="w-6 h-6" />
             </Button>
           </div>

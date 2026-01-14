@@ -7,23 +7,48 @@ import * as api from "@/lib/api";
 import type { VisitEvent } from "@/types/visits";
 import type { ApiVisit } from "@/lib/api";
 
+import { Calendar } from "react-big-calendar";
+import { dateFnsLocalizer } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import "react-big-calendar/lib/css/react-big-calendar.css";
+import { enUS } from 'date-fns/locale/en-US';
+
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
-const mapVisitsToEvents = (rows: ApiVisit[]): VisitEvent[] => {
-  return rows.map((v) => ({
+const locales = { 'en-US': enUS };
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }), 
+  getDay,
+  locales,
+});
+
+const mapToCalendarEvents = (events: VisitEvent[]) => {
+  return events.map(ev => ({
+    id: ev.id,
+    title: ev.title,
+    start: new Date(ev.start_time),
+    end: new Date(ev.end_time),
+    resource: ev, 
+  }));
+};
+
+const mapVisitsToEvents = (visits: ApiVisit[]): VisitEvent[] => {
+  return visits.map((v) => ({
     id: v.id,
     title: v.notes || "Visit",
-    day: (new Date(v.start_time).getDay() + 6) % 7,
-    type: "mine", 
+    type: "mine", // temporarily assign type until you get it from API
     planId: v.plan_id,
     start_time: v.start_time,
     end_time: v.end_time,
-    location: v.location,
-    status: v.status,
+    location: v.location || "",
+    status: v.status || "scheduled",
+    day: (new Date(v.start_time).getDay() + 6) % 7, // Monday = 0
   }));
 };
 
 const Visits = () => {
-  const [viewMode, setViewMode] = useState<"Month" | "Week">("Month");
   const [plansOpen, setPlansOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<VisitEvent | null>(null);
   const [editEvent, setEditEvent] = useState<VisitEvent | null>(null);
@@ -81,41 +106,6 @@ const Visits = () => {
 
           {/* Calendar Card */}
           <Card className="rounded-3xl overflow-hidden">
-            <CardHeader className="pb-0">
-              <div className="flex items-center justify-between">
-                {/* View Toggle */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={viewMode === "Month" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("Month")}
-                    className="rounded-full"
-                  >
-                    Month
-                  </Button>
-                  <Button
-                    variant={viewMode === "Week" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("Week")}
-                    className="rounded-full"
-                  >
-                    Week
-                  </Button>
-                </div>
-
-                {/* Month Navigation */}
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon">
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <span className="font-display font-bold">Nov 2025</span>
-                  <Button variant="ghost" size="icon">
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-
             <CardContent className="pt-4">
               {/* Legend & Plan */}
               <div className="flex items-center gap-4 mb-4 relative">
@@ -141,17 +131,8 @@ const Visits = () => {
                             setActivePlan(fullPlan);
                           } catch (err) {
                             console.error("Failed to fetch full plan:", err);
-                            alert("Unable to fetch full plan details. Showing basic plan info.");
-                            setActivePlan({
-                              ...plan,
-                              description: "",
-                              start_date: "",
-                              end_date: "",
-                              status: "",
-                              created_by: "",
-                              created_at: "",
-                              invites: [],
-                            });
+                            alert("Unable to fetch full plan details.");
+                            setActivePlan(null);
                           }
                         }}
                         className={`w-full px-4 py-3 flex items-center justify-between hover:bg-muted text-left ${
@@ -181,135 +162,25 @@ const Visits = () => {
               </div>
 
               {/* Calendar */}
-              {viewMode === "Month" && (
-                <div className="border rounded-2xl overflow-hidden">
-                  {/* Header */}
-                  <div className="grid grid-cols-7 bg-cub-mint-light">
-                    {daysOfWeek.map((day) => (
-                      <div
-                        key={day}
-                        className="text-center py-3 font-display font-bold text-primary border-r last:border-r-0"
-                      >
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Month Grid */}
-                  <div className="grid grid-cols-7 min-h-[300px]">
-                    {(() => {
-                      if (!activePlan) return null;
-
-                      const today = new Date();
-                      const year = today.getFullYear();
-                      const month = today.getMonth(); // current month
-                      const firstDay = new Date(year, month, 1).getDay(); // 0=Sun, 1=Mon
-                      const lastDate = new Date(year, month + 1, 0).getDate();
-
-                      // Offset for Monday as first day
-                      const offset = (firstDay + 6) % 7;
-
-                      const daysArray = Array.from({ length: offset + lastDate }, (_, i) => {
-                        const dayNumber = i - offset + 1;
-                        return dayNumber > 0 ? dayNumber : null;
-                      });
-
-                      return daysArray.map((dayNumber, i) => {
-                        const dayEvents = visibleEvents.filter(
-                          (event) => new Date(event.start_time).getDate() === dayNumber
-                        );
-
-                        return (
-                          <div
-                            key={i}
-                            className="border-r border-b last:border-r-0 p-2 min-h-[100px]"
-                          >
-                            {dayNumber && (
-                              <>
-                                <span className="text-sm text-muted-foreground">{dayNumber}</span>
-
-                                <div className="mt-2 space-y-1">
-                                  {dayEvents.map((event) => (
-                                    <button
-                                      key={event.id}
-                                      onClick={() => setSelectedEvent(event)}
-                                      className={`block w-full text-left text-xs px-3 py-1 rounded-full ${
-                                        event.type === "mine"
-                                          ? "bg-cub-blue text-primary-foreground"
-                                          : event.type === "theirs"
-                                          ? "bg-cub-green text-primary-foreground"
-                                          : "bg-gray-400 text-white"
-                                      }`}
-                                    >
-                                      {event.title}
-                                    </button>
-                                  ))}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {viewMode === "Week" && (
-                <div className="border rounded-2xl divide-y">
-                  {(() => {
-                    const startOfWeek = (() => {
-                      const today = new Date();
-                      const day = today.getDay(); // 0 = Sun
-                      const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Monday start
-                      return new Date(today.setDate(diff));
-                    })();
-
-                    return daysOfWeek.map((dayName, i) => {
-                      const currentDay = new Date(startOfWeek);
-                      currentDay.setDate(startOfWeek.getDate() + i);
-
-                      const dayEvents = visibleEvents.filter(
-                        (event) =>
-                          new Date(event.start_time).toDateString() ===
-                          currentDay.toDateString()
-                      );
-
-                      return (
-                        <div key={i} className="p-4">
-                          <h3 className="font-display font-bold text-primary mb-1">
-                            {dayName} <span className="text-sm text-muted-foreground">{currentDay.getDate()}</span>
-                          </h3>
-
-                          {dayEvents.length === 0 ? (
-                            <span className="text-sm text-muted-foreground">
-                              No events
-                            </span>
-                          ) : (
-                            <div className="space-y-2">
-                              {dayEvents.map((event) => (
-                                <button
-                                  key={event.id}
-                                  onClick={() => setSelectedEvent(event)}
-                                  className={`w-full text-left px-4 py-2 rounded-xl text-sm ${
-                                    event.type === "mine"
-                                      ? "bg-cub-blue text-primary-foreground"
-                                      : event.type === "theirs"
-                                      ? "bg-cub-green text-primary-foreground"
-                                      : "bg-gray-400 text-white"
-                                  }`}
-                                >
-                                  {event.title}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              )}
+              <div className="border rounded-2xl overflow-hidden p-4">
+                <Calendar
+                  localizer={localizer}
+                  events={mapToCalendarEvents(visibleEvents)}
+                  views={['month', 'week', 'day']}
+                  startAccessor="start"
+                  endAccessor="end"
+                  style={{ height: 600 }}
+                  onSelectEvent={(event) => setSelectedEvent(event.resource)}
+                  eventPropGetter={(event) => {
+                    const bgColor = event.resource.type === "mine"
+                      ? "#3b82f6"
+                      : event.resource.type === "theirs"
+                      ? "#10b981"
+                      : "#9ca3af";
+                    return { style: { backgroundColor: bgColor, color: 'white', borderRadius: '0.75rem', padding: '2px 4px', margin: '1px 0' } };
+                  }}
+                />
+              </div>
 
               {/* Legend */}
               <div className="flex items-center gap-6 mt-4 pt-4">
@@ -351,13 +222,15 @@ const Visits = () => {
                       </div>
 
                       <div>
-                        <span className="text-muted-foreground">Day:</span>{" "}
-                        {daysOfWeek[selectedEvent.day]}
-                      </div>
+                        <div>
+                          <span className="text-muted-foreground">Date:</span>{" "}
+                          {new Date(selectedEvent.start_time).toLocaleDateString()}
+                        </div>
 
-                      <div>
-                        <span className="text-muted-foreground">Title / Notes:</span>{" "}
-                        {selectedEvent.title}
+                        <div>
+                          <span className="text-muted-foreground">Title / Notes:</span>{" "}
+                          {selectedEvent.title}
+                        </div>
                       </div>
 
                       {selectedEvent.location && (
@@ -509,13 +382,13 @@ const Visits = () => {
                     {
                       id: created.id,
                       title: created.notes || "Visit",
-                      day: (new Date(created.start_time).getDay() + 6) % 7,
-                      type: "mine",
+                      type: "mine", // or dynamically if available
                       planId: created.plan_id,
                       start_time: created.start_time,
                       end_time: created.end_time,
                       location: created.location || "",
                       status: created.status || "scheduled",
+                      day: (new Date(created.start_time).getDay() + 6) % 7,
                     },
                   ]);
                 } catch (err) {

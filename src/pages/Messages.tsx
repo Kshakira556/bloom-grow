@@ -1,27 +1,45 @@
+import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/Navbar";
 import { Input } from "@/components/ui/input";
-import { Search, Send } from "lucide-react";
+import { Search, Send, Check } from "lucide-react";
 import { useState } from "react";
 import { format, isToday, isYesterday } from "date-fns";
 import jsPDF from "jspdf";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
+import { useAuth } from "@/hooks/useAuth";
+import { useMessages } from "@/hooks/useMessages";
+import { useEffect } from "react";
+import { ApiMessage } from "@/lib/api";
+import * as api from "@/lib/api";
+
+type Conversation = {
+  user_id: number;
+  plan_id: string;
+  name: string;
+  role: string;
+  topic: string;
+  caseRef: string;
+  childName: string | null;
+  lastMessage: string;
+  time: string;
+  createdAt: string;
+};
 
 const groupMessagesByDate = (messages: Message[]) => {
   const groups: Record<string, Message[]> = {};
-  messages.forEach((msg) => {
-    const date = new Date();
-    // For demonstration, assume all messages are today; replace with msg.date if available
-    const msgDate = new Date();
-    let key = format(msgDate, "yyyy-MM-dd");
 
+  messages.forEach((msg) => {
+    const msgDate = new Date(msg.createdAt);
+
+    let key = format(msgDate, "MMM dd, yyyy");
     if (isToday(msgDate)) key = "Today";
     else if (isYesterday(msgDate)) key = "Yesterday";
-    else key = format(msgDate, "MMM dd, yyyy");
 
     if (!groups[key]) groups[key] = [];
     groups[key].push(msg);
   });
+
   return groups;
 };
 
@@ -45,13 +63,16 @@ type Attachment = {
 };
 
 type Message = {
-  id: number;
+  id: string;
   sender: "me" | "them";
+  sender_id: number;      
+  receiver_id: number;    
   text: string;
   time: string;
+  createdAt: string;
   purpose: MessagePurpose;
   status?: MessageStatus;
-  attachments?: Attachment[]; 
+  attachments?: Attachment[];
 };
 
 type DraftMessage = {
@@ -60,98 +81,10 @@ type DraftMessage = {
   attachments?: Attachment[];
 };
 
-const mockMessages: Message[] = [
-  {
-    id: 1,
-    sender: "them",
-    text: "Please remember to bring her school uniform tomorrow.",
-    time: "13:56",
-    purpose: "General",
-    status: "Delivered",
-  },
-  {
-    id: 2,
-    sender: "me",
-    text: "Noted. I’ll drop it off before 8am.",
-    time: "13:59",
-    purpose: "General",
-    status: "Read",
-  },
-  {
-    id: 3,
-    sender: "them",
-    text: "Here is the doctor’s note for Sophie.",
-    time: "14:04",
-    purpose: "Medical",
-    status: "Delivered",
-    attachments: [
-      {
-        id: "att-001",
-        name: "Sophie_MedicalNote.pdf",
-        type: "Medical Note",
-        url: "/mock-files/Sophie_MedicalNote.pdf",
-      },
-    ],
-  },
-  {
-    id: 4,
-    sender: "me",
-    text: "Received. Uploading the signed consent form.",
-    time: "14:16",
-    purpose: "Legal",
-    status: "Sent",
-    attachments: [
-      {
-        id: "att-002",
-        name: "ConsentForm_Signed.pdf",
-        type: "Court Order",
-        url: "/mock-files/ConsentForm_Signed.pdf",
-      },
-    ],
-  },
-];
-
-const conversations = [
-  {
-    id: 1,
-    name: "Parent B",
-    role: "Co-Parent",
-    topic: "School Pickup Schedule",
-    caseRef: "Parenting Plan 2025",
-    childName: "Sophie",
-    lastMessage: "The message preview",
-    time: "13:56",
-    createdAt: "2026-01-07",
-  },
-  {
-    id: 2,
-    name: "Child Counselor",
-    role: "Professional",
-    topic: "Wellbeing Check-in",
-    caseRef: "Counseling Notes",
-    childName: "Sophie",
-    lastMessage: "The message preview",
-    time: "",
-    createdAt: "2026-01-05",
-  },
-  {
-    id: 3,
-    name: "Lawyer",
-    role: "Legal",
-    topic: "Consent Documentation",
-    caseRef: "Court Order #A482",
-    childName: null,
-    lastMessage: "The message preview",
-    time: "",
-    createdAt: "2026-01-03",
-  },
-];
-
 const Messages = () => {
-  const [expandedMessages, setExpandedMessages] = useState<Record<number, boolean>>({});
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
+  const [messages, setMessages] = useState<Message[]>([]);
   const [purposeFilter, setPurposeFilter] = useState<MessagePurpose | "All">("All");
-  const [selectedConversation, setSelectedConversation] = useState(conversations[0]);
   const [draft, setDraft] = useState<DraftMessage>({
     text: "",
     purpose: "General",
@@ -163,6 +96,7 @@ const Messages = () => {
   };
 
   const exportConversationPDF = () => {
+    if (!selectedConversation) return;
     const exportedMessages =
       purposeFilter === "All"
         ? messages
@@ -220,10 +154,11 @@ const Messages = () => {
       y += 4;
     });
 
-    doc.save(`conversation-${selectedConversation.id}.pdf`);
+    doc.save(`conversation-${selectedConversation.user_id}.pdf`);
   };
 
   const exportConversationDOCX = async () => {
+    if (!selectedConversation) return;
     const exportedMessages =
       purposeFilter === "All"
         ? messages
@@ -273,13 +208,169 @@ const Messages = () => {
     });
 
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `conversation-${selectedConversation.id}.docx`);
+    saveAs(blob, `conversation-${selectedConversation.user_id}.docx`);
   };
 
   const exportConversation = (format: "pdf" | "docx") => {
     if (format === "pdf") exportConversationPDF();
     else exportConversationDOCX();
   };
+
+  const { user } = useAuth();
+  const { fetchByPlan, send } = useMessages();
+
+    useEffect(() => {
+      const fetchPlans = async () => {
+        try {
+          // ✅ Destructure the returned object
+          const { plans } = await api.getPlans(); 
+          setPlans(plans);
+
+          if (plans[0]) {
+            // ✅ Destructure plan from API response
+            const { plan: fullPlan } = await api.getPlanById(plans[0].id); 
+            setActivePlan(fullPlan);
+
+            // ✅ Make sure user_id is a number
+            setSelectedConversation({
+              user_id: Number(fullPlan.created_by), // ✅ cast to number
+              plan_id: fullPlan.id,
+              name: "Co-Parent",
+              role: "Co-Parent",
+              topic: "Plan conversation",
+              caseRef: fullPlan.title,
+              childName: fullPlan?.invites[0]?.email || null,
+              lastMessage: "",
+              time: "",
+              createdAt: fullPlan.created_at,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load plans:", err);
+        }
+      };
+
+      fetchPlans();
+    }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const token = localStorage.getItem("token"); 
+    const ws = new WebSocket(
+      `ws://localhost:8000/api/messages/ws?token=${token}`
+    );
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "new_message") {
+        const msg = data.message;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: msg.id,
+            sender: msg.sender_id === user.id ? "me" : "them",
+            sender_id: Number(msg.sender_id),
+            receiver_id: Number(msg.receiver_id),
+            text: msg.content,
+            createdAt: msg.created_at, 
+            time: new Date(msg.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            purpose: "General",
+            status: "Delivered",
+            attachments: msg.attachments || [],
+          } as Message,
+        ]);
+      }
+    };
+
+    return () => ws.close();
+  }, [user]);
+
+  const [plans, setPlans] = useState<api.Plan[]>([]);
+  const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
+  const [conversations, setConversations] = useState<
+    Array<{ user_id: number; plan_id: string; name: string; role: string; topic: string; caseRef: string; childName: string | null; lastMessage: string; time: string; createdAt: string }>
+  >([]);
+
+  const [selectedConversation, setSelectedConversation] = useState<{
+    user_id: number;
+    plan_id: string;
+    name: string;
+    role: string;
+    topic: string;
+    caseRef: string;
+    childName: string | null;
+    lastMessage: string;
+    time: string;
+    createdAt: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!activePlan || !user) return;
+
+    const fetchMessages = async () => {
+      try {
+        const apiMessages = await fetchByPlan(activePlan.id);
+
+        if (apiMessages.length === 0) {
+          console.log("No messages started for this plan yet.");
+        }
+
+        const mapped: Message[] = apiMessages.map((m: ApiMessage & { attachments?: Attachment[] }) => ({
+        id: m.id,
+        sender: m.sender_id === user.id ? "me" : "them",
+        sender_id: Number(m.sender_id),       
+        receiver_id: Number(m.receiver_id),
+        text: m.content,
+        createdAt: m.created_at,
+        time: new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        purpose: "General",
+        status: m.is_seen ? "Read" : "Delivered",
+        attachments: m.attachments || [],
+      }));
+
+      setMessages(mapped);
+      
+      // Populate conversations from messages
+      const convs = mapped.reduce((acc: typeof conversations, msg) => {
+        // Determine the other user's numeric ID correctly
+        const otherUserId =
+          msg.sender === "me"
+            ? Number(msg.receiver_id)
+            : Number(msg.sender_id);
+
+        if (!acc.find(c => c.user_id === otherUserId)) {
+          acc.push({
+            user_id: otherUserId, 
+            plan_id: activePlan.id,
+            name: msg.sender === "me" ? "Co-Parent" : selectedConversation?.name || "Other",
+            role: "Co-Parent",
+            topic: "Plan conversation",
+            caseRef: activePlan.title,
+            childName: activePlan?.invites[0]?.email || null,
+            lastMessage: msg.text,
+            time: msg.time,
+            createdAt: msg.createdAt,
+          });
+        }
+        return acc;
+      }, []);
+
+      setConversations(convs);
+    } catch (err) {
+        console.error("Failed to fetch messages:", err);
+      }
+    };
+
+    fetchMessages();
+  }, [activePlan, fetchByPlan, user?.id]);
+
+  const [plansOpen, setPlansOpen] = useState(false);
+
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -295,6 +386,7 @@ const Messages = () => {
             <div className="grid md:grid-cols-12">
               {/* Sidebar */}
               <div className="md:col-span-4 border-r">
+                {/* Search Bar */}
                 <div className="p-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -305,26 +397,84 @@ const Messages = () => {
                   </div>
                 </div>
 
-                <div className="space-y-1 p-2">
-                  {conversations.map((conv) => (
-                    <button
-                      key={conv.id}
-                      onClick={() => setSelectedConversation(conv)}
-                      className={`w-full p-4 rounded-2xl text-left transition-all ${
-                        selectedConversation.id === conv.id
-                          ? "bg-cub-mint-light"
-                          : "hover:bg-secondary"
-                      }`}
-                    >
-                      <p className="font-display font-bold">{conv.name}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {conv.lastMessage}
-                      </p>
-                    </button>
-                  ))}
+                {/* Plan Selector */}
+                <div className="relative p-2">
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-full flex items-center justify-between px-4 py-2"
+                    onClick={() => setPlansOpen((prev) => !prev)}
+                  >
+                    <span>{activePlan?.title || "Select Plan"}</span>
+                    <Check className="w-4 h-4 text-primary" />
+                  </Button>
+
+                  {plansOpen && Array.isArray(plans) && plans.length > 0 && (
+                    <div className="absolute top-12 left-0 z-10 w-full bg-card border rounded-2xl shadow-lg overflow-hidden">
+                      {plans.map((plan) => (
+                        <button
+                          key={plan.id}
+                          onClick={async () => {
+                            setPlansOpen(false);
+
+                            try {
+                              const { plan: fullPlan } = await api.getPlanById(plan.id);
+                              setActivePlan(fullPlan);
+
+                              setSelectedConversation({
+                                user_id: Number(fullPlan.created_by),
+                                plan_id: fullPlan.id,
+                                name: "Co-Parent",
+                                role: "Co-Parent",
+                                topic: "Plan conversation",
+                                caseRef: fullPlan.title,
+                                childName: fullPlan?.invites[0]?.email || null,
+                                lastMessage: "",
+                                time: "",
+                                createdAt: fullPlan.created_at,
+                              });
+                            } catch (err) {
+                              console.error("Failed to fetch full plan:", err);
+                              alert("Unable to fetch full plan details.");
+                              setActivePlan(null);
+                            }
+                          }}
+                          className={`w-full px-4 py-3 flex items-center justify-between text-left hover:bg-muted ${
+                            activePlan?.id === plan.id ? "bg-muted" : ""
+                          }`}
+                        >
+                          <span className="text-sm">{plan.title}</span>
+                          {activePlan?.id === plan.id && <Check className="w-4 h-4 text-primary" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Contacts List */}
+                <div className="space-y-1 p-2 mt-2">
+                  {conversations.length === 0 ? (
+                    <p className="text-xs text-muted-foreground px-2 py-1">No contacts yet.</p>
+                  ) : (
+                    conversations.map((conv, idx) => (
+                      <button
+                        key={`${conv.user_id ?? conv.plan_id}-${idx}`} // ✅ unique string key
+                        onClick={() => setSelectedConversation(conv)}
+                        className={`w-full p-4 rounded-2xl text-left transition-all ${
+                          selectedConversation?.user_id === conv.user_id
+                            ? "bg-cub-mint-light"
+                            : "hover:bg-secondary"
+                        }`}
+                      >
+                        <p className="font-display font-bold">{conv.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {conv.lastMessage || "No messages yet"}
+                        </p>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
-
+              
               {/* Chat Area */}
               <div className="md:col-span-8 flex flex-col min-h-[500px]">
                 {/* Conversation Context Header */}
@@ -332,12 +482,16 @@ const Messages = () => {
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <h2 className="font-display font-bold text-lg">
-                          {selectedConversation.name}
-                        </h2>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                          {selectedConversation.role}
-                        </span>
+                        {selectedConversation && (
+                          <>
+                            <h2 className="font-display font-bold text-lg">
+                              {selectedConversation.name}
+                            </h2>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                              {selectedConversation.role}
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       <button onClick={() => exportConversation("pdf")}>Export PDF</button>
@@ -364,22 +518,20 @@ const Messages = () => {
 
                     <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-1">
                       <span>
-                        <strong>Case:</strong> {selectedConversation.caseRef}
+                        <strong>Case:</strong> {selectedConversation?.caseRef || "-"}
                       </span>
 
-                      {selectedConversation.childName && (
+                      {selectedConversation?.childName && (
                         <span>
-                          <strong>Child:</strong>{" "}
-                          {selectedConversation.childName}
+                          <strong>Child:</strong> {selectedConversation.childName}
                         </span>
                       )}
 
                       <span>
                         <strong>Started:</strong>{" "}
-                        {new Date(
-                          selectedConversation.createdAt
-                        ).toLocaleDateString()}
+                        {selectedConversation ? new Date(selectedConversation.createdAt).toLocaleDateString() : "-"}
                       </span>
+
                     </div>
 
                     <p className="text-xs italic text-muted-foreground mt-2">
@@ -516,7 +668,7 @@ const Messages = () => {
                         const files = Array.from(e.target.files || []).map((file, idx) => ({
                           id: `att-${Date.now()}-${idx}`,
                           name: file.name,
-                          type: "Document" as AttachmentType, // simplify for now
+                          type: "Document" as AttachmentType, 
                           url: URL.createObjectURL(file),
                         }));
                         setDraft((prev) => ({
@@ -541,18 +693,32 @@ const Messages = () => {
                         draft.text.trim() === "" ? "bg-muted cursor-not-allowed" : "bg-primary"
                       }`}
                       disabled={draft.text.trim() === ""}
-                      onClick={() => {
-                        const newMsg: Message = {
-                          id: Date.now(),
-                          sender: "me",
-                          text: draft.text,
-                          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                          purpose: draft.purpose,
-                          status: "Sent",
-                          attachments: draft.attachments,
-                        };
+                      onClick={async () => {
+                        if (!user || !activePlan || !selectedConversation) return;
 
-                        setMessages((prev) => [...prev, newMsg]);
+                        const sent = await send({
+                          sender_id: String(user.id),
+                          receiver_id: String(selectedConversation.user_id),
+                          plan_id: activePlan.id,
+                          content: draft.text,
+                        });
+
+                        setMessages((prev) => [
+                          ...prev,
+                          {
+                            id: sent.id,
+                            sender: "me",
+                            sender_id: Number(user.id),
+                            receiver_id: Number(selectedConversation.user_id),
+                            text: sent.content,
+                            createdAt: sent.created_at,
+                            time: new Date(sent.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                            purpose: draft.purpose,
+                            status: "Sent",
+                            attachments: draft.attachments || [],
+                          } as Message,
+                        ]);
+
                         setDraft({ text: "", purpose: "General", attachments: [] });
                       }}
                     >

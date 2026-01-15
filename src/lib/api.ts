@@ -160,3 +160,63 @@ export const updateVisit = async (
 export const deleteVisit = async (id: string) => {
   return http<void>(`/visits/${id}`, "DELETE");
 };
+
+// --------------------
+// Messages
+// --------------------
+export type AttachmentType = "Document" | "Medical Note" | "Court Order" | "Report";
+
+export interface Attachment {
+  id: string;
+  name: string;
+  type: AttachmentType;
+  url: string;
+}
+export interface ApiMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  plan_id: string;
+  content: string;
+  created_at: string;
+  is_flagged: boolean;
+  is_seen?: boolean;
+  attachments?: Attachment[];
+}
+
+export const getMessagesByPlan = async (planId: string) => {
+  const res = await http<{ messages: ApiMessage[] }>(
+    `/messages/plan/${planId}`,
+    "GET"
+  );
+  return res.messages;
+};
+
+export const sendMessage = async (payload: {
+  sender_id: string;
+  receiver_id: string;
+  plan_id: string;
+  content: string;
+}) => {
+  const res = await http<{ message: ApiMessage }>(
+    "/messages",
+    "POST",
+    payload
+  );
+  return res.message;
+};
+
+export const markMessageAsSeen = async (id: string) => {
+  const res = await http<{ message: ApiMessage }>(
+    `/messages/seen/${id}`,
+    "PUT"
+  );
+  return res.message;
+};
+
+export const flagMessage = async (id: string, reason?: string) => {
+  return http(`/messages/${id}`, "PUT", {
+    is_flagged: true,
+    flagged_reason: reason,
+  });
+};

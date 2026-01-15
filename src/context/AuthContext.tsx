@@ -28,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const { user, token } = await loginApi(email, password);
 
     setAuthToken(token);
+    localStorage.setItem("token", token);
     setUser(user);
     localStorage.setItem("user", JSON.stringify(user));
 
@@ -51,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setAuthToken(null);
     setUser(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
   }, []);
 
   return (

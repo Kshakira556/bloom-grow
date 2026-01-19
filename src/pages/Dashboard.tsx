@@ -2,11 +2,9 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Link } from "react-router-dom";
 import { Lock, Car, ClipboardList, Star, Bookmark } from "lucide-react";
 import { mockEvents, mockPlans } from "@/lib/mocks/visits";
-import { mockJournalEntries } from "@/types/journal";
-
 
 const remainingVisitsCount = mockEvents.length;
-const journalEntriesCount = mockJournalEntries.length;
+const journalEntriesCount = 0;
 
 const quickLinks = [
   {

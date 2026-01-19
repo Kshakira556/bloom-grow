@@ -3,20 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { JournalEntry, mockJournalEntries } from "@/types/journal";
+import { useState, useEffect } from "react";
+import { JournalEntry } from "@/types/journal";
+import * as api from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 const moods = ["😊", "😢", "😴", "🤒", "😤", "🥰"];
 
 const Journal = () => {
+  const [plans, setPlans] = useState<api.Plan[]>([]);
+  const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
+  const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
+  const [selectedChild, setSelectedChild] = useState<{ id: string; name: string } | null>(null);
+
   const [selectedMood, setSelectedMood] = useState<string>(""); 
   const [entryTitle, setEntryTitle] = useState("");
   const [entryText, setEntryText] = useState(""); 
   const [entryImage, setEntryImage] = useState<string | null>(null);
-  const [entries, setEntries] = useState<JournalEntry[]>(mockJournalEntries);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedEntryIndex, setSelectedEntryIndex] = useState<number | null>(null);
   const maxChars = 2000;
   const [viewMode, setViewMode] = useState<"all" | "received" | "sent">("all");
+  const { user } = useAuth();
 
   const filteredEntries = entries.filter(
     (entry) => viewMode === "all" || entry.type === viewMode
@@ -24,6 +32,117 @@ const Journal = () => {
 
   const selectedEntry =
     selectedEntryIndex !== null ? filteredEntries[selectedEntryIndex] : null;
+
+    // Fetch plans & resolve first child
+    useEffect(() => {
+      const fetchPlans = async () => {
+        const { plans } = await api.getPlans();
+        setPlans(plans);
+
+        if (plans[0]) {
+          const { plan: fullPlan } = await api.getPlanById(plans[0].id);
+          setActivePlan(fullPlan);
+
+          const firstChild = fullPlan.children?.[0] || null;
+          if (firstChild) setSelectedChild({ id: firstChild.id, name: firstChild.name });
+        }
+      };
+      fetchPlans();
+    }, []);
+
+    useEffect(() => {
+      const fetchEntries = async () => {
+        if (!selectedChild) return;
+        const apiEntries = await api.getJournalEntriesByChild(selectedChild.id);
+
+        setEntries(
+          apiEntries.map((e) => ({
+            ...e,
+            type: "all", 
+          }))
+        );
+
+      };
+      fetchEntries();
+    }, [selectedChild]);
+
+    useEffect(() => {
+    if (!activePlan) return;
+
+    const fetchChildren = async () => {
+      try {
+        const allChildren = await api.getChildren(); // now returns Child[]
+        
+        setChildren(
+          allChildren.map((child) => ({
+            id: child.id,
+            name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+          }))
+        );
+
+        if (allChildren.length > 0) {
+          setSelectedChild({
+            id: allChildren[0].id,
+            name: `${allChildren[0].first_name}${allChildren[0].last_name ? ` ${allChildren[0].last_name}` : ""}`,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch children:", err);
+      }
+    };
+
+    fetchChildren();
+  }, [activePlan]);
+
+    // Add Journal Entry
+    const addJournalEntry = async () => {
+      console.log("Add Entry clicked");
+
+      if (!user) {
+        console.warn("Blocked: no user");
+        return;
+      }
+
+      if (!activePlan) {
+        console.warn("Blocked: no activePlan");
+        return;
+      }
+
+      if (!selectedChild) {
+        console.warn("Blocked: no selectedChild");
+        return;
+      }
+
+      if (!entryText.trim()) {
+        console.warn("Blocked: empty entryText");
+        return;
+      }
+
+      try {
+        const created = await api.createJournalEntry({
+          plan_id: activePlan.id,
+          child_id: selectedChild.id,
+          author_id: user.id,
+          content: entryText,
+          title: entryTitle || undefined,
+          mood: selectedMood || undefined,
+          image: entryImage || undefined,
+          entry_date: new Date().toISOString(),
+        });
+
+        console.log("Journal entry created:", created);
+
+        setEntries((prev) => [...prev, { ...created, type: "all" }]);
+
+        setEntryTitle("");
+        setEntryText("");
+        setSelectedMood("");
+        setEntryImage(null);
+      } catch (err) {
+        console.error("Failed to create journal entry:", err);
+        alert("Failed to save journal entry. Check console.");
+      }
+    };
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -35,7 +154,7 @@ const Journal = () => {
             My Little Journal
           </h1>
           <p className="text-center text-muted-foreground mb-8">
-            One-page, private, and stored in your browser.
+            Secure, child-specific journal entries linked to your parenting plan.
           </p>
 
           <div className="grid lg:grid-cols-2 gap-6">
@@ -43,6 +162,30 @@ const Journal = () => {
             <Card className="rounded-3xl">
               <CardContent className="p-6 space-y-4">
                 <h2 className="font-display font-bold text-xl">Journal</h2>
+
+                {/* Child Selector */}
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">
+                    Select Child
+                  </label>
+
+                  <select
+                    aria-label="Choose-Child"
+                    value={selectedChild?.id || ""}
+                    onChange={(e) => {
+                      const child = children.find(c => c.id === e.target.value);
+                      if (child) setSelectedChild(child);
+                    }}
+                    className="w-full rounded-full px-4 py-2 bg-cub-mint-light border-0 text-sm focus:outline-none"
+                  >
+                    <option value="" disabled>Choose a child</option>
+                    {children.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {child.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 
                 <Input
                   placeholder="Title (optional)"
@@ -126,22 +269,8 @@ const Journal = () => {
                   </span>
                   <Button
                     className="rounded-full"
-                    onClick={() => {
-                      setEntries([
-                        ...entries,
-                        {
-                          title: entryTitle || undefined,
-                          text: entryText,
-                          mood: selectedMood,
-                          image: entryImage,
-                          type: "sent",
-                        },
-                      ]);
-                      setEntryTitle("");
-                      setEntryText("");
-                      setSelectedMood("");
-                      setEntryImage(null);
-                    }}
+                    onClick={addJournalEntry}
+                    disabled={!selectedChild}
                   >
                     Add Entry
                   </Button>
@@ -217,7 +346,7 @@ const Journal = () => {
                             />
                           )}
                           
-                          <p className="whitespace-pre-wrap">{entry.text}</p>
+                          <p className="whitespace-pre-wrap">{entry.content}</p>
                         </CardContent>
                       </Card>
                     ))}
@@ -277,7 +406,7 @@ const Journal = () => {
                 />
               )}
 
-              <p className="whitespace-pre-wrap">{selectedEntry.text}</p>
+              <p className="whitespace-pre-wrap">{selectedEntry.content}</p>
             </div>
 
             {/* Right Arrow */}

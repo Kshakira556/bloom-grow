@@ -29,7 +29,7 @@ export const http = async <T>(
 
   if (res.status === 401) {
     setAuthToken(null);
-    window.location.href = "/login";
+    window.location.href = "/dashboard";
     throw new Error("Unauthorized");
   }
 

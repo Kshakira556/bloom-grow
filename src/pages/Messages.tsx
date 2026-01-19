@@ -10,11 +10,16 @@ import { saveAs } from "file-saver";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useEffect } from "react";
-import { ApiMessage } from "@/lib/api";
 import * as api from "@/lib/api";
+import { ApiMessage } from "@/lib/api";
+import { toast } from "@/lib/toastHelper";
+
+type PlanInviteWithResolved = api.PlanInvite & {
+  resolved_user_id?: number;
+};
 
 type Conversation = {
-  user_id: number;
+  user_id: string;
   plan_id: string;
   name: string;
   role: string;
@@ -65,9 +70,9 @@ type Attachment = {
 type Message = {
   id: string;
   sender: "me" | "them";
-  sender_id: number;      
-  receiver_id: number;    
-  text: string;
+  sender_id: string;       
+  receiver_id: string;     
+  content: string;
   time: string;
   createdAt: string;
   purpose: MessagePurpose;
@@ -76,7 +81,7 @@ type Message = {
 };
 
 type DraftMessage = {
-  text: string;
+  content: string;
   purpose: MessagePurpose; 
   attachments?: Attachment[];
 };
@@ -86,7 +91,7 @@ const Messages = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [purposeFilter, setPurposeFilter] = useState<MessagePurpose | "All">("All");
   const [draft, setDraft] = useState<DraftMessage>({
-    text: "",
+    content: "",
     purpose: "General",
     attachments: [],
   });
@@ -142,7 +147,7 @@ const Messages = () => {
       y += 6;
 
       doc.setFont(undefined, "normal");
-      const lines = doc.splitTextToSize(msg.text, 180);
+      const lines = doc.splitTextToSize(msg.content, 180);
       doc.text(lines, 10, y);
       y += lines.length * 5 + 4;
 
@@ -195,7 +200,7 @@ const Messages = () => {
                   }),
                 ],
               }),
-              new Paragraph(msg.text),
+              new Paragraph(msg.content),
               ...(msg.attachments || []).map(
                 (att) =>
                   new Paragraph(`Attachment: ${att.name} (${att.type})`)
@@ -217,7 +222,8 @@ const Messages = () => {
   };
 
   const { user } = useAuth();
-  const { fetchByPlan, send } = useMessages();
+  const userIdStr = user?.id.toString(); 
+  const { fetchByPlan, send, markSeen } = useMessages();
 
     useEffect(() => {
       const fetchPlans = async () => {
@@ -232,18 +238,38 @@ const Messages = () => {
             setActivePlan(fullPlan);
 
             // ✅ Make sure user_id is a number
+            // Resolve the user full_name for the first invite
+            let name = "Co-Parent";
+            let childName = null;
+
+            if (fullPlan.invites && fullPlan.invites.length > 0) {
+              const inviteEmail = fullPlan.invites[0].email;
+
+              try {
+                const allUsers = await api.getUsers(); // GET /api/users
+                const matchedUser = allUsers.find(u => u.email === inviteEmail);
+                name = matchedUser?.full_name || inviteEmail;
+              } catch (err) {
+                console.error("Failed to resolve invite user full_name:", err);
+                name = fullPlan.invites[0].email; // fallback
+              }
+
+              childName = null; // fallback            
+              }
+
             setSelectedConversation({
-              user_id: Number(fullPlan.created_by), // ✅ cast to number
+              user_id: fullPlan.created_by,
               plan_id: fullPlan.id,
-              name: "Co-Parent",
+              name,
               role: "Co-Parent",
               topic: "Plan conversation",
               caseRef: fullPlan.title,
-              childName: fullPlan?.invites[0]?.email || null,
+              childName,
               lastMessage: "",
               time: "",
               createdAt: fullPlan.created_at,
             });
+
           }
         } catch (err) {
           console.error("Failed to load plans:", err);
@@ -253,52 +279,124 @@ const Messages = () => {
       fetchPlans();
     }, []);
 
-  useEffect(() => {
-    if (!user) return;
+    interface PlanInvite {
+      id: string;
+      plan_id: string;
+      email: string;
+      status: "pending" | "accepted" | "declined";
+      created_at: string;
+      resolved_user_id?: number; 
+    }
 
-    const token = localStorage.getItem("token"); 
-    const ws = new WebSocket(
-      `ws://localhost:8000/api/messages/ws?token=${token}`
-    );
+    useEffect(() => {
+      if (!user) return;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      const token = localStorage.getItem("token"); 
+      const ws = new WebSocket(
+        `ws://localhost:8000/api/messages/ws?token=${token}`
+      );
 
-      if (data.type === "new_message") {
-        const msg = data.message;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: msg.id,
-            sender: msg.sender_id === user.id ? "me" : "them",
-            sender_id: Number(msg.sender_id),
-            receiver_id: Number(msg.receiver_id),
-            text: msg.content,
-            createdAt: msg.created_at, 
-            time: new Date(msg.created_at).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            purpose: "General",
-            status: "Delivered",
-            attachments: msg.attachments || [],
-          } as Message,
-        ]);
-      }
-    };
+      ws.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
 
-    return () => ws.close();
-  }, [user]);
+        if (data.type === "new_message") {
+          const msg = data.message;
+
+          // 1️⃣ Update chat messages
+          setMessages(prev => {
+            if (prev.find(m => m.id === msg.id)) return prev;
+
+            return [
+              ...prev,
+              {
+                id: msg.id,
+                sender: msg.sender_id === user.id ? "me" : "them",
+                sender_id: msg.sender_id,
+                receiver_id: msg.receiver_id,
+                content: msg.content,
+                createdAt: msg.created_at,
+                time: new Date(msg.created_at).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                purpose: "General",
+                status: msg.is_seen ? "Read" : "Delivered",
+                attachments: [],
+              },
+            ];
+          });
+
+          // 2️⃣ ✅ UPDATE SIDEBAR CONVERSATION PREVIEW (THIS IS THE FIX)
+          setConversations(prev =>
+            prev.map(c =>
+              c.user_id === msg.sender_id ||
+              c.user_id === msg.receiver_id
+                ? {
+                    ...c,
+                    lastMessage: msg.content,
+                    time: new Date(msg.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }),
+                  }
+                : c
+            )
+          );
+
+          // 3️⃣ Mark as seen if needed
+          if (msg.receiver_id === user.id && !msg.is_seen) {
+            await markSeen(msg.id);
+          }
+        }
+      };
+
+
+      return () => ws.close();
+    }, [user]);
 
   const [plans, setPlans] = useState<api.Plan[]>([]);
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
   const [conversations, setConversations] = useState<
-    Array<{ user_id: number; plan_id: string; name: string; role: string; topic: string; caseRef: string; childName: string | null; lastMessage: string; time: string; createdAt: string }>
+    Array<{
+      user_id: string;
+      plan_id: string;
+      name: string;
+      role: string;
+      topic: string;
+      caseRef: string;
+      childName: string | null;
+      lastMessage: string;
+      time: string;
+      createdAt: string;
+    }>
   >([]);
 
+  const [invitesResolved, setInvitesResolved] = useState(false);
+
+useEffect(() => {
+  if (!activePlan || !activePlan.invites || invitesResolved) return;
+
+  const fetchAllUsers = async () => {
+    try {
+      const allUsers = await api.getUsers();
+      const updatedInvites = (activePlan.invites as PlanInviteWithResolved[]).map((inv) => {
+        const user = allUsers.find(u => u.email === inv.email);
+        return user ? { ...inv, resolved_user_id: user.id } : inv;
+      });
+
+      setActivePlan({ ...activePlan, invites: updatedInvites });
+      setInvitesResolved(true);
+    } catch (err) {
+      console.error("Failed to fetch users to resolve invites:", err);
+    }
+  };
+
+  fetchAllUsers();
+}, [activePlan, invitesResolved]);
+
   const [selectedConversation, setSelectedConversation] = useState<{
-    user_id: number;
-    plan_id: string;
+    user_id: string; 
+    plan_id: string; 
     name: string;
     role: string;
     topic: string;
@@ -323,9 +421,9 @@ const Messages = () => {
         const mapped: Message[] = apiMessages.map((m: ApiMessage & { attachments?: Attachment[] }) => ({
         id: m.id,
         sender: m.sender_id === user.id ? "me" : "them",
-        sender_id: Number(m.sender_id),       
-        receiver_id: Number(m.receiver_id),
-        text: m.content,
+        sender_id: m.sender_id,       
+        receiver_id: m.receiver_id,
+        content: m.content,
         createdAt: m.created_at,
         time: new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         purpose: "General",
@@ -337,26 +435,44 @@ const Messages = () => {
       
       // Populate conversations from messages
       const convs = mapped.reduce((acc: typeof conversations, msg) => {
-        // Determine the other user's numeric ID correctly
         const otherUserId =
           msg.sender === "me"
-            ? Number(msg.receiver_id)
-            : Number(msg.sender_id);
+            ? msg.receiver_id
+            : msg.sender_id;
 
         if (!acc.find(c => c.user_id === otherUserId)) {
+          let convName = "Co-Parent";
+          let convChildName = null;
+
+          // Use invitesResolved info instead of awaiting here
+          if (activePlan?.invites && activePlan.invites.length > 0) {
+            const invite = (activePlan.invites as PlanInviteWithResolved[]).find(
+              inv => inv.resolved_user_id?.toString() === otherUserId
+            );
+
+
+            if (invite) {
+              const matchedUser = invite.resolved_user_id ? { full_name: invite.email } : null; 
+              convName = matchedUser?.full_name || invite.email;
+            }
+
+            convChildName = null; 
+          }
+
           acc.push({
-            user_id: otherUserId, 
+            user_id: otherUserId,
             plan_id: activePlan.id,
-            name: msg.sender === "me" ? "Co-Parent" : selectedConversation?.name || "Other",
+            name: msg.sender === "me" ? "Co-Parent" : convName,
             role: "Co-Parent",
             topic: "Plan conversation",
             caseRef: activePlan.title,
-            childName: activePlan?.invites[0]?.email || null,
-            lastMessage: msg.text,
+            childName: convChildName,
+            lastMessage: msg.content,
             time: msg.time,
             createdAt: msg.createdAt,
           });
         }
+
         return acc;
       }, []);
 
@@ -371,6 +487,21 @@ const Messages = () => {
 
   const [plansOpen, setPlansOpen] = useState(false);
 
+  const isUserParticipantOfPlan = (planId: string, userId: string) => {
+    if (!activePlan) return false;
+
+    const participantIds: string[] = [activePlan.created_by];
+
+    if (activePlan.invites && activePlan.invites.length > 0) {
+      (activePlan.invites as PlanInviteWithResolved[]).forEach(inv => {
+        if (inv.resolved_user_id) {
+          participantIds.push(inv.resolved_user_id.toString());
+        }
+      });
+    }
+
+    return participantIds.includes(userId);
+  };
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -420,14 +551,32 @@ const Messages = () => {
                               const { plan: fullPlan } = await api.getPlanById(plan.id);
                               setActivePlan(fullPlan);
 
+                              let name = "Co-Parent";
+                              let childName = null;
+
+                              if (fullPlan.invites && fullPlan.invites.length > 0) {
+                                const inviteEmail = fullPlan.invites[0].email;
+
+                                try {
+                                  const allUsers = await api.getUsers(); // GET /api/users
+                                  const matchedUser = allUsers.find(u => u.email === inviteEmail);
+                                  name = matchedUser?.full_name || inviteEmail;
+                                } catch (err) {
+                                  console.error("Failed to resolve invite user full_name:", err);
+                                  name = fullPlan.invites[0].email; // fallback
+                                }
+
+                                childName = null;
+                              }
+
                               setSelectedConversation({
-                                user_id: Number(fullPlan.created_by),
+                                user_id: fullPlan.created_by,
                                 plan_id: fullPlan.id,
-                                name: "Co-Parent",
+                                name,
                                 role: "Co-Parent",
                                 topic: "Plan conversation",
                                 caseRef: fullPlan.title,
-                                childName: fullPlan?.invites[0]?.email || null,
+                                childName,
                                 lastMessage: "",
                                 time: "",
                                 createdAt: fullPlan.created_at,
@@ -453,24 +602,35 @@ const Messages = () => {
                 {/* Contacts List */}
                 <div className="space-y-1 p-2 mt-2">
                   {conversations.length === 0 ? (
-                    <p className="text-xs text-muted-foreground px-2 py-1">No contacts yet.</p>
+                    <p className="text-xs text-muted-foreground px-2 py-1">
+                      No contacts yet.
+                    </p>
                   ) : (
-                    conversations.map((conv, idx) => (
-                      <button
-                        key={`${conv.user_id ?? conv.plan_id}-${idx}`} // ✅ unique string key
-                        onClick={() => setSelectedConversation(conv)}
-                        className={`w-full p-4 rounded-2xl text-left transition-all ${
-                          selectedConversation?.user_id === conv.user_id
-                            ? "bg-cub-mint-light"
-                            : "hover:bg-secondary"
-                        }`}
-                      >
-                        <p className="font-display font-bold">{conv.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {conv.lastMessage || "No messages yet"}
-                        </p>
-                      </button>
-                    ))
+                    conversations.map((conv, idx) => {
+                      const userIdStr = user?.id.toString();
+                      const disabled = !isUserParticipantOfPlan(conv.plan_id, userIdStr);
+
+                      return (
+                        <button
+                          key={`${conv.user_id ?? conv.plan_id}-${idx}`}
+                          disabled={disabled}
+                          onClick={() => {
+                            if (!isUserParticipantOfPlan(conv.plan_id, user.id)) return;
+                            setSelectedConversation(conv);
+                          }}
+                          className={`w-full p-4 rounded-2xl text-left transition-all ${
+                            selectedConversation?.user_id === conv.user_id
+                              ? "bg-cub-mint-light"
+                              : "hover:bg-secondary"
+                          } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <p className="font-display font-bold">{conv.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {conv.lastMessage || "No messages yet"}
+                          </p>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -585,7 +745,7 @@ const Messages = () => {
                             </span>
 
                             {/* Message Text */}
-                            <p className="mt-1">{msg.text}</p>
+                            <p className="mt-1">{msg.content}</p>
 
                             {/* Attachments */}
                             {msg.attachments && msg.attachments.length > 0 && (
@@ -653,9 +813,9 @@ const Messages = () => {
                     {/* Text input */}
                     <Input
                       placeholder="Type a message..."
-                      value={draft.text}
+                      value={draft.content}
                       onChange={(e) =>
-                        setDraft((prev) => ({ ...prev, text: e.target.value }))
+                        setDraft((prev) => ({ ...prev, content: e.target.value }))
                       }
                       className="flex-1 rounded-full"
                     />
@@ -690,37 +850,75 @@ const Messages = () => {
                     <button
                       aria-label="Send message"
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground ${
-                        draft.text.trim() === "" ? "bg-muted cursor-not-allowed" : "bg-primary"
+                        draft.content.trim() === "" ? "bg-muted cursor-not-allowed" : "bg-primary"
                       }`}
-                      disabled={draft.text.trim() === ""}
+                      disabled={draft.content.trim() === ""}
                       onClick={async () => {
                         if (!user || !activePlan || !selectedConversation) return;
 
-                        const sent = await send({
-                          sender_id: String(user.id),
-                          receiver_id: String(selectedConversation.user_id),
+                        try {
+                        const sentMessage = await send({
+                          sender_id: userIdStr,               
+                          receiver_id: selectedConversation.user_id,
                           plan_id: activePlan.id,
-                          content: draft.text,
+                          content: draft.content.trim(),
                         });
 
-                        setMessages((prev) => [
+                        // Optimistic UI update — use UUID strings for IDs
+                        // Generate a temporary unique ID for optimistic message to avoid duplicate keys
+                        const tempId = `temp-${Date.now()}`;
+
+                        setMessages(prev => [
                           ...prev,
                           {
-                            id: sent.id,
+                            id: tempId, // temporary ID
                             sender: "me",
-                            sender_id: Number(user.id),
-                            receiver_id: Number(selectedConversation.user_id),
-                            text: sent.content,
-                            createdAt: sent.created_at,
-                            time: new Date(sent.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                            sender_id: sentMessage.sender_id,
+                            receiver_id: sentMessage.receiver_id,
+                            content: sentMessage.content,
+                            createdAt: sentMessage.created_at,
+                            time: new Date(sentMessage.created_at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }),
                             purpose: draft.purpose,
-                            status: "Sent",
-                            attachments: draft.attachments || [],
-                          } as Message,
+                            status: sentMessage.is_seen ? "Read" : "Delivered",
+                            attachments: sentMessage.attachments || [],
+                          },
                         ]);
 
-                        setDraft({ text: "", purpose: "General", attachments: [] });
+                        // Update sidebar preview
+                        setConversations(prev =>
+                          prev.map(c =>
+                            c.user_id === userIdStr
+                              ? {
+                                  ...c,
+                                  lastMessage: sentMessage.content,
+                                  time: new Date(sentMessage.created_at).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }),
+                                }
+                              : c
+                          )
+                        );
+
+                        setDraft({ content: "", purpose: "General", attachments: [] });
+                      } catch (err: unknown) {
+                        let description = "Unknown error";
+
+                        if (err instanceof Error) {
+                          description = err.message;
+                        } else if (typeof err === "object" && err !== null && "message" in err) {
+                          description = (err as { message: string }).message;
+                        }
+                        toast({
+                          title: "Failed to send message",
+                          description,
+                          variant: "destructive",
+                        });
                       }}
+                    }
                     >
                       <Send className="w-5 h-5" />
                     </button>
@@ -729,7 +927,7 @@ const Messages = () => {
                   {/* Guidance and character count */}
                   <div className="flex justify-between text-xs text-muted-foreground px-2">
                     <span>Type a clear, professional message.</span>
-                    <span>{draft.text.length} / 500</span>
+                    <span>{draft.content.length} / 500</span>
                   </div>
                 </div>
               </div>

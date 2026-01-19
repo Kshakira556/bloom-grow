@@ -52,6 +52,12 @@ export const getUsers = async (): Promise<SafeUser[]> => {
   return res.users;
 };
 
+export const getUserByEmail = async (email: string) => {
+  const res = await http<{ id: string; full_name: string; email: string }>(`/users/email/${email}`, "GET");
+  if (!res) throw new Error("User not found");
+  return res;
+};
+
 export const getModerators = async (): Promise<Moderator[]> => {
   const res = await http<{ moderators: Moderator[] }>("/admin/moderators", "GET");
   return res.moderators;
@@ -192,12 +198,16 @@ export const getMessagesByPlan = async (planId: string) => {
   return res.messages;
 };
 
-export const sendMessage = async (payload: {
+export type SendMessagePayload = {
   sender_id: string;
   receiver_id: string;
   plan_id: string;
   content: string;
-}) => {
+};
+
+export const sendMessage = async (
+  payload: SendMessagePayload
+): Promise<ApiMessage> => {
   const res = await http<{ message: ApiMessage }>(
     "/messages",
     "POST",

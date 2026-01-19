@@ -13,6 +13,17 @@ export interface SafeUser {
   phone?: string;
 }
 
+export interface Child {
+  id: string;
+  first_name: string;
+  last_name?: string;
+  birth_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+
 export interface Moderator extends SafeUser {
   isActive: boolean;
   assignedClients: string[];
@@ -83,7 +94,10 @@ export interface PlanInvite {
   status: "pending" | "accepted" | "declined";
   created_at: string;
 }
-
+export interface PlanChild {
+  id: string;
+  name: string;
+}
 export interface FullPlan extends Plan {
   description: string;
   start_date: string;
@@ -92,8 +106,31 @@ export interface FullPlan extends Plan {
   created_by: string;
   created_at: string;
   invites: PlanInvite[];
+  children?: PlanChild[];
 }
 
+export interface JournalEntryPayload {
+  plan_id: string;
+  child_id: string;
+  author_id: string;
+  content: string;
+  title?: string;
+  mood?: string;
+  image?: string;
+  entry_date: string;
+}
+
+export interface ApiJournalEntry  {
+  id: string;
+  plan_id: string;
+  child_id: string;
+  author_id: string;
+  content: string;
+  title?: string;
+  mood?: string;
+  image?: string;
+  entry_date: string;
+}
 export async function getPlans(): Promise<{ plans: Plan[] }> {
   try {
     return await http<{ plans: Plan[] }>("/plans", "GET"); 
@@ -229,4 +266,40 @@ export const flagMessage = async (id: string, reason?: string) => {
     is_flagged: true,
     flagged_reason: reason,
   });
+};
+
+export const createJournalEntry = async (
+  payload: JournalEntryPayload
+): Promise<ApiJournalEntry> => {
+  return http<ApiJournalEntry>("/journal", "POST", payload);
+};
+
+export const getJournalEntriesByChild = async (
+  childId: string
+): Promise<ApiJournalEntry[]> => {
+  const res = await http<{ entries: ApiJournalEntry[] }>(
+    `/journal/child/${childId}`,
+    "GET"
+  );
+  return res.entries;
+};
+
+export const updateJournalEntry = async (
+  id: string, 
+  payload: Partial<ApiJournalEntry>
+) => {
+  return http<ApiJournalEntry>(`/journal/${id}`, "PUT", payload);
+};
+
+export const deleteJournalEntry = async (
+  id: string
+) => {
+  return http<void>(`/journal/${id}`, "DELETE");
+};
+
+export const getChildren = async (): Promise<Child[]> => {
+  const res = await fetch("/api/children");
+  if (!res.ok) throw new Error("Failed to fetch children");
+  const data = await res.json();
+  return data.children; 
 };

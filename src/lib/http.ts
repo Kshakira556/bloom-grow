@@ -10,7 +10,7 @@ export const http = async <T>(
   url: string,
   method: HttpMethod,
   body?: unknown
-): Promise<T> => {
+): Promise<T | null> => {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
@@ -21,7 +21,6 @@ export const http = async <T>(
 
   const API_URL = import.meta.env.VITE_API_URL; 
   const res = await fetch(`${API_URL}${url}`, {
-
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -31,6 +30,10 @@ export const http = async <T>(
     setAuthToken(null);
     window.location.href = "/dashboard";
     throw new Error("Unauthorized");
+  }
+
+  if (res.status === 404) {
+    return null;
   }
 
   if (!res.ok) {

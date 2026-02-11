@@ -94,66 +94,180 @@ export const vaultSaveService = {
             })
       ),
 
-        // Legal with sanitized empty fields to avoid 500
-        aggregate.legal && (
-          aggregate.legal.id
-            ? http<LegalRequest>(`/vaults/legal-custody/${aggregate.legal.id}`, "PUT", {
+        // Legal
+        aggregate.legal && (async () => {
+          if (aggregate.legal.id) {
+            try {
+              // Check if record exists
+              await http<{ legal: VaultAggregate["legal"] | null }>(`/vaults/legal-custody/${aggregate.legal.id}`, "GET");
+              // Exists → update
+              const payload: LegalRequest = {};
+              if (aggregate.legal.custodyType?.trim()) payload.custody_type = aggregate.legal.custodyType.trim();
+              if (aggregate.legal.caseNo?.trim()) payload.case_no = aggregate.legal.caseNo.trim();
+              if (aggregate.legal.validUntil?.trim()) payload.valid_until = aggregate.legal.validUntil.trim();
+              if (aggregate.legal.contactType?.trim()) payload.contact_type = aggregate.legal.contactType.trim();
+
+              const updated = await http<LegalRequest & { id: string }>(
+                `/vaults/legal-custody/${aggregate.legal.id}`,
+                "PUT",
+                payload
+              );
+              aggregate.legal.id = updated.id;
+              return updated;
+            } catch {
+              // ID doesn't exist → create
+              const created = await http<LegalRequest & { id: string }>(
+                `/vaults/${vaultId}/legal-custody`,
+                "POST",
+                {
+                  vault_id: vaultId,
+                  custody_type: aggregate.legal.custodyType?.trim() || undefined,
+                  case_no: aggregate.legal.caseNo?.trim() || undefined,
+                  valid_until: aggregate.legal.validUntil?.trim() || undefined,
+                  contact_type: aggregate.legal.contactType?.trim() || undefined
+                }
+              );
+              aggregate.legal.id = created.id;
+              return created;
+            }
+          } else {
+            // No ID → create
+            const created = await http<LegalRequest & { id: string }>(
+              `/vaults/${vaultId}/legal-custody`,
+              "POST",
+              {
+                vault_id: vaultId,
                 custody_type: aggregate.legal.custodyType?.trim() || undefined,
                 case_no: aggregate.legal.caseNo?.trim() || undefined,
                 valid_until: aggregate.legal.validUntil?.trim() || undefined,
                 contact_type: aggregate.legal.contactType?.trim() || undefined
-              })
-            : http<LegalRequest>(`/vaults/${vaultId}/legal-custody`, "POST", {
-                custody_type: aggregate.legal.custodyType?.trim() || undefined,
-                case_no: aggregate.legal.caseNo?.trim() || undefined,
-                valid_until: aggregate.legal.validUntil?.trim() || undefined,
-                contact_type: aggregate.legal.contactType?.trim() || undefined
-              })
-        ),
+              }
+            );
+            aggregate.legal.id = created.id;
+            return created;
+          }
+        })(),
 
         // Medical
-        aggregate.medical && (
-          aggregate.medical.id
-            ? http<MedicalRequest>(`/vaults/medical/${aggregate.medical.id}`, "PUT", {
+        aggregate.medical && (async () => {
+          if (aggregate.medical.id) {
+            try {
+              await http<{ medical: VaultAggregate["medical"] | null }>(`/vaults/medical/${aggregate.medical.id}`, "GET");
+              const updated = await http<MedicalRequest & { id: string }>(
+                `/vaults/medical/${aggregate.medical.id}`,
+                "PUT",
+                {
+                  blood_type: aggregate.medical.bloodType?.trim() || undefined,
+                  allergies: aggregate.medical.allergies?.trim() || undefined,
+                  medication: aggregate.medical.medication?.trim() || undefined,
+                  doctor: aggregate.medical.doctor?.trim() || undefined
+                }
+              );
+              aggregate.medical.id = updated.id;
+              return updated;
+            } catch {
+              const created = await http<MedicalRequest & { id: string }>(
+                `/vaults/${vaultId}/medical`,
+                "POST",
+                {
+                  blood_type: aggregate.medical.bloodType?.trim() || undefined,
+                  allergies: aggregate.medical.allergies?.trim() || undefined,
+                  medication: aggregate.medical.medication?.trim() || undefined,
+                  doctor: aggregate.medical.doctor?.trim() || undefined
+                }
+              );
+              aggregate.medical.id = created.id;
+              return created;
+            }
+          } else {
+            const created = await http<MedicalRequest & { id: string }>(
+              `/vaults/${vaultId}/medical`,
+              "POST",
+              {
                 blood_type: aggregate.medical.bloodType?.trim() || undefined,
                 allergies: aggregate.medical.allergies?.trim() || undefined,
                 medication: aggregate.medical.medication?.trim() || undefined,
                 doctor: aggregate.medical.doctor?.trim() || undefined
-              })
-            : http<MedicalRequest>(`/vaults/${vaultId}/medical`, "POST", {
-                blood_type: aggregate.medical.bloodType?.trim() || undefined,
-                allergies: aggregate.medical.allergies?.trim() || undefined,
-                medication: aggregate.medical.medication?.trim() || undefined,
-                doctor: aggregate.medical.doctor?.trim() || undefined,
-              })
-        ),
+              }
+            );
+            aggregate.medical.id = created.id;
+            return created;
+          }
+        })(),
 
         // Safety
-        aggregate.safety && (
-          aggregate.safety.id
-            ? http<SafetyRequest>(`/vaults/safety/${aggregate.safety.id}`, "PUT", {
+        aggregate.safety && (async () => {
+          if (aggregate.safety.id) {
+            try {
+              await http<{ safety: VaultAggregate["safety"] | null }>(`/vaults/safety/${aggregate.safety.id}`, "GET");
+              const updated = await http<SafetyRequest & { id: string }>(
+                `/vaults/safety/${aggregate.safety.id}`,
+                "PUT",
+                {
+                  approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
+                  not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined
+                }
+              );
+              aggregate.safety.id = updated.id;
+              return updated;
+            } catch {
+              const created = await http<SafetyRequest & { id: string }>(
+                `/vaults/${vaultId}/safety`,
+                "POST",
+                {
+                  approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
+                  not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined
+                }
+              );
+              aggregate.safety.id = created.id;
+              return created;
+            }
+          } else {
+            const created = await http<SafetyRequest & { id: string }>(
+              `/vaults/${vaultId}/safety`,
+              "POST",
+              {
                 approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
-                not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined,
-              })
-            : http<SafetyRequest>(`/vaults/${vaultId}/safety`, "POST", {
-                approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
-                not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined,
-              })
-        ),
+                not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined
+              }
+            );
+            aggregate.safety.id = created.id;
+            return created;
+          }
+        })(),
 
         // Emergency Contacts
-        ...aggregate.emergencyContacts.map(e =>
-          e.id
-            ? http<EmergencyRequest>(`/vaults/emergency-contacts/${e.id}`, "PUT", { 
-              name: e.name, 
-              phone: e.phone?.trim() || undefined 
-            })
-          : http<EmergencyRequest>(`/vaults/${vaultId}/emergency-contacts`, "POST", { 
-              name: e.name, 
-              phone: e.phone?.trim() || undefined 
-            })
-          )
-        ])
+        ...aggregate.emergencyContacts.map(e => (async () => {
+          if (e.id) {
+            try {
+              await http<{ contact: VaultAggregate["emergencyContacts"][0] | null }>(`/vaults/emergency-contacts/${e.id}`, "GET");
+              const updated = await http<EmergencyRequest & { id: string }>(
+                `/vaults/emergency-contacts/${e.id}`,
+                "PUT",
+                { name: e.name, phone: e.phone?.trim() || undefined }
+              );
+              e.id = updated.id;
+              return updated;
+            } catch {
+              const created = await http<EmergencyRequest & { id: string }>(
+                `/vaults/${vaultId}/emergency-contacts`,
+                "POST",
+                { name: e.name, phone: e.phone?.trim() || undefined }
+              );
+              e.id = created.id;
+              return created;
+            }
+          } else {
+            const created = await http<EmergencyRequest & { id: string }>(
+              `/vaults/${vaultId}/emergency-contacts`,
+              "POST",
+              { name: e.name, phone: e.phone?.trim() || undefined }
+            );
+            e.id = created.id;
+            return created;
+          }
+        })())
+          ])
 
       // --------------------
       // Simple retry helper for documents

@@ -80,11 +80,19 @@ export const vaultSaveService = {
       // --------------------
       await Promise.all([
         // Guardians
-        ...aggregate.guardians.map(g =>
-          g.id
-            ? http<GuardianRequest>(`/guardians/${g.id}`, "PUT", { name: g.name, cell_no: g.cell, work_no: g.work })
-            : http<GuardianRequest>(`/vaults/${vaultId}/guardians`, "POST", { name: g.name, cell_no: g.cell, work_no: g.work })
-        ),
+      ...aggregate.guardians.map(g =>
+        g.id
+          ? http<GuardianRequest>(`/guardians/${g.id}`, "PUT", { 
+              name: g.name, 
+              cell_no: g.cell?.trim() || undefined, 
+              work_no: g.work?.trim() || undefined 
+            })
+          : http<GuardianRequest>(`/vaults/${vaultId}/guardians`, "POST", { 
+              name: g.name, 
+              cell_no: g.cell?.trim() || undefined, 
+              work_no: g.work?.trim() || undefined 
+            })
+      ),
 
         // Legal with sanitized empty fields to avoid 500
         aggregate.legal && (
@@ -106,40 +114,46 @@ export const vaultSaveService = {
         // Medical
         aggregate.medical && (
           aggregate.medical.id
-            ? http<MedicalRequest>(`/medical/${aggregate.medical.id}`, "PUT", {
-                blood_type: aggregate.medical.bloodType.trim() || "",
-                allergies: aggregate.medical.allergies.trim() || "",
-                medication: aggregate.medical.medication.trim() || "",
-                doctor: aggregate.medical.doctor.trim() || ""
+            ? http<MedicalRequest>(`/vaults/medical/${aggregate.medical.id}`, "PUT", {
+                blood_type: aggregate.medical.bloodType?.trim() || undefined,
+                allergies: aggregate.medical.allergies?.trim() || undefined,
+                medication: aggregate.medical.medication?.trim() || undefined,
+                doctor: aggregate.medical.doctor?.trim() || undefined
               })
             : http<MedicalRequest>(`/vaults/${vaultId}/medical`, "POST", {
-                blood_type: aggregate.medical.bloodType.trim() || "",
-                allergies: aggregate.medical.allergies.trim() || "",
-                medication: aggregate.medical.medication.trim() || "",
-                doctor: aggregate.medical.doctor.trim() || "",
+                blood_type: aggregate.medical.bloodType?.trim() || undefined,
+                allergies: aggregate.medical.allergies?.trim() || undefined,
+                medication: aggregate.medical.medication?.trim() || undefined,
+                doctor: aggregate.medical.doctor?.trim() || undefined,
               })
         ),
 
         // Safety
         aggregate.safety && (
           aggregate.safety.id
-            ? http<SafetyRequest>(`/safety/${aggregate.safety.id}`, "PUT", {
-                approved_pickup: aggregate.safety.approvedPickup.trim() || "",
-                not_allowed_pickup: aggregate.safety.notAllowedPickup.trim() || "",
+            ? http<SafetyRequest>(`/vaults/safety/${aggregate.safety.id}`, "PUT", {
+                approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
+                not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined,
               })
             : http<SafetyRequest>(`/vaults/${vaultId}/safety`, "POST", {
-                approved_pickup: aggregate.safety.approvedPickup.trim() || "",
-                not_allowed_pickup: aggregate.safety.notAllowedPickup.trim() || "",
+                approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
+                not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined,
               })
         ),
 
         // Emergency Contacts
         ...aggregate.emergencyContacts.map(e =>
           e.id
-            ? http<EmergencyRequest>(`/emergency-contacts/${e.id}`, "PUT", { name: e.name, phone: e.phone })
-            : http<EmergencyRequest>(`/vaults/${vaultId}/emergency-contacts`, "POST", { name: e.name, phone: e.phone })
-        )
-      ])
+            ? http<EmergencyRequest>(`/vaults/emergency-contacts/${e.id}`, "PUT", { 
+              name: e.name, 
+              phone: e.phone?.trim() || undefined 
+            })
+          : http<EmergencyRequest>(`/vaults/${vaultId}/emergency-contacts`, "POST", { 
+              name: e.name, 
+              phone: e.phone?.trim() || undefined 
+            })
+          )
+        ])
 
       // --------------------
       // Simple retry helper for documents

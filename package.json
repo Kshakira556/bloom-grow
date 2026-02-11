@@ -1,5 +1,5 @@
 {
-  "name": "template_bun_shadcn_react_vite_bun_ts",
+  "name": "cub-parenting-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -49,6 +49,7 @@
     "embla-carousel-react": "^8.6.0",
     "file-saver": "^2.0.5",
     "input-otp": "^1.4.2",
+    "jspdf": "^4.1.0",
     "lucide-react": "^0.556.0",
     "next-themes": "^0.4.6",
     "react": "^19.2.3",
@@ -77,7 +78,6 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
-    "lovable-tagger": "^1.1.13",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",

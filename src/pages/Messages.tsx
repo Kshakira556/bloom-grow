@@ -350,7 +350,6 @@ const Messages = () => {
         }
       };
 
-
       return () => ws.close();
     }, [user]);
 

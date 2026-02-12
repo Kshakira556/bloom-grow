@@ -5,26 +5,13 @@ import * as api from "@/lib/api";
 import { useEffect, useState } from "react";
 import type { VisitEvent } from "@/types/visits";
 import { mapVisitsToEvents } from "@/lib/mappers/visitMapper";
-
-const unreadMessages = [
-  {
-    message: "Please remember to fetch her from school today",
-    time: "12:02",
-    href: "/messages",
-    description: "Unread Messages"
-  },
-  {
-    message: "I found her forms in the cupboard",
-    time: "12:00",
-    href: "/messages",
-    description: "Unread Messages"
-  },
-];
+import { useAuthContext } from "@/context/AuthContext";
 
 export default function Dashboard() {
   const [plans, setPlans] = useState<api.Plan[]>([]);
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
   const [events, setEvents] = useState<VisitEvent[]>([]);
+  const { user } = useAuthContext();
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -65,13 +52,29 @@ export default function Dashboard() {
     fetchVisits();
   }, [activePlan]);
 
-  const journalEntriesCount = 0; 
   const remainingVisitsCount = events.length;
+  const [children, setChildren] = useState<api.Child[]>([]);
+  const [journalEntriesCount, setJournalEntriesCount] = useState(0);
+
+  // Fetch children along with plans
+  useEffect(() => {
+    const fetchChildren = async () => {
+      try {
+        const allChildren = await api.getChildren();
+        setChildren(allChildren);
+      } catch (err) {
+        console.error("Failed to load children:", err);
+      }
+    };
+
+    fetchChildren();
+  }, []);
 
   const quickLinks = [
     {
       icon: Lock,
       label: "Vault",
+      number: children.length, 
       href: "/children",
       description: "takes you to the vault of child info",
       bgColor: "bg-primary",
@@ -109,6 +112,59 @@ export default function Dashboard() {
     .sort((a, b) =>
       new Date(a.start_time).getTime() - new Date(b.start_time).getTime() // ascending
     )[0]; // take first
+
+    const [unreadMessages, setUnreadMessages] = useState<
+      { message: string; time: string; href: string; description: string }[]
+    >([]);
+
+    useEffect(() => {
+      if (!activePlan || !user) {
+        setUnreadMessages([]);
+        return;
+      }
+
+      const fetchUnreadMessages = async () => {
+        try {
+          const msgs = await api.getMessagesByPlan(activePlan.id);
+          const unread = msgs
+            .filter(msg => !msg.is_seen && msg.receiver_id === user.id)
+            .map(msg => ({
+              message: msg.content,
+              time: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              href: "/messages",
+              description: "Unread Messages",
+            }));
+
+          setUnreadMessages(unread);
+        } catch (err) {
+          console.error("Failed to fetch unread messages:", err);
+          setUnreadMessages([]);
+        }
+      };
+
+      fetchUnreadMessages();
+    }, [activePlan, user]);
+
+    useEffect(() => {
+      const fetchJournalCount = async () => {
+        if (!activePlan || children.length === 0) {
+          setJournalEntriesCount(0);
+          return;
+        }
+
+        try {
+          // For simplicity, count entries of first child
+          const firstChildId = children[0].id;
+          const entries = await api.getJournalEntriesByChild(firstChildId);
+          setJournalEntriesCount(entries.length);
+        } catch (err) {
+          console.error("Failed to fetch journal entries count:", err);
+          setJournalEntriesCount(0);
+        }
+      };
+
+      fetchJournalCount();
+    }, [activePlan, children]);
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">

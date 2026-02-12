@@ -1,45 +1,10 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Link } from "react-router-dom";
 import { Lock, Car, ClipboardList, Star, Bookmark } from "lucide-react";
-import { mockEvents, mockPlans } from "@/lib/mocks/visits";
-
-const remainingVisitsCount = mockEvents.length;
-const journalEntriesCount = 0;
-
-const quickLinks = [
-  {
-    icon: Lock,
-    label: "Vault",
-    href: "/children",
-    description: "takes you to the vault of child info",
-    bgColor: "bg-primary",
-    iconColor: "text-primary-foreground",
-  },
-  {
-    icon: Car,
-    number: remainingVisitsCount,
-    href: "/visits",
-    description: "takes you to the visits page",
-    bgColor: "bg-cub-green",
-    iconColor: "text-primary-foreground",
-  },
-  {
-    icon: ClipboardList,
-    number: mockPlans.length,
-    href: "/visits",
-    description: "takes you to your list of plans",
-    bgColor: "bg-cub-mint",
-    iconColor: "text-primary",
-  },
-  {
-    icon: Star,
-    number: journalEntriesCount,
-    href: "/journal",
-    description: "takes you to the journal page",
-    bgColor: "bg-cub-teal-light",
-    iconColor: "text-primary",
-  },
-];
+import * as api from "@/lib/api";
+import { useEffect, useState } from "react";
+import type { VisitEvent } from "@/types/visits";
+import { mapVisitsToEvents } from "@/lib/mappers/visitMapper";
 
 const unreadMessages = [
   {
@@ -57,6 +22,94 @@ const unreadMessages = [
 ];
 
 export default function Dashboard() {
+  const [plans, setPlans] = useState<api.Plan[]>([]);
+  const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
+  const [events, setEvents] = useState<VisitEvent[]>([]);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const { plans } = await api.getPlans();
+        setPlans(plans);
+
+        if (plans[0]) {
+          const { plan: fullPlan } = await api.getPlanById(plans[0].id);
+          setActivePlan(fullPlan);
+        } else {
+          setActivePlan(null);
+        }
+      } catch (err) {
+        console.error("Failed to load plans:", err);
+        alert("Unable to load plans. Please refresh or login again.");
+      }
+    };
+
+    fetchPlans();
+  }, []);
+
+  useEffect(() => {
+    const fetchVisits = async () => {
+      if (!activePlan) {
+        setEvents([]);
+        return;
+      }
+
+      try {
+        const { data } = await api.getVisitsByPlan(activePlan.id);
+        setEvents(mapVisitsToEvents(data));
+      } catch (err) {
+        console.error("Failed to load visits:", err);
+      }
+    };
+
+    fetchVisits();
+  }, [activePlan]);
+
+  const journalEntriesCount = 0; 
+  const remainingVisitsCount = events.length;
+
+  const quickLinks = [
+    {
+      icon: Lock,
+      label: "Vault",
+      href: "/children",
+      description: "takes you to the vault of child info",
+      bgColor: "bg-primary",
+      iconColor: "text-primary-foreground",
+    },
+    {
+      icon: Car,
+      number: remainingVisitsCount,
+      href: "/visits",
+      description: "takes you to the visits page",
+      bgColor: "bg-cub-green",
+      iconColor: "text-primary-foreground",
+    },
+    {
+      icon: ClipboardList,
+      number: plans.length,
+      href: "/visits",
+      description: "takes you to your list of plans",
+      bgColor: "bg-cub-mint",
+      iconColor: "text-primary",
+    },
+    {
+      icon: Star,
+      number: journalEntriesCount,
+      href: "/journal",
+      description: "takes you to the journal page",
+      bgColor: "bg-cub-teal-light",
+      iconColor: "text-primary",
+    },
+  ];
+
+  // Compute the next upcoming visit
+  const nextVisit = events
+    .filter(ev => new Date(ev.start_time) > new Date()) // only future events
+    .sort((a, b) =>
+      new Date(a.start_time).getTime() - new Date(b.start_time).getTime() // ascending
+    )[0]; // take first
+
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
@@ -74,11 +127,11 @@ export default function Dashboard() {
 
           {/* Quick Action Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {quickLinks.map((link) => {
+            {quickLinks.map((link, idx) => {
               const Icon = link.icon;
               return (
                 <Link
-                  key={link.label || link.number}
+                  key={`quicklink-${idx}`} // unique key per item
                   to={link.href}
                   className={`group relative ${link.bgColor} rounded-3xl p-6 flex flex-col items-center justify-center aspect-square shadow-sm transition-all`}
                 >
@@ -115,9 +168,14 @@ export default function Dashboard() {
             {/* Next Upcoming Visit */}
             <div className="bg-card rounded-3xl p-6 shadow-sm">
               <h2 className="font-display font-bold text-lg mb-4">Next Upcoming Visit</h2>
-              <p className="text-2xl font-display">
-                17 Nov, 13:00 - Sophie
-              </p>
+              {nextVisit ? (
+                <p className="text-2xl font-display">
+                  {new Date(nextVisit.start_time).toLocaleDateString()},{" "}
+                  {new Date(nextVisit.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              ) : (
+                <p>No upcoming visits</p>
+              )}
             </div>
 
             {/* Unread Messages / Last Message Preview */}
@@ -126,7 +184,7 @@ export default function Dashboard() {
               <h2 className="font-display font-bold text-lg mb-4">Unread Messages</h2>
               <div className="space-y-3">
                 {unreadMessages.map((msg, idx) => (
-                  <div key={idx} className="flex items-start justify-between border-b border-border pb-3 last:border-0">
+                  <div key={`msg-${idx}`} className="flex items-start justify-between border-b border-border pb-3 last:border-0">
                     <p className="text-foreground/80">{msg.message}</p>
                     <span className="text-sm text-muted-foreground ml-4 flex-shrink-0">{msg.time}</span>
                   </div>

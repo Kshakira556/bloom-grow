@@ -157,8 +157,23 @@ export default function Dashboard() {
   fetchVisits();
 }, [activePlan, toast]);
 
-  const journalEntriesCount = 0; 
   const remainingVisitsCount = events.length;
+  const [children, setChildren] = useState<api.Child[]>([]);
+  const [journalEntriesCount, setJournalEntriesCount] = useState(0);
+
+  // Fetch children along with plans
+  useEffect(() => {
+    const fetchChildren = async () => {
+      try {
+        const allChildren = await api.getChildren();
+        setChildren(allChildren);
+      } catch (err) {
+        console.error("Failed to load children:", err);
+      }
+    };
+
+    fetchChildren();
+  }, []);
 
   // Precompute numbers
 const quickLinksData = [
@@ -197,7 +212,6 @@ const quickLinksData = [
     iconColor: "text-primary",
   },
 ];
-
   // Compute the next upcoming visit
   const nextVisit = useMemo(() => {
     return events
@@ -206,6 +220,59 @@ const quickLinksData = [
         new Date(a.start_time).getTime() - new Date(b.start_time).getTime() // ascending
       )[0]; // take first
   }, [events]);
+
+    const [unreadMessages, setUnreadMessages] = useState<
+      { message: string; time: string; href: string; description: string }[]
+    >([]);
+
+    useEffect(() => {
+      if (!activePlan || !user) {
+        setUnreadMessages([]);
+        return;
+      }
+
+      const fetchUnreadMessages = async () => {
+        try {
+          const msgs = await api.getMessagesByPlan(activePlan.id);
+          const unread = msgs
+            .filter(msg => !msg.is_seen && msg.receiver_id === user.id)
+            .map(msg => ({
+              message: msg.content,
+              time: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              href: "/messages",
+              description: "Unread Messages",
+            }));
+
+          setUnreadMessages(unread);
+        } catch (err) {
+          console.error("Failed to fetch unread messages:", err);
+          setUnreadMessages([]);
+        }
+      };
+
+      fetchUnreadMessages();
+    }, [activePlan, user]);
+
+    useEffect(() => {
+      const fetchJournalCount = async () => {
+        if (!activePlan || children.length === 0) {
+          setJournalEntriesCount(0);
+          return;
+        }
+
+        try {
+          // For simplicity, count entries of first child
+          const firstChildId = children[0].id;
+          const entries = await api.getJournalEntriesByChild(firstChildId);
+          setJournalEntriesCount(entries.length);
+        } catch (err) {
+          console.error("Failed to fetch journal entries count:", err);
+          setJournalEntriesCount(0);
+        }
+      };
+
+      fetchJournalCount();
+    }, [activePlan, children]);
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">

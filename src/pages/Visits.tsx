@@ -5,8 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import * as api from "@/lib/api";
 import type { VisitEvent } from "@/types/visits";
-import type { ApiVisit } from "@/lib/api";
-
+import { mapVisitsToEvents } from "@/lib/mappers/visitMapper";
 import { Calendar } from "react-big-calendar";
 import { dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
@@ -31,20 +30,6 @@ const mapToCalendarEvents = (events: VisitEvent[]) => {
     start: new Date(ev.start_time),
     end: new Date(ev.end_time),
     resource: ev, 
-  }));
-};
-
-const mapVisitsToEvents = (visits: ApiVisit[]): VisitEvent[] => {
-  return visits.map((v) => ({
-    id: v.id,
-    title: v.notes || "Visit",
-    type: "mine", // temporarily assign type until you get it from API
-    planId: v.plan_id,
-    start_time: v.start_time,
-    end_time: v.end_time,
-    location: v.location || "",
-    status: v.status || "scheduled",
-    day: (new Date(v.start_time).getDay() + 6) % 7, // Monday = 0
   }));
 };
 

@@ -11,10 +11,15 @@ import { dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { enUS } from 'date-fns/locale/en-US';
+import { DateTime } from "luxon"
 
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
 const locales = { 'en-US': enUS };
-
+const eventColorMap: Record<VisitEvent["type"], string> = {
+                  mine: "bg-cub-blue",
+                  theirs: "bg-cub-green",
+                  deleted: "bg-gray-400",
+                };
 const localizer = dateFnsLocalizer({
   format,
   parse,
@@ -24,13 +29,17 @@ const localizer = dateFnsLocalizer({
 });
 
 const mapToCalendarEvents = (events: VisitEvent[]) => {
-  return events.map(ev => ({
-    id: ev.id,
-    title: ev.title,
-    start: new Date(ev.start_time),
-    end: new Date(ev.end_time),
-    resource: ev, 
-  }));
+  return events.map(ev => {
+    const start = DateTime.fromISO(ev.start_time).toJSDate();
+    const end = DateTime.fromISO(ev.end_time).toJSDate();
+    return {
+      id: ev.id,
+      title: ev.title,
+      start,
+      end,
+      resource: ev,
+    };
+  });
 };
 
 const Visits = () => {
@@ -43,28 +52,45 @@ const Visits = () => {
 
   const [events, setEvents] = useState<VisitEvent[]>([]);
 
-
+  // Close dropdown when clicking outside
   useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const { plans } = await api.getPlans();
-        setPlans(plans);
-
-        if (plans[0]) {
-          // Fetch full plan for the first plan
-          const { plan: fullPlan } = await api.getPlanById(plans[0].id);
-          setActivePlan(fullPlan);
-        } else {
-          setActivePlan(null);
-        }
-      } catch (err) {
-        console.error("Failed to load plans:", err);
-        alert("Unable to load plans. Please refresh or login again.");
+    const handleClickOutside = (event: MouseEvent) => {
+      const dropdown = document.getElementById("plans-dropdown");
+      const button = document.getElementById("plans-button");
+      if (plansOpen && dropdown && button && !dropdown.contains(event.target as Node) && !button.contains(event.target as Node)) {
+        setPlansOpen(false);
       }
     };
 
-    fetchPlans();
-  }, []);
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [plansOpen]);
+
+  useEffect(() => {
+  const fetchPlans = async () => {
+    try {
+      const { plans } = await api.getPlans();
+      setPlans(plans);
+
+      if (plans.length > 0) {
+        const firstPlan = plans[0];
+
+        // Fetch full plan for the selected plan
+        const { plan: fullPlan } = await api.getPlanById(firstPlan.id);
+        setActivePlan(fullPlan);
+      } else {
+        setActivePlan(null);
+      }
+    } catch (err) {
+      console.error("Failed to load plans:", err);
+      alert("Unable to load plans. Please refresh or login again.");
+    }
+  };
+
+  fetchPlans();
+}, []);
 
   useEffect(() => {
   if (!activePlan) return;
@@ -76,9 +102,6 @@ const Visits = () => {
 
   fetchVisits();
 }, [activePlan]);
-
-  // Compute visible events for calendar
-  const visibleEvents = events.filter(event => event.planId === activePlan?.id);
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -95,6 +118,7 @@ const Visits = () => {
               {/* Legend & Plan */}
               <div className="flex items-center gap-4 mb-4 relative">
                 <Button
+                  id="plans-button"
                   variant="outline"
                   className="rounded-full flex items-center gap-2"
                   onClick={() => setPlansOpen((prev) => !prev)}
@@ -104,7 +128,10 @@ const Visits = () => {
                 </Button>
 
                 {plansOpen && Array.isArray(plans) && plans.length > 0 && (
-                  <div className="absolute top-12 left-0 z-10 w-64 bg-card border rounded-2xl shadow-lg overflow-hidden">
+                  <div
+                    id="plans-dropdown"
+                    className="absolute top-12 left-0 z-10 w-64 bg-card border rounded-2xl shadow-lg overflow-hidden"
+                  >
                     {plans.map((plan) => (
                       <button
                         key={plan.id}
@@ -150,19 +177,17 @@ const Visits = () => {
               <div className="border rounded-2xl overflow-hidden p-4">
                 <Calendar
                   localizer={localizer}
-                  events={mapToCalendarEvents(visibleEvents)}
+                  events={mapToCalendarEvents(events)}
                   views={['month', 'week', 'day']}
                   startAccessor="start"
                   endAccessor="end"
                   style={{ height: 600 }}
                   onSelectEvent={(event) => setSelectedEvent(event.resource)}
                   eventPropGetter={(event) => {
-                    const bgColor = event.resource.type === "mine"
-                      ? "#3b82f6"
-                      : event.resource.type === "theirs"
-                      ? "#10b981"
-                      : "#9ca3af";
-                    return { style: { backgroundColor: bgColor, color: 'white', borderRadius: '0.75rem', padding: '2px 4px', margin: '1px 0' } };
+                    const tailwindClass = eventColorMap[event.resource.type] || "bg-gray-400";
+                    return {
+                      className: tailwindClass + " text-white rounded-lg px-1 py-0.5 m-0.5"
+                    };
                   }}
                 />
               </div>
@@ -209,7 +234,7 @@ const Visits = () => {
                       <div>
                         <div>
                           <span className="text-muted-foreground">Date:</span>{" "}
-                          {new Date(selectedEvent.start_time).toLocaleDateString()}
+                          {DateTime.fromISO(selectedEvent.start_time).setZone("local").toLocaleString(DateTime.DATE_MED)}
                         </div>
 
                         <div>
@@ -244,7 +269,10 @@ const Visits = () => {
                     <div className="mt-6 space-y-2">
                       <Button
                         className="w-full rounded-full"
-                        onClick={() => setEditEvent(selectedEvent)}
+                        onClick={() => {
+                          setEditEvent(selectedEvent);
+                          setSelectedEvent(null); // close view modal
+                        }}
                       >
                         Edit
                       </Button>
@@ -281,7 +309,29 @@ const Visits = () => {
                             id="edit-day"
                             className="w-full p-2 border rounded mb-4"
                             value={editEvent.day}
-                            onChange={(e) => setEditEvent({ ...editEvent, day: Number(e.target.value) })}
+                            onChange={(e) => {
+                              const newDay = Number(e.target.value);
+
+                              if (!editEvent) return;
+
+                              // Calculate difference in days
+                              const oldStart = DateTime.fromISO(editEvent.start_time);
+                              const oldEnd = DateTime.fromISO(editEvent.end_time);
+
+                              // Convert JS Sunday=0 → Monday=0
+                              const oldDayIndex = (oldStart.weekday + 6) % 7; 
+                              const diffDays = newDay - oldDayIndex;
+
+                              const newStart = oldStart.plus({ days: diffDays });
+                              const newEnd = oldEnd.plus({ days: diffDays });
+
+                              setEditEvent({
+                                ...editEvent,
+                                day: newDay,
+                                start_time: newStart.toISOString(),
+                                end_time: newEnd.toISOString(),
+                              });
+                            }}
                           >
                             {daysOfWeek.map((day, index) => (
                               <option key={day} value={index}>{day}</option>
@@ -347,12 +397,11 @@ const Visits = () => {
               onClick={async () => {
                 if (!activePlan) return;
 
-                // Set start/end times
-                const start = new Date();
-                start.setHours(9, 0, 0, 0);
+                const now = DateTime.local();
 
-                const end = new Date(start);
-                end.setHours(10, 0, 0, 0);
+                // Next full hour
+                const start = now.plus({ minutes: 60 - now.minute }).startOf("hour");
+                const end = start.plus({ hours: 1 });
 
                 try {
                   const created = await api.createVisit({
@@ -367,13 +416,14 @@ const Visits = () => {
                     {
                       id: created.id,
                       title: created.notes || "Visit",
-                      type: "mine", // or dynamically if available
+                      type: "mine", // TODO: make dynamic if creating events for other participants
                       planId: created.plan_id,
                       start_time: created.start_time,
                       end_time: created.end_time,
                       location: created.location || "",
                       status: created.status || "scheduled",
-                      day: (new Date(created.start_time).getDay() + 6) % 7,
+                      // Convert JS Sunday=0 to Monday=0
+                      day: (DateTime.fromISO(created.start_time).weekday + 6) % 7,
                     },
                   ]);
                 } catch (err) {

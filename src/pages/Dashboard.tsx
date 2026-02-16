@@ -286,39 +286,39 @@ export default function Dashboard() {
           {/* Quick Action Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickLinks.map((link, idx) => {
-  const Icon = link.icon;
-  return (
-    <Link
-      key={idx} 
-      to={link.href}
-      role="button" 
-      tabIndex={0} 
-      aria-label={link.label ? `${link.label}: ${link.description}` : link.description} // accessibility
-      className={`group relative ${link.bgColor} rounded-3xl p-6 flex flex-col items-center justify-center aspect-square shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary`} // visible focus ring
-    >
-      <Icon className={`w-12 h-12 ${link.iconColor} mb-2 transition-transform group-hover:scale-110`} />
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={idx} 
+                  to={link.href}
+                  role="button" 
+                  tabIndex={0} 
+                  aria-label={link.label ? `${link.label}: ${link.description}` : link.description} // accessibility
+                  className={`group relative ${link.bgColor} rounded-3xl p-6 flex flex-col items-center justify-center aspect-square shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary`} // visible focus ring
+                >
+                  <Icon className={`w-12 h-12 ${link.iconColor} mb-2 transition-transform group-hover:scale-110`} />
 
-      {link.number !== undefined && (
-        <span className={`text-3xl font-display font-bold ${link.iconColor} transition-opacity group-hover:opacity-20`}>
-          {link.number}
-        </span>
-      )}
+                  {link.number !== undefined && (
+                    <span className={`text-3xl font-display font-bold ${link.iconColor} transition-opacity group-hover:opacity-20`}>
+                      {link.number}
+                    </span>
+                  )}
 
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center opacity-0 translate-y-2 transition-all group-hover:opacity-100 group-hover:translate-y-0">
-        {link.label && (
-          <p className="font-display font-bold text-base text-primary-foreground">{link.label}</p>
-        )}
-        <p className="text-xs text-primary-foreground/80 mt-1 px-2">{link.description}</p>
-      </div>
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center opacity-0 translate-y-2 transition-all group-hover:opacity-100 group-hover:translate-y-0">
+                    {link.label && (
+                      <p className="font-display font-bold text-base text-primary-foreground">{link.label}</p>
+                    )}
+                    <p className="text-xs text-primary-foreground/80 mt-1 px-2">{link.description}</p>
+                  </div>
 
-      {(isLoadingPlans || isLoadingVisits) && (
-        <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-3xl">
-          <span className="loader" role="status" aria-live="polite">Loading...</span>
-        </div>
-      )}
-    </Link>
-  );
-})}
+                  {(isLoadingPlans || isLoadingVisits) && (
+                    <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-3xl">
+                      <span className="loader" role="status" aria-live="polite">Loading...</span>
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Bottom Cards */}
@@ -340,45 +340,45 @@ export default function Dashboard() {
             </div>
 
             {/* Unread Messages / Last Message Preview */}
-<div className="bg-card rounded-3xl p-6 shadow-sm">
-  <Link to="/messages">
-    <h2 className="font-display font-bold text-lg mb-4">Unread Messages</h2>
-    <div className="space-y-3" role="list">
-  {unreadMessages.length === 0 ? (
-    <p className="text-sm text-muted-foreground">No unread messages</p>
-  ) : (
-    <>
-      {unreadMessages.map((msg, idx) => (
-        <div
-          key={`msg-${idx}`}
-          role="listitem"
-          aria-label={`Unread message: ${msg.message}, received at ${msg.time}`}
-          className="flex items-start justify-between border-b border-border pb-3 last:border-0"
-        >
-          <p className="text-foreground/80">{msg.message}</p>
-          <span className="text-sm text-muted-foreground ml-4 flex-shrink-0">
-            {msg.time}
-          </span>
-        </div>
-      ))}
-      {/* Pagination controls */}
-      {unreadMessages.length > messagesPerPage && (
-        <Pagination className="mt-2">
-          <PaginationPrevious
-            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-            className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-          />
-          <PaginationNext
-            onClick={() => setCurrentPage(p => p + 1)}
-            className={currentPage === Math.ceil(allUnreadMessages.length / messagesPerPage) ? "pointer-events-none opacity-50" : ""}
-          />
-        </Pagination>
-      )}
-    </>
-  )}
-</div>
-  </Link>
-</div>
+            <div className="bg-card rounded-3xl p-6 shadow-sm">
+              <Link to="/messages">
+                <h2 className="font-display font-bold text-lg mb-4">Unread Messages</h2>
+                <div className="space-y-3" role="list">
+              {unreadMessages.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No unread messages</p>
+              ) : (
+                <>
+                  {unreadMessages.map((msg, idx) => (
+                    <div
+                      key={`msg-${idx}`}
+                      role="listitem"
+                      aria-label={`Unread message: ${msg.message}, received at ${msg.time}`}
+                      className="flex items-start justify-between border-b border-border pb-3 last:border-0"
+                    >
+                      <p className="text-foreground/80">{msg.message}</p>
+                      <span className="text-sm text-muted-foreground ml-4 flex-shrink-0">
+                        {msg.time}
+                      </span>
+                    </div>
+                  ))}
+                  {/* Pagination controls */}
+                  {unreadMessages.length > messagesPerPage && (
+                    <Pagination className="mt-2">
+                      <PaginationPrevious
+                        onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
+                      <PaginationNext
+                        onClick={() => setCurrentPage(p => p + 1)}
+                        className={currentPage === Math.ceil(allUnreadMessages.length / messagesPerPage) ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </Pagination>
+                  )}
+                </>
+              )}
+            </div>
+              </Link>
+            </div>
           </div>
         </div>
       </main>

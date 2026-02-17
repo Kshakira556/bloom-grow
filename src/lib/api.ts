@@ -181,8 +181,12 @@ export async function getVisitsByPlan(
 
 export const createVisit = async (payload: {
   plan_id: string;
+  child_id: string;
   start_time: string;
   end_time: string;
+  location?: string;
+  notes?: string;
+  status?: string;
 }) => {
   return http<ApiVisit>("/visits", "POST", payload);
 };

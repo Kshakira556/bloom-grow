@@ -6,12 +6,12 @@ import { useState, useEffect } from "react";
 import * as api from "@/lib/api";
 import type { VisitEvent } from "@/types/visits";
 import { mapVisitsToEvents } from "@/lib/mappers/visitMapper";
-import { Calendar } from "react-big-calendar";
-import { dateFnsLocalizer } from 'react-big-calendar';
+import { dateFnsLocalizer, Calendar } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { enUS } from 'date-fns/locale/en-US';
 import { DateTime } from "luxon"
+import { VisitModal } from "@/components/VisitModal";
 
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
 const locales = { 'en-US': enUS };
@@ -44,13 +44,43 @@ const mapToCalendarEvents = (events: VisitEvent[]) => {
 
 const Visits = () => {
   const [plansOpen, setPlansOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<VisitEvent | null>(null);
-  const [editEvent, setEditEvent] = useState<VisitEvent | null>(null);
+  type ModalMode = "view" | "edit" | "create" | null;
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+  const [modalEvent, setModalEvent] = useState<VisitEvent | null>(null);
 
   const [plans, setPlans] = useState<api.Plan[]>([]);
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
 
   const [events, setEvents] = useState<VisitEvent[]>([]);
+  const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
+  const [selectedChild, setSelectedChild] = useState<{ id: string; name: string } | null>(null);
+  const [loadingChildren, setLoadingChildren] = useState(true);
+
+  useEffect(() => {
+  const fetchChildren = async () => {
+    try {
+      const allChildren = await api.getChildren();
+      const mapped = allChildren.map(child => ({
+        id: child.id,
+        name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+      }));
+      setChildren(mapped);
+
+      if (mapped.length > 0) {
+        setSelectedChild(mapped[0]); // default to first child
+      } else {
+        setSelectedChild(null);
+      }
+    } catch (err) {
+      console.error("Error fetching children:", err);
+      setSelectedChild(null);
+    } finally {
+      setLoadingChildren(false);
+    }
+  };
+
+  fetchChildren();
+}, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -115,48 +145,72 @@ const Visits = () => {
           {/* Calendar Card */}
           <Card className="rounded-3xl overflow-hidden">
             <CardContent className="pt-4">
-              {/* Legend & Plan */}
-              <div className="flex items-center gap-4 mb-4 relative">
-                <Button
-                  id="plans-button"
-                  variant="outline"
-                  className="rounded-full flex items-center gap-2"
-                  onClick={() => setPlansOpen((prev) => !prev)}
-                >
-                  <span>{activePlan?.title || "Select Plan"}</span>
-                  <Check className="w-4 h-4 text-primary" />
-                </Button>
+              {/* Legend, Plan & Child Selector */}
+<div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 relative">
 
-                {plansOpen && Array.isArray(plans) && plans.length > 0 && (
-                  <div
-                    id="plans-dropdown"
-                    className="absolute top-12 left-0 z-10 w-64 bg-card border rounded-2xl shadow-lg overflow-hidden"
-                  >
-                    {plans.map((plan) => (
-                      <button
-                        key={plan.id}
-                        onClick={async () => {
-                          setPlansOpen(false);
+  {/* Plan Selector */}
+  <Button
+    id="plans-button"
+    variant="outline"
+    className="rounded-full flex items-center gap-2"
+    onClick={() => setPlansOpen((prev) => !prev)}
+  >
+    <span>{activePlan?.title || "Select Plan"}</span>
+    <Check className="w-4 h-4 text-primary" />
+  </Button>
 
-                          try {
-                            const { plan: fullPlan } = await api.getPlanById(plan.id);
-                            setActivePlan(fullPlan);
-                          } catch (err) {
-                            console.error("Failed to fetch full plan:", err);
-                            alert("Unable to fetch full plan details.");
-                            setActivePlan(null);
-                          }
-                        }}
-                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-muted text-left ${
-                          activePlan?.id === plan.id ? "bg-muted" : ""
-                        }`}
-                      >
-                        <span className="text-sm">{plan.title}</span>
-                        {activePlan?.id === plan.id && (
-                          <Check className="w-4 h-4 text-primary" />
-                        )}
-                      </button>
-                    ))}
+  {plansOpen && Array.isArray(plans) && plans.length > 0 && (
+    <div
+      id="plans-dropdown"
+      className="absolute top-12 left-0 z-10 w-64 bg-card border rounded-2xl shadow-lg overflow-hidden"
+    >
+      {plans.map((plan) => (
+        <button
+          key={plan.id}
+          onClick={async () => {
+            setPlansOpen(false);
+            try {
+              const { plan: fullPlan } = await api.getPlanById(plan.id);
+              setActivePlan(fullPlan);
+            } catch (err) {
+              console.error("Failed to fetch full plan:", err);
+              alert("Unable to fetch full plan details.");
+              setActivePlan(null);
+            }
+          }}
+          className={`w-full px-4 py-3 flex items-center justify-between hover:bg-muted text-left ${
+            activePlan?.id === plan.id ? "bg-muted" : ""
+          }`}
+        >
+          <span className="text-sm">{plan.title}</span>
+          {activePlan?.id === plan.id && <Check className="w-4 h-4 text-primary" />}
+        </button>
+      ))}
+    </div>
+  )}
+
+  {/* Child Selector */}
+  {children.length > 0 && (
+    <div>
+      <label className="block text-sm font-medium mb-1">Child</label>
+      <select
+      aria-label="child"
+        value={selectedChild?.id || ""}
+        onChange={(e) => {
+          const child = children.find(c => c.id === e.target.value) || null;
+          setSelectedChild(child);
+        }}
+        className="w-48 p-2 border rounded-lg"
+      >
+        {children.map((child) => (
+          <option key={child.id} value={child.id}>
+            {child.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  )}
+  
                     {activePlan && activePlan.invites.length > 0 && (
                       <div className="mt-2 p-2 text-sm text-muted-foreground border rounded-lg bg-card-light">
                         <strong>Invites:</strong>
@@ -169,9 +223,9 @@ const Visits = () => {
                         </ul>
                       </div>
                     )}
-                  </div>
-                )}
-              </div>
+
+
+</div>
 
               {/* Calendar */}
               <div className="border rounded-2xl overflow-hidden p-4">
@@ -182,7 +236,10 @@ const Visits = () => {
                   startAccessor="start"
                   endAccessor="end"
                   style={{ height: 600 }}
-                  onSelectEvent={(event) => setSelectedEvent(event.resource)}
+                  onSelectEvent={(event) => {
+                    setModalEvent(event.resource);
+                    setModalMode("view");
+                  }}
                   eventPropGetter={(event) => {
                     const tailwindClass = eventColorMap[event.resource.type] || "bg-gray-400";
                     return {
@@ -207,184 +264,94 @@ const Visits = () => {
                   <span className="text-sm">Deleted</span>
                 </div>
               </div>
-              {selectedEvent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                  <div className="bg-card rounded-3xl w-full max-w-md p-6 shadow-xl">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="font-display text-xl font-bold text-primary">
-                        {selectedEvent.title}
-                      </h2>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setSelectedEvent(null)}
-                      >
-                        ✕
-                      </Button>
-                    </div>
+              {modalEvent && modalMode && (
+                <VisitModal
+                  mode={modalMode}
+                  event={modalEvent}
+                  onClose={() => setModalMode(null)}
+                  onSave={async (updatedEvent) => {
+                    if (!activePlan || !selectedChild) {
+                      alert("Please select a child first.");
+                      return;
+                    }
 
-                    {/* Details */}
-                    <div className="space-y-3 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Plan:</span>{" "}
-                        {activePlan?.title}
-                      </div>
+                    const payload = {
+                      plan_id: activePlan.id,
+                      child_id: selectedChild.id,
+                      parent_id: activePlan?.invites?.[0]?.id || "", 
+                      start_time: updatedEvent.start_time,
+                      end_time: updatedEvent.end_time,
+                      location: updatedEvent.location || "",
+                      notes: updatedEvent.title || "",
+                      status: updatedEvent.status || "scheduled",
+                    };
 
-                      <div>
-                        <div>
-                          <span className="text-muted-foreground">Date:</span>{" "}
-                          {DateTime.fromISO(selectedEvent.start_time).setZone("local").toLocaleString(DateTime.DATE_MED)}
-                        </div>
+                    try {
+                      if (modalMode === "create") {
+                        // Create new visit
+                        const created = await api.createVisit(payload);
 
-                        <div>
-                          <span className="text-muted-foreground">Title / Notes:</span>{" "}
-                          {selectedEvent.title}
-                        </div>
-                      </div>
+                        // Update modalEvent with real ID for future edits
+                        setModalEvent({
+                          ...updatedEvent,
+                          id: created.id,
+                          title: created.notes || updatedEvent.title || "Visit",
+                          status: created.status || "scheduled",
+                        });
 
-                      {selectedEvent.location && (
-                        <div>
-                          <span className="text-muted-foreground">Location:</span>{" "}
-                          {selectedEvent.location}
-                        </div>
-                      )}
+                        // Add to events list
+                        setEvents((prev) => [
+                          ...prev,
+                          {
+                            ...updatedEvent,
+                            id: created.id,
+                            title: created.notes || updatedEvent.title || "Visit",
+                            status: created.status || "scheduled",
+                          },
+                        ]);
 
-                      <div>
-                        <span className="text-muted-foreground">Status:</span>{" "}
-                        {selectedEvent.status}
-                      </div>
+                        // Optional: switch modal to "edit" mode after creation
+                        setModalMode("view");
+                      } else {
+                        // Update existing visit
+                        const updated = await api.updateVisit(updatedEvent.id, payload);
 
-                      <div>
-                        <span className="text-muted-foreground">Type:</span>{" "}
-                        {selectedEvent.type === "mine"
-                          ? "My event"
-                          : selectedEvent.type === "theirs"
-                          ? "Their event"
-                          : "Deleted"}
-                      </div>
-                    </div>
+                        const updatedVisit: VisitEvent = {
+                          id: updated.id,
+                          title: updated.notes || updatedEvent.title || "Visit",
+                          type: updatedEvent.type,
+                          planId: activePlan.id,
+                          start_time: updatedEvent.start_time,
+                          end_time: updatedEvent.end_time,
+                          location: updatedEvent.location || "",
+                          status: updated.status || "scheduled",
+                          day: (DateTime.fromISO(updatedEvent.start_time).weekday + 6) % 7,
+                        };
 
-                    {/* Actions */}
-                    <div className="mt-6 space-y-2">
-                      <Button
-                        className="w-full rounded-full"
-                        onClick={() => {
-                          setEditEvent(selectedEvent);
-                          setSelectedEvent(null); // close view modal
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full rounded-full"
-                        onClick={() => alert("Propose change feature coming soon")}
-                      >
-                        Propose change
-                      </Button>
-                    </div>
+                        setEvents(prev =>
+                          prev.map(ev => (ev.id === updatedEvent.id ? updatedVisit : ev))
+                        );
 
-                    {/* Edit Modal */}
-                    {editEvent && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                        <div className="bg-card rounded-3xl w-full max-w-md p-6 shadow-xl">
-                          <div className="flex items-center justify-between mb-4">
-                            <h2 className="font-display text-xl font-bold text-primary">Edit Event</h2>
-                            <Button variant="ghost" size="icon" onClick={() => setEditEvent(null)}>✕</Button>
-                          </div>
-
-                          {/* Title */}
-                          <input
-                            type="text"
-                            aria-label="Event Title"
-                            className="w-full p-2 border rounded mb-4"
-                            value={editEvent.title}
-                            onChange={(e) => setEditEvent({ ...editEvent, title: e.target.value })}
-                          />
-
-                          {/* Day */}
-                          <label className="block mb-1 text-sm font-medium" htmlFor="edit-day">Day</label>
-                          <select
-                            id="edit-day"
-                            className="w-full p-2 border rounded mb-4"
-                            value={editEvent.day}
-                            onChange={(e) => {
-                              const newDay = Number(e.target.value);
-
-                              if (!editEvent) return;
-
-                              // Calculate difference in days
-                              const oldStart = DateTime.fromISO(editEvent.start_time);
-                              const oldEnd = DateTime.fromISO(editEvent.end_time);
-
-                              // Convert JS Sunday=0 → Monday=0
-                              const oldDayIndex = (oldStart.weekday + 6) % 7; 
-                              const diffDays = newDay - oldDayIndex;
-
-                              const newStart = oldStart.plus({ days: diffDays });
-                              const newEnd = oldEnd.plus({ days: diffDays });
-
-                              setEditEvent({
-                                ...editEvent,
-                                day: newDay,
-                                start_time: newStart.toISOString(),
-                                end_time: newEnd.toISOString(),
-                              });
-                            }}
-                          >
-                            {daysOfWeek.map((day, index) => (
-                              <option key={day} value={index}>{day}</option>
-                            ))}
-                          </select>
-
-                          {/* Type */}
-                          <label className="block mb-1 text-sm font-medium" htmlFor="edit-type">Type</label>
-                          <select
-                            id="edit-type"
-                            className="w-full p-2 border rounded mb-4"
-                            value={editEvent.type}
-                            onChange={(e) => setEditEvent({ ...editEvent, type: e.target.value as VisitEvent["type"] })}
-                          >
-                            <option value="mine">My event</option>
-                            <option value="theirs">Their event</option>
-                            <option value="deleted">Deleted</option>
-                          </select>
-
-                          <Button
-                            className="w-full rounded-full"
-                            onClick={async () => {
-                              if (!editEvent) return;
-
-                              try {
-                                await api.updateVisit(editEvent.id, {
-                                  start_time: editEvent.start_time,
-                                  end_time: editEvent.end_time,
-                                  location: editEvent.location,
-                                  notes: editEvent.title, 
-                                  status: editEvent.status,
-                                });
-
-                                // Update UI
-                                setEvents((prev) =>
-                                  prev.map((ev) => (ev.id === editEvent.id ? editEvent : ev))
-                                );
-                                setSelectedEvent(editEvent);
-                                setEditEvent(null);
-                              } catch (err) {
-                                console.error("Failed to update visit:", err);
-                                alert("Failed to update visit. Please try again.");
-                              }
-                            }}
-                          >
-                            Save
-                          </Button>
-
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                        // Update modalEvent too, so modal stays consistent
+                        setModalEvent(updatedVisit);
+                      }
+                    } catch (err) {
+                      console.error("Failed to save visit:", err);
+                      alert("Failed to save visit. Check all fields.");
+                    }
+                  }}
+                  onDelete={async (id) => {
+                    try {
+                      await api.deleteVisit(id);
+                      setEvents((prev) => prev.filter((ev) => ev.id !== id));
+                      setModalMode(null);
+                      setModalEvent(null);
+                    } catch (err) {
+                      console.error("Failed to delete visit:", err);
+                      alert("Failed to delete visit. Please try again.");
+                    }
+                  }}
+                />
               )}
             </CardContent>
           </Card>
@@ -394,42 +361,25 @@ const Visits = () => {
             <Button
               size="lg"
               className="rounded-full w-14 h-14 shadow-lg"
-              onClick={async () => {
+              onClick={() => {
                 if (!activePlan) return;
 
                 const now = DateTime.local();
-
-                // Next full hour
                 const start = now.plus({ minutes: 60 - now.minute }).startOf("hour");
                 const end = start.plus({ hours: 1 });
 
-                try {
-                  const created = await api.createVisit({
-                    plan_id: activePlan.id,
-                    start_time: start.toISOString(),
-                    end_time: end.toISOString(),
-                  });
-
-                  // Add to UI
-                  setEvents((prev) => [
-                    ...prev,
-                    {
-                      id: created.id,
-                      title: created.notes || "Visit",
-                      type: "mine", // TODO: make dynamic if creating events for other participants
-                      planId: created.plan_id,
-                      start_time: created.start_time,
-                      end_time: created.end_time,
-                      location: created.location || "",
-                      status: created.status || "scheduled",
-                      // Convert JS Sunday=0 to Monday=0
-                      day: (DateTime.fromISO(created.start_time).weekday + 6) % 7,
-                    },
-                  ]);
-                } catch (err) {
-                  console.error("Failed to create visit:", err);
-                  alert("Failed to create visit. Please try again.");
-                }
+                setModalEvent({
+                  id: "", // temporary for create
+                  planId: activePlan.id,
+                  title: "",
+                  type: "mine",
+                  start_time: start.toISO(),
+                  end_time: end.toISO(),
+                  location: "",
+                  status: "scheduled",
+                  day: (start.weekday + 6) % 7,
+                });
+                setModalMode("create");
               }}
             >
               <Plus className="w-6 h-6" />

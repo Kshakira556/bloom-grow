@@ -33,11 +33,11 @@ const mapToCalendarEvents = (events: VisitEvent[]) => {
     const start = DateTime.fromISO(ev.start_time).toJSDate();
     const end = DateTime.fromISO(ev.end_time).toJSDate();
     return {
-      id: ev.id,
+      id: ev.id || crypto.randomUUID(), // fallback just in case
       title: ev.title,
       start,
       end,
-      resource: ev,
+      resource: ev,   // Keep full event
     };
   });
 };
@@ -269,77 +269,67 @@ const Visits = () => {
                   mode={modalMode}
                   event={modalEvent}
                   onClose={() => setModalMode(null)}
+                  onEdit={() => setModalMode("edit")}
                   onSave={async (updatedEvent) => {
-                    if (!activePlan || !selectedChild) {
-                      alert("Please select a child first.");
-                      return;
-                    }
+  if (!activePlan || !selectedChild) {
+    alert("Please select a child first.");
+    return;
+  }
 
-                    const payload = {
-                      plan_id: activePlan.id,
-                      child_id: selectedChild.id,
-                      parent_id: activePlan?.invites?.[0]?.id || "", 
-                      start_time: updatedEvent.start_time,
-                      end_time: updatedEvent.end_time,
-                      location: updatedEvent.location || "",
-                      notes: updatedEvent.title || "",
-                      status: updatedEvent.status || "scheduled",
-                    };
+  // Explicitly handle create vs update
+  const isCreate = !updatedEvent.id || updatedEvent.id === "";
 
-                    try {
-                      if (modalMode === "create") {
-                        // Create new visit
-                        const created = await api.createVisit(payload);
+  const payload = {
+    plan_id: activePlan.id,
+    child_id: selectedChild.id,
+    parent_id: activePlan?.invites?.[0]?.id || "",
+    start_time: updatedEvent.start_time,
+    end_time: updatedEvent.end_time,
+    location: updatedEvent.location || "",
+    notes: updatedEvent.title || "",
+    status: updatedEvent.status || "scheduled",
+  };
 
-                        // Update modalEvent with real ID for future edits
-                        setModalEvent({
-                          ...updatedEvent,
-                          id: created.id,
-                          title: created.notes || updatedEvent.title || "Visit",
-                          status: created.status || "scheduled",
-                        });
+  try {
+    let finalEvent: VisitEvent;
 
-                        // Add to events list
-                        setEvents((prev) => [
-                          ...prev,
-                          {
-                            ...updatedEvent,
-                            id: created.id,
-                            title: created.notes || updatedEvent.title || "Visit",
-                            status: created.status || "scheduled",
-                          },
-                        ]);
+    if (isCreate) {
+      // CREATE
+      const created = await api.createVisit(payload);
 
-                        // Optional: switch modal to "edit" mode after creation
-                        setModalMode("view");
-                      } else {
-                        // Update existing visit
-                        const updated = await api.updateVisit(updatedEvent.id, payload);
+      finalEvent = {
+        ...updatedEvent,
+        id: created.id, // guaranteed backend ID
+        title: created.notes || updatedEvent.title || "Visit",
+        status: created.status || "scheduled",
+      };
 
-                        const updatedVisit: VisitEvent = {
-                          id: updated.id,
-                          title: updated.notes || updatedEvent.title || "Visit",
-                          type: updatedEvent.type,
-                          planId: activePlan.id,
-                          start_time: updatedEvent.start_time,
-                          end_time: updatedEvent.end_time,
-                          location: updatedEvent.location || "",
-                          status: updated.status || "scheduled",
-                          day: (DateTime.fromISO(updatedEvent.start_time).weekday + 6) % 7,
-                        };
+      setEvents((prev) => [...prev, finalEvent]);
+      setModalEvent(finalEvent);
+      setModalMode("view");
+    } else {
+      // UPDATE
+      const updated = await api.updateVisit(updatedEvent.id, payload);
 
-                        setEvents(prev =>
-                          prev.map(ev => (ev.id === updatedEvent.id ? updatedVisit : ev))
-                        );
+      finalEvent = {
+        ...updatedEvent,
+        id: updated.id, // ensure using backend ID
+        title: updated.notes || updatedEvent.title || "Visit",
+        status: updated.status || "scheduled",
+        day: (DateTime.fromISO(updatedEvent.start_time).weekday + 6) % 7,
+      };
 
-                        // Update modalEvent too, so modal stays consistent
-                        setModalEvent(updatedVisit);
-                      }
-                    } catch (err) {
-                      console.error("Failed to save visit:", err);
-                      alert("Failed to save visit. Check all fields.");
-                    }
-                  }}
+      setEvents((prev) =>
+        prev.map((ev) => (ev.id === updatedEvent.id ? finalEvent : ev))
+      );
+      setModalEvent(finalEvent);
+    }
+  } catch (err) {
+    console.error("Failed to save visit:", err);
+    alert("Failed to save visit. Check all fields.");
+  }
+}}
+
                   onDelete={async (id) => {
                     try {
                       await api.deleteVisit(id);

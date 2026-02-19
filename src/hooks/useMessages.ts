@@ -17,12 +17,12 @@ export const useMessages = () => {
     []
   );
 
-const send = useCallback(
-  async (payload: SendMessagePayload): Promise<ApiMessage> => {
-    return api.sendMessage(payload);
-  },
-  []
-);
+  const send = useCallback(
+    async (payload: SendMessagePayload): Promise<ApiMessage> => {
+      return api.sendMessage(payload);
+    },
+    []
+  );
 
   const markSeen = useCallback(
     async (id: string): Promise<ApiMessage> => {
@@ -31,9 +31,25 @@ const send = useCallback(
     []
   );
 
+  const update = useCallback(
+    async (id: string, content: string): Promise<ApiMessage> => {
+      return api.updateMessage(id, { content });
+    },
+    []
+  );
+
+  const remove = useCallback(
+    async (id: string): Promise<void> => {
+      return api.deleteMessage(id);
+    },
+    []
+  );
+
   return {
     fetchByPlan,
     send,
     markSeen,
+    update,
+    remove,
   };
 };

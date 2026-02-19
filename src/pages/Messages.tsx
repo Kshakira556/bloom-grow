@@ -34,7 +34,31 @@ const Messages = () => {
   const [draft, setDraft] = useState<DraftMessage>({ content: "", purpose: "General", attachments: [], });
   const { user } = useAuth();
   const userIdStr = user?.id.toString(); 
-  const { fetchByPlan, send, markSeen } = useMessages();
+  const { fetchByPlan, send, markSeen, update, remove } = useMessages();
+
+  const handleEditMessage = async (id: string, newContent: string) => {
+    try {
+      await update(id, newContent);
+
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === id ? { ...m, content: newContent } : m
+        )
+      );
+    } catch (err) {
+      console.error("Failed to update message:", err);
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    try {
+      await remove(id);
+
+      setMessages(prev => prev.filter(m => m.id !== id));
+    } catch (err) {
+      console.error("Failed to delete message:", err);
+    }
+  };
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -152,7 +176,7 @@ const Messages = () => {
       };
 
       return () => ws.close();
-    }, [user]);
+    }, [user, markSeen]);
 
   const [plans, setPlans] = useState<api.Plan[]>([]);
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
@@ -275,7 +299,7 @@ useEffect(() => {
     };
 
     fetchMessages();
-  }, [activePlan, fetchByPlan, user?.id]);
+  }, [activePlan, fetchByPlan, user, userIdStr]);
 
   const [plansOpen, setPlansOpen] = useState(false);
 
@@ -331,6 +355,8 @@ useEffect(() => {
                 <MessageList
                   messages={messages}
                   purposeFilter={purposeFilter}
+                  onEdit={handleEditMessage}
+                  onDelete={handleDeleteMessage}
                 />
 
                 <MessageInput

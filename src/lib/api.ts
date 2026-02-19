@@ -307,3 +307,21 @@ export const getChildren = async (): Promise<Child[]> => {
   const data = await res.json();
   return data.children; 
 };
+
+// Update message
+export const updateMessage = async (
+  id: string,
+  payload: Partial<{ content: string }>
+): Promise<ApiMessage> => {
+  const res = await http<{ message: ApiMessage }>(
+    `/messages/${id}`,
+    "PUT",
+    payload
+  );
+  return res.message;
+};
+
+// Delete message
+export const deleteMessage = async (id: string): Promise<void> => {
+  return http<void>(`/messages/${id}`, "DELETE");
+};

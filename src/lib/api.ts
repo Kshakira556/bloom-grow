@@ -226,6 +226,7 @@ export interface ApiMessage {
   plan_id: string;
   content: string;
   created_at: string;
+  updated_at?: string | null;
   is_flagged: boolean;
   is_seen?: boolean;
   attachments?: Attachment[];
@@ -324,4 +325,19 @@ export const updateMessage = async (
 // Delete message
 export const deleteMessage = async (id: string): Promise<void> => {
   return http<void>(`/messages/${id}`, "DELETE");
+};
+
+
+// --------------------
+// Contacts / Invite Users
+// --------------------
+export interface InviteUserPayload {
+  name: string;
+  email?: string;
+  phone?: string;
+  relationship?: string;
+}
+
+export const inviteUser = async (payload: InviteUserPayload) => {
+  return http("/contacts", "POST", payload);
 };

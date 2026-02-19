@@ -83,21 +83,10 @@ const Messages = () => {
               return { name: inviteEmail, childName: null };
             }
           };
-          const { name, childName } = await resolveInviteName(fullPlan.invites);
-
-          setSelectedConversation({
-            user_id: fullPlan.created_by,
-            plan_id: fullPlan.id,
-            name,
-            role: "Co-Parent",
-            topic: "Plan conversation",
-            caseRef: fullPlan.title,
-            childName,
-            lastMessage: "",
-            time: "",
-            createdAt: fullPlan.created_at,
-          });
-
+          if (plans[0]) {
+            const { plan: fullPlan } = await api.getPlanById(plans[0].id);
+            setActivePlan(fullPlan);
+          }
         }
       } catch (err) {
         console.error("Failed to load plans:", err);
@@ -243,17 +232,18 @@ useEffect(() => {
         }
 
         const mapped: Message[] = apiMessages.map((m: ApiMessage & { attachments?: Attachment[] }) => ({
-        id: m.id,
-        sender: m.sender_id === user.id ? "me" : "them",
-        sender_id: m.sender_id,       
-        receiver_id: m.receiver_id,
-        content: m.content,
-        createdAt: m.created_at,
-        time: new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        purpose: "General",
-        status: m.is_seen ? "Read" : "Delivered",
-        attachments: m.attachments || [],
-      }));
+          id: m.id,
+          sender: m.sender_id === user.id ? "me" : "them",
+          sender_id: m.sender_id,       
+          receiver_id: m.receiver_id,
+          content: m.content,
+          createdAt: m.created_at,         // already matches backend
+          updated_at: m.updated_at ?? null, // new field for alignment
+          time: new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          purpose: "General",
+          status: m.is_seen ? "Read" : "Delivered",
+          attachments: m.attachments || [],
+        }));
 
       setMessages(mapped);
       
@@ -262,7 +252,8 @@ useEffect(() => {
         activePlan: api.FullPlan, 
         userId: string
       ) => {
-        const otherUserId = msg.sender === "me" ? msg.receiver_id : msg.sender_id;
+        const otherUserId =
+          msg.sender === "me" ? msg.receiver_id : msg.sender_id;
 
         if (!activePlan.invites) return null;
 
@@ -270,12 +261,12 @@ useEffect(() => {
           inv => inv.resolved_user_id?.toString() === otherUserId
         );
 
-        const convName = invite ? invite.email : "Co-Parent";
+        if (!invite) return null;
 
         return {
           user_id: otherUserId,
           plan_id: activePlan.id,
-          name: msg.sender === "me" ? "Co-Parent" : convName,
+          name: invite.email,
           role: "Co-Parent",
           topic: "Plan conversation",
           caseRef: activePlan.title,
@@ -322,6 +313,7 @@ useEffect(() => {
                 plansOpen={plansOpen}
                 setPlansOpen={setPlansOpen}
                 conversations={conversations}
+                setConversations={setConversations}
                 selectedConversation={selectedConversation}
                 setSelectedConversation={setSelectedConversation}
                 user={user}

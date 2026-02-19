@@ -1,19 +1,154 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check, Search } from "lucide-react";
-import { useState } from "react";
+import * as api from "@/lib/api";
+import { toast } from "@/lib/toastHelper";
+import { useState, useEffect } from "react";
 
-const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setPlansOpen, conversations, selectedConversation, setSelectedConversation, user, isUserParticipantOfPlan }) => {
+const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setPlansOpen, conversations, setConversations, selectedConversation, setSelectedConversation, user, isUserParticipantOfPlan }) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [relationship, setRelationship] = useState("Co-Parent");
+
+  const handleAddContact = async () => {
+    if (!name.trim() || !activePlan) {
+      toast({ title: "Name required", description: "Please enter a name.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      // Check if user exists
+      const allUsers = await api.getUsers();
+      const matchedUser = allUsers.find(
+        (u) => u.email === email.trim() || u.phone === phone.trim()
+      );
+
+      let userId: string;
+      let contactName: string = name.trim();
+
+      if (matchedUser) {
+        userId = matchedUser.id;
+        contactName = matchedUser.full_name;
+        toast({ title: "User found", description: `${contactName} added to conversations.` });
+      } else {
+        // Send invite if user doesn't exist
+        const contactPayload: api.InviteUserPayload = {
+          name: contactName,
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
+          relationship: relationship || "Co-Parent",
+        };
+
+        await api.inviteUser(contactPayload);
+
+        userId = `invite-${Date.now()}`; // temporary ID
+        toast({ title: "Contact added", description: `${contactName} will receive an invitation.` });
+      }
+
+      const newConv = {
+        id: undefined,
+        user_id: userId,
+        plan_id: activePlan.id,
+        name: contactName,
+        role: "Co-Parent",
+        topic: "Plan conversation",
+        caseRef: activePlan.title,
+        childName: null,
+        lastMessage: "",
+        time: "",
+        created_at: new Date().toISOString(),
+        updated_at: null,
+      };
+
+      setSelectedConversation(newConv);
+      setConversations((prev) => [newConv, ...prev]);
+
+      // reset inputs
+      setName("");
+      setEmail("");
+      setPhone("");
+      setRelationship("Co-Parent");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast({ title: "Failed to add contact", description: err.message, variant: "destructive" });
+      } else {
+        toast({ title: "Failed to add contact", description: "Unknown error", variant: "destructive" });
+      }
+    }
+  };
+
+  useEffect(() => {
+    const fetchContacts = async () => {
+      if (!user) return;
+      try {
+        const token = localStorage.getItem("token"); // get JWT token
+        if (!token) throw new Error("No token found");
+
+        const res = await fetch("/api/contacts", {
+          headers: {
+            "Authorization": `Bearer ${token}`, // <-- add auth header
+          },
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch contacts");
+        const data = await res.json();
+
+        if (Array.isArray(data.contacts)) {
+          const convs = data.contacts.map(c => ({
+            user_id: c.user_id,
+            plan_id: activePlan?.id || "unknown",
+            name: c.name,
+            role: c.relationship || "Co-Parent",
+            topic: "Plan conversation",
+            caseRef: activePlan?.title || "",
+            childName: null,
+            lastMessage: "",
+            time: "",
+            created_at: c.created_at,
+            updated_at: c.updated_at,
+          }));
+          setConversations(prev => [...convs, ...prev]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch contacts:", err);
+      }
+    };
+    fetchContacts();
+  }, [user, activePlan]);
+
   return (
     <div className="md:col-span-4 border-r">
       {/* Search Bar */}
       <div className="p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="p-4 space-y-2">
           <Input
-            placeholder="Search contacts"
-            className="pl-9 rounded-full bg-cub-mint-light border-0"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
+          <Input
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            placeholder="Phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <Input
+            placeholder="Relationship (optional)"
+            value={relationship}
+            onChange={(e) => setRelationship(e.target.value)}
+          />
+          <Button
+            onClick={handleAddContact}
+            disabled={!name.trim()}
+            className="w-full"
+          >
+            Add Contact
+          </Button>
         </div>
       </div>
 
@@ -52,30 +187,35 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
           <p className="text-xs text-muted-foreground px-2 py-1">No contacts yet.</p>
         ) : (
           conversations.map((conv, idx) => {
-            const userIdStr = user?.id.toString();
-            const disabled = !isUserParticipantOfPlan(conv.plan_id, userIdStr);
+            const disabled = false;
+
+            // Fix: always use the name from the conversation object, not fallback to "Co-Parent"
+            const displayName = conv.name || "Unnamed";
 
             return (
               <button
-                key={`${conv.user_id ?? conv.plan_id}-${idx}`}
+                key={`${conv.user_id}-${conv.created_at}`}
                 disabled={disabled}
                 onClick={() => {
-                  if (!isUserParticipantOfPlan(conv.plan_id, user.id)) return;
                   setSelectedConversation(conv);
                 }}
-                className={`w-full p-4 rounded-2xl text-left transition-all ${
-                  selectedConversation?.user_id === conv.user_id
-                    ? "bg-cub-mint-light"
-                    : "hover:bg-secondary"
-                } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`w-full p-4 rounded-2xl text-left transition-all
+                bg-white border
+                ${
+                  selectedConversation?.createdAt === conv.created_at
+                    ? "border-primary bg-cub-mint-light shadow-sm"
+                    : "border-primary hover:bg-muted"
+                }
+                ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                <p className="font-display font-bold">{conv.name}</p>
+                <p className="font-display font-bold">{displayName}</p>
                 <p className="text-sm text-muted-foreground truncate">
                   {conv.lastMessage || "No messages yet"}
                 </p>
               </button>
             );
           })
+
         )}
       </div>
     </div>

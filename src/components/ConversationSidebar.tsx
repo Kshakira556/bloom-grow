@@ -10,6 +10,7 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [relationship, setRelationship] = useState("Co-Parent");
+  const [showAddContact, setShowAddContact] = useState(false);
 
   const handleAddContact = async () => {
     if (!name.trim() || !activePlan) {
@@ -57,7 +58,7 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
         childName: null,
         lastMessage: "",
         time: "",
-        created_at: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         updated_at: null,
       };
 
@@ -69,6 +70,10 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
       setEmail("");
       setPhone("");
       setRelationship("Co-Parent");
+
+      // <-- NEW: Automatically close the Add Contact input
+      setShowAddContact(false);
+
     } catch (err: unknown) {
       if (err instanceof Error) {
         toast({ title: "Failed to add contact", description: err.message, variant: "destructive" });
@@ -80,77 +85,98 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
 
   useEffect(() => {
     const fetchContacts = async () => {
-      if (!user) return;
+      if (!user || !activePlan) return;
+
       try {
-        const token = localStorage.getItem("token"); // get JWT token
+        const token = localStorage.getItem("token");
         if (!token) throw new Error("No token found");
 
         const res = await fetch("/api/contacts", {
-          headers: {
-            "Authorization": `Bearer ${token}`, // <-- add auth header
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) throw new Error("Failed to fetch contacts");
+
         const data = await res.json();
 
         if (Array.isArray(data.contacts)) {
           const convs = data.contacts.map(c => ({
             user_id: c.user_id,
-            plan_id: activePlan?.id || "unknown",
+            plan_id: activePlan.id,
             name: c.name,
             role: c.relationship || "Co-Parent",
             topic: "Plan conversation",
-            caseRef: activePlan?.title || "",
+            caseRef: activePlan.title,
             childName: null,
             lastMessage: "",
             time: "",
-            created_at: c.created_at,
-            updated_at: c.updated_at,
+            createdAt: c.created_at,
           }));
-          setConversations(prev => [...convs, ...prev]);
+
+          setConversations(convs); 
         }
       } catch (err) {
         console.error("Failed to fetch contacts:", err);
       }
     };
+
     fetchContacts();
-  }, [user, activePlan]);
+  }, [user?.id, activePlan?.id]); 
 
   return (
     <div className="md:col-span-4 border-r">
-      {/* Search Bar */}
-      <div className="p-4">
-        <div className="p-4 space-y-2">
-          <Input
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Input
-            placeholder="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <Input
-            placeholder="Relationship (optional)"
-            value={relationship}
-            onChange={(e) => setRelationship(e.target.value)}
-          />
-          <Button
-            onClick={handleAddContact}
-            disabled={!name.trim()}
-            className="w-full"
-          >
-            Add Contact
-          </Button>
-        </div>
+      {/* Add Contact Section */}
+<div className="p-4">
+  {!showAddContact ? (
+    <Button
+      variant="outline"
+      className="w-full"
+      onClick={() => setShowAddContact(true)}
+    >
+      + Add Contact
+    </Button>
+  ) : (
+    <div className="p-2 space-y-2 bg-muted rounded-xl">
+      <Input
+        placeholder="Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <Input
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <Input
+        placeholder="Phone"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+      />
+      <Input
+        placeholder="Relationship (optional)"
+        value={relationship}
+        onChange={(e) => setRelationship(e.target.value)}
+      />
+
+      <div className="flex gap-2">
+        <Button
+          onClick={handleAddContact}
+          disabled={!name.trim()}
+          className="flex-1"
+        >
+          Add
+        </Button>
+        <Button
+          variant="ghost"
+          className="flex-1"
+          onClick={() => setShowAddContact(false)}
+        >
+          Cancel
+        </Button>
       </div>
+    </div>
+  )}
+</div>
 
       {/* Plan Selector */}
       <div className="relative p-2">
@@ -168,7 +194,10 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
             {plans.map((plan) => (
               <button
                 key={plan.id}
-                onClick={async () => setActivePlan(plan)}
+                onClick={async () => {
+                  setActivePlan(plan);
+                  setPlansOpen(false); 
+                }}
                 className={`w-full px-4 py-3 flex items-center justify-between text-left hover:bg-muted ${
                   activePlan?.id === plan.id ? "bg-muted" : ""
                 }`}
@@ -182,7 +211,7 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
       </div>
 
       {/* Contacts List */}
-      <div className="space-y-1 p-2 mt-2">
+      <div className="space-y-1 p-2 mt-2 overflow-y-auto max-h-[400px]">
         {conversations.length === 0 ? (
           <p className="text-xs text-muted-foreground px-2 py-1">No contacts yet.</p>
         ) : (
@@ -194,7 +223,7 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
 
             return (
               <button
-                key={`${conv.user_id}-${conv.created_at}`}
+                key={`${conv.user_id}-${conv.createdAt}`}
                 disabled={disabled}
                 onClick={() => {
                   setSelectedConversation(conv);
@@ -202,7 +231,7 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
                 className={`w-full p-4 rounded-2xl text-left transition-all
                 bg-white border
                 ${
-                  selectedConversation?.createdAt === conv.created_at
+                  selectedConversation?.createdAt === conv.createdAt
                     ? "border-primary bg-cub-mint-light shadow-sm"
                     : "border-primary hover:bg-muted"
                 }
@@ -215,7 +244,6 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
               </button>
             );
           })
-
         )}
       </div>
     </div>

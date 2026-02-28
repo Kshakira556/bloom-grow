@@ -321,7 +321,7 @@ useEffect(() => {
               />
               
               {/* Chat Area */}
-              <div className="md:col-span-8 flex flex-col min-h-[500px]">
+              <div className="md:col-span-8 flex flex-col h-[600px]">
                 {/* Chat Header */}
                 <ChatHeader
                   selectedConversation={selectedConversation}
@@ -343,19 +343,27 @@ useEffect(() => {
                 <Banner text="⚠️ This conversation is logged and auditable for mediation purposes." color="bg-red-100 border-red-500 text-red-700" />
                 <Banner text="💬 Communication here is structured, auditable, and linked to parenting plans." color="bg-cub-mint-light border-primary text-primary" />
 
-
-                <MessageList
-                  messages={messages}
-                  purposeFilter={purposeFilter}
-                  onEdit={handleEditMessage}
-                  onDelete={handleDeleteMessage}
-                />
+                <div className="flex-1 overflow-y-auto">
+                  <MessageList
+                    messages={messages}
+                    purposeFilter={purposeFilter}
+                    onEdit={handleEditMessage}
+                    onDelete={handleDeleteMessage}
+                  />
+                </div>
 
                 <MessageInput
                   draft={draft}
                   setDraft={setDraft}
                   onSend={async () => {
-                    if (!user || !activePlan || !selectedConversation) return;
+                    if (!user || !activePlan || !selectedConversation?.user_id) {
+                      toast({
+                        title: "No contact selected",
+                        description: "Please select a contact to send a message.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
 
                     try {
                       const sentMessage = await send({
@@ -410,6 +418,8 @@ useEffect(() => {
                       });
                     }
                   }}
+                  disabled={!selectedConversation?.user_id}
+                  selectedConversation={selectedConversation}
                 />
               </div>
             </div>

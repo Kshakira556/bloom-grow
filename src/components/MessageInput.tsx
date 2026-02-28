@@ -7,12 +7,16 @@ type Props = {
   draft: DraftMessage;
   setDraft: React.Dispatch<React.SetStateAction<DraftMessage>>;
   onSend: () => void;
+  disabled?: boolean;
+  selectedConversation: { user_id: string } | null;
 };
 
 const MessageInput: React.FC<Props> = ({
   draft,
   setDraft,
   onSend,
+  disabled = false,
+  selectedConversation,
 }) => {
   return (
     <div className="p-4 border-t flex flex-col gap-2">
@@ -85,13 +89,14 @@ const MessageInput: React.FC<Props> = ({
 
         {/* Send button */}
         <button
+          key={draft.purpose + selectedConversation?.user_id} // force re-render when plan/contact changes
           aria-label="Send message"
           className={`w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground ${
-            draft.content.trim() === ""
+            draft.content.trim() === "" || !selectedConversation?.user_id
               ? "bg-muted cursor-not-allowed"
               : "bg-primary"
           }`}
-          disabled={draft.content.trim() === ""}
+          disabled={draft.content.trim() === "" || !selectedConversation?.user_id}
           onClick={onSend}
         >
           <Send className="w-5 h-5" />

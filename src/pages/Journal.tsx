@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { JournalEntry } from "@/types/journal";
 import * as api from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import ViewJournalModal from "@/components/ViewJournalModal";
 
 const moods = ["😊", "😢", "😴", "🤒", "😤", "🥰"];
 
@@ -58,7 +59,7 @@ const Journal = () => {
         setEntries(
           apiEntries.map((e) => ({
             ...e,
-            type: "all", 
+            type: e.author_id === user?.id ? "sent" : "received",
           }))
         );
 
@@ -132,7 +133,10 @@ const Journal = () => {
 
         console.log("Journal entry created:", created);
 
-        setEntries((prev) => [...prev, { ...created, type: "all" }]);
+        setEntries((prev) => [
+          ...prev,
+          { ...created, type: "sent" },
+        ]);
 
         setEntryTitle("");
         setEntryText("");
@@ -345,7 +349,6 @@ const Journal = () => {
                               className="max-h-48 rounded-2xl object-cover border"
                             />
                           )}
-                          
                           <p className="whitespace-pre-wrap">{entry.content}</p>
                         </CardContent>
                       </Card>
@@ -365,63 +368,34 @@ const Journal = () => {
         </div>
       </main>
 
-      {selectedEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-card rounded-3xl max-w-md w-full mx-4 relative">
-            {/* Left Arrow */}
-            <button
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl disabled:opacity-30"
-              disabled={selectedEntryIndex === 0}
-              onClick={() =>
-                setSelectedEntryIndex((i) => (i !== null ? i - 1 : i))
-              }
-            >
-              ←
-            </button>
-
-            {/* Close */}
-            <button
-              onClick={() => setSelectedEntryIndex(null)}
-              className="absolute top-3 right-3"
-            >
-              ✕
-            </button>
-
-            <div className="p-6 space-y-4">
-              {selectedEntry.mood && (
-                <div className="text-2xl">{selectedEntry.mood}</div>
-              )}
-
-              {selectedEntry.title && (
-                <h3 className="font-display font-bold text-xl">
-                  {selectedEntry.title}
-                </h3>
-              )}
-
-              {selectedEntry.image && (
-                <img
-                  alt="Child Journal Image"
-                  src={selectedEntry.image}
-                  className="rounded-2xl max-h-64 w-full object-cover"
-                />
-              )}
-
-              <p className="whitespace-pre-wrap">{selectedEntry.content}</p>
-            </div>
-
-            {/* Right Arrow */}
-            <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl disabled:opacity-30"
-              disabled={selectedEntryIndex === filteredEntries.length - 1}
-              onClick={() =>
-                setSelectedEntryIndex((i) => (i !== null ? i + 1 : i))
-              }
-            >
-              →
-            </button>
-          </div>
-        </div>
-      )}
+      <ViewJournalModal
+        isOpen={selectedEntry !== null}
+        entry={selectedEntry}
+        onClose={() => setSelectedEntryIndex(null)}
+        onPrev={
+          selectedEntryIndex !== null
+            ? () => setSelectedEntryIndex(selectedEntryIndex - 1)
+            : undefined
+        }
+        onNext={
+          selectedEntryIndex !== null
+            ? () => setSelectedEntryIndex(selectedEntryIndex + 1)
+            : undefined
+        }
+        disablePrev={selectedEntryIndex === 0}
+        disableNext={selectedEntryIndex === filteredEntries.length - 1}
+        onUpdate={(updatedEntry) => {
+          setEntries((prev) =>
+            prev.map((e) =>
+              e.id === updatedEntry.id ? { ...updatedEntry, type: e.type } : e
+            )
+          );
+        }}
+        onDelete={(id) => {
+          setEntries((prev) => prev.filter((e) => e.id !== id));
+          setSelectedEntryIndex(null);
+        }}
+      />
     </div>
   );
 };

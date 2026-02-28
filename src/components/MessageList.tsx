@@ -1,6 +1,7 @@
 import { format, isToday, isYesterday } from "date-fns";
 import { Message, MessagePurpose } from "@/types/messages";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import Modal from "./Modal";
 
 type Props = {
   messages: Message[];
@@ -12,17 +13,16 @@ type Props = {
 const MessageItem = ({ message, onEdit, onDelete }) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+
   const handleLongPressStart = () => {
     timerRef.current = setTimeout(() => {
       if (message.sender === "me") {
-        const action = window.prompt("Type 'edit' or 'delete'");
-        if (action === "edit") {
-          const newContent = window.prompt("Edit message:", message.content);
-          if (newContent?.trim()) onEdit(message.id, newContent.trim());
-        }
-        if (action === "delete") {
-          if (window.confirm("Delete this message?")) onDelete(message.id);
-        }
+        // Instead of window.prompt, open modals
+        setIsEditModalOpen(true);
+        // You could add logic to choose delete modal as well if needed
       }
     }, 600);
   };
@@ -55,21 +55,76 @@ const MessageItem = ({ message, onEdit, onDelete }) => {
       {/* Optional: edit/delete buttons for 'me' */}
       {message.sender === "me" && (
         <div className="flex gap-2 text-xs mt-1 justify-end">
+          {/* Edit Button */}
           <button
-            onClick={() => {
-              const newContent = window.prompt("Edit message:", message.content);
-              if (newContent?.trim()) onEdit(message.id, newContent.trim());
-            }}
+            className="px-2 py-1 bg-cub-mint-light text-primary rounded hover:bg-cub-mint/70 transition"
+            onClick={() => setIsEditModalOpen(true)}
           >
             Edit
           </button>
+
+          <Modal
+            isOpen={isEditModalOpen}
+            title="Edit Message"
+            onClose={() => setIsEditModalOpen(false)}
+          >
+            <textarea
+              aria-label="Edit message"
+              className="w-full p-2 border rounded mb-4"
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+                onClick={() => setIsEditModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-cub-mint-light text-primary hover:bg-cub-mint/70"
+                onClick={() => {
+                  if (editContent.trim()) onEdit(message.id, editContent.trim());
+                  setIsEditModalOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </Modal>
+
+          {/* Delete Button */}
           <button
-            onClick={() => {
-              if (window.confirm("Delete this message?")) onDelete(message.id);
-            }}
+            className="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
+            onClick={() => setIsDeleteModalOpen(true)}
           >
             Delete
           </button>
+
+          <Modal
+            isOpen={isDeleteModalOpen}
+            title="Delete Message?"
+            description="This action cannot be undone."
+            onClose={() => setIsDeleteModalOpen(false)}
+          >
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-100 text-red-700 hover:bg-red-200"
+                onClick={() => {
+                  onDelete(message.id);
+                  setIsDeleteModalOpen(false);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </Modal>
         </div>
       )}
     </div>

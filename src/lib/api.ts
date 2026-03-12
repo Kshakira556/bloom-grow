@@ -1,4 +1,5 @@
 import { http } from "./http";
+import type { MessagePurpose } from "@/types/messages";
 
 // --------------------
 // User/Auth
@@ -227,6 +228,7 @@ export interface ApiMessage {
   content: string;
   created_at: string;
   updated_at?: string | null;
+  purpose?: MessagePurpose;
   is_flagged: boolean;
   is_seen?: boolean;
   attachments?: Attachment[];
@@ -245,6 +247,8 @@ export type SendMessagePayload = {
   receiver_id: string;
   plan_id: string;
   content: string;
+  purpose?: MessagePurpose;
+  attachments?: Attachment[];
 };
 
 export const sendMessage = async (
@@ -341,3 +345,21 @@ export interface InviteUserPayload {
 export const inviteUser = async (payload: InviteUserPayload) => {
   return http("/contacts", "POST", payload);
 };
+export interface ApiContact {
+  id: string;
+  user_id: string;
+  linked_user_id?: string | null;
+  name: string;
+  phone?: string;
+  email?: string;
+  relationship?: string;
+  created_at: string;
+  updated_at?: string | null;
+  purpose?: MessagePurpose;
+}
+
+export const getContacts = async (): Promise<ApiContact[]> => {
+  const res = await http<{ contacts: ApiContact[] }>("/contacts", "GET");
+  return res?.contacts ?? [];
+};
+

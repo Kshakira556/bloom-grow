@@ -25,6 +25,7 @@ export type Message = {
   content: string;
   time: string;
   createdAt: string;
+  updated_at?: string | null;
   purpose: MessagePurpose;
   status?: MessageStatus;
   attachments?: Attachment[];
@@ -35,3 +36,4 @@ export type DraftMessage = {
   purpose: MessagePurpose;
   attachments?: Attachment[];
 };
+

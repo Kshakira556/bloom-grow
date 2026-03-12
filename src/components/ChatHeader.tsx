@@ -1,5 +1,6 @@
-import { MessagePurpose, PURPOSES } from "@/lib/constants";
-import { Conversation } from "@/lib/types"; 
+import { PURPOSES } from "@/constants/purposes";
+import { MessagePurpose } from "@/types/messages";
+import { Conversation } from "@/lib/types";
 
 type ChatHeaderProps = {
   selectedConversation: Conversation | null;
@@ -21,9 +22,7 @@ const ChatHeader = ({
           <div className="flex items-center gap-2">
             {selectedConversation && (
               <>
-                <h2 className="font-display font-bold text-lg">
-                  {selectedConversation.name}
-                </h2>
+                <h2 className="font-display font-bold text-lg">{selectedConversation.name}</h2>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
                   {selectedConversation.role}
                 </span>

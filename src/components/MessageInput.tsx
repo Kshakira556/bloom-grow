@@ -1,7 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
 import React from "react";
-import { DraftMessage, MessagePurpose, Attachment, AttachmentType } from "@/types/messages";
+import { DraftMessage, MessagePurpose, AttachmentType } from "@/types/messages";
+import { MESSAGE_PURPOSES } from "@/constants/purposes";
 
 type Props = {
   draft: DraftMessage;
@@ -33,12 +34,11 @@ const MessageInput: React.FC<Props> = ({
           }
           className="rounded-full border px-3 py-1 text-sm bg-muted"
         >
-          <option value="General">General</option>
-          <option value="Legal">Legal</option>
-          <option value="Medical">Medical</option>
-          <option value="Safety">Safety</option>
-          <option value="Emergency">Emergency</option>
-          <option value="Financial">Financial</option>
+          {MESSAGE_PURPOSES.map((purpose) => (
+            <option key={purpose} value={purpose}>
+              {purpose}
+            </option>
+          ))}
         </select>
 
         {/* Text input */}
@@ -59,21 +59,16 @@ const MessageInput: React.FC<Props> = ({
           type="file"
           multiple
           onChange={(e) => {
-            const files = Array.from(e.target.files || []).map(
-              (file, idx) => ({
-                id: `att-${Date.now()}-${idx}`,
-                name: file.name,
-                type: "Document" as AttachmentType,
-                url: URL.createObjectURL(file),
-              })
-            );
+            const files = Array.from(e.target.files || []).map((file, idx) => ({
+              id: `att-${Date.now()}-${idx}`,
+              name: file.name,
+              type: "Document" as AttachmentType,
+              url: URL.createObjectURL(file),
+            }));
 
             setDraft((prev) => ({
               ...prev,
-              attachments: [
-                ...(prev.attachments || []),
-                ...files,
-              ],
+              attachments: [...(prev.attachments || []), ...files],
             }));
           }}
           className="hidden"
@@ -89,7 +84,7 @@ const MessageInput: React.FC<Props> = ({
 
         {/* Send button */}
         <button
-          key={draft.purpose + selectedConversation?.user_id} // force re-render when plan/contact changes
+          key={draft.purpose + selectedConversation?.user_id}
           aria-label="Send message"
           className={`w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground ${
             draft.content.trim() === "" || !selectedConversation?.user_id

@@ -1,16 +1,93 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Search } from "lucide-react";
+import { Check } from "lucide-react";
 import * as api from "@/lib/api";
 import { toast } from "@/lib/toastHelper";
 import { useState, useEffect } from "react";
+import { Message } from "@/types/messages";
+import { useAuth } from "@/hooks/useAuth";
 
-const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setPlansOpen, conversations, setConversations, selectedConversation, setSelectedConversation, user, isUserParticipantOfPlan }) => {
+type Conversation = {
+  user_id: string;
+  plan_id: string;
+  name: string;
+  role: string;
+  topic: string;
+  caseRef: string;
+  childName: string | null;
+  lastMessage: string;
+  time: string;
+  createdAt: string;
+};
+
+type Props = {
+  plans: api.Plan[];
+  activePlan: api.FullPlan | null;
+  setActivePlan: React.Dispatch<React.SetStateAction<api.FullPlan | null>>;
+  plansOpen: boolean;
+  setPlansOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  conversations: Conversation[];
+  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
+  selectedConversation: Conversation | null;
+  setSelectedConversation: React.Dispatch<React.SetStateAction<Conversation | null>>;
+  user: { id: string } | null;
+  isUserParticipantOfPlan: (plan: api.FullPlan | null, userId: string) => boolean;
+  messages: Message[];
+};
+
+const mapContactsToConversations = (
+  contacts: api.ApiContact[],
+  messages: Message[],
+  plan: api.FullPlan,
+  userId: string
+): Conversation[] => {
+  return contacts.map((c) => {
+    const contactUserId = c.linked_user_id || c.user_id;
+    const msgsForUser = messages
+      .filter(
+        (m) =>
+          (m.sender_id === userId && m.receiver_id === contactUserId) ||
+          (m.receiver_id === userId && m.sender_id === contactUserId)
+      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return {
+      user_id: contactUserId,
+      plan_id: plan.id,
+      name: c.name,
+      role: c.relationship || "Co-Parent",
+      topic: "Plan conversation",
+      caseRef: plan.title,
+      childName: null,
+      lastMessage: msgsForUser[0]?.content || "",
+      time: msgsForUser[0]?.time || "",
+      createdAt: c.created_at,
+    };
+  });
+};
+
+const ConversationSidebar = ({
+  plans,
+  activePlan,
+  setActivePlan,
+  plansOpen,
+  setPlansOpen,
+  conversations,
+  setConversations,
+  selectedConversation,
+  setSelectedConversation,
+  user,
+  isUserParticipantOfPlan,
+  messages,
+}: Props) => {
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id || "";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [relationship, setRelationship] = useState("Co-Parent");
   const [showAddContact, setShowAddContact] = useState(false);
+  const [contacts, setContacts] = useState<api.ApiContact[]>([]);
 
   const handleAddContact = async () => {
     if (!name.trim() || !activePlan) {
@@ -19,21 +96,15 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
     }
 
     try {
-      // Check if user exists
       const allUsers = await api.getUsers();
-      const matchedUser = allUsers.find(
-        (u) => u.email === email.trim() || u.phone === phone.trim()
-      );
+      const matchedUser = allUsers.find((u) => u.email === email.trim() || u.phone === phone.trim());
 
-      let userId: string;
       let contactName: string = name.trim();
 
       if (matchedUser) {
-        userId = matchedUser.id;
         contactName = matchedUser.full_name;
         toast({ title: "User found", description: `${contactName} added to conversations.` });
       } else {
-        // Send invite if user doesn't exist
         const contactPayload: api.InviteUserPayload = {
           name: contactName,
           email: email.trim() || undefined,
@@ -42,38 +113,25 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
         };
 
         await api.inviteUser(contactPayload);
-
-        userId = `invite-${Date.now()}`; // temporary ID
         toast({ title: "Contact added", description: `${contactName} will receive an invitation.` });
       }
 
-      const newConv = {
-        id: undefined,
-        user_id: userId,
-        plan_id: activePlan.id,
-        name: contactName,
-        role: "Co-Parent",
-        topic: "Plan conversation",
-        caseRef: activePlan.title,
-        childName: null,
-        lastMessage: "",
-        time: "",
-        createdAt: new Date().toISOString(),
-        updated_at: null,
-      };
+      const refreshedContacts = await api.getContacts();
+      setContacts(refreshedContacts);
 
-      setSelectedConversation(newConv);
-      setConversations((prev) => [newConv, ...prev]);
+      const convs = activePlan
+        ? mapContactsToConversations(refreshedContacts, messages, activePlan, userId)
+        : [];
+      setConversations(convs);
 
-      // reset inputs
+      const newConv = convs.find((c) => c.name === contactName) || convs[0];
+      setSelectedConversation(newConv || null);
+
       setName("");
       setEmail("");
       setPhone("");
       setRelationship("Co-Parent");
-
-      // <-- NEW: Automatically close the Add Contact input
       setShowAddContact(false);
-
     } catch (err: unknown) {
       if (err instanceof Error) {
         toast({ title: "Failed to add contact", description: err.message, variant: "destructive" });
@@ -85,98 +143,59 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
 
   useEffect(() => {
     const fetchContacts = async () => {
-      if (!user || !activePlan) return;
+      if (!activePlan) return;
 
       try {
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("No token found");
-
-        const res = await fetch("/api/contacts", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch contacts");
-
-        const data = await res.json();
-
-        if (Array.isArray(data.contacts)) {
-          const convs = data.contacts.map(c => ({
-            user_id: c.user_id,
-            plan_id: activePlan.id,
-            name: c.name,
-            role: c.relationship || "Co-Parent",
-            topic: "Plan conversation",
-            caseRef: activePlan.title,
-            childName: null,
-            lastMessage: "",
-            time: "",
-            createdAt: c.created_at,
-          }));
-
-          setConversations(convs); 
-        }
+        const contacts = await api.getContacts();
+        setContacts(contacts);
       } catch (err) {
         console.error("Failed to fetch contacts:", err);
       }
     };
 
     fetchContacts();
-  }, [user?.id, activePlan?.id]); 
+  }, [activePlan?.id]);
+
+  useEffect(() => {
+    if (!activePlan) {
+      setConversations([]);
+      return;
+    }
+
+    const convs = mapContactsToConversations(contacts, messages, activePlan, userId);
+    setConversations(convs);
+  }, [activePlan?.id, contacts, messages, setConversations]);
 
   return (
     <div className="md:col-span-4 border-r">
       {/* Add Contact Section */}
-<div className="p-4">
-  {!showAddContact ? (
-    <Button
-      variant="outline"
-      className="w-full"
-      onClick={() => setShowAddContact(true)}
-    >
-      + Add Contact
-    </Button>
-  ) : (
-    <div className="p-2 space-y-2 bg-muted rounded-xl">
-      <Input
-        placeholder="Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <Input
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <Input
-        placeholder="Phone"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      <Input
-        placeholder="Relationship (optional)"
-        value={relationship}
-        onChange={(e) => setRelationship(e.target.value)}
-      />
+      <div className="p-4">
+        {!showAddContact ? (
+          <Button variant="outline" className="w-full" onClick={() => setShowAddContact(true)}>
+            + Add Contact
+          </Button>
+        ) : (
+          <div className="p-2 space-y-2 bg-muted rounded-xl">
+            <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input
+              placeholder="Relationship (optional)"
+              value={relationship}
+              onChange={(e) => setRelationship(e.target.value)}
+            />
 
-      <div className="flex gap-2">
-        <Button
-          onClick={handleAddContact}
-          disabled={!name.trim()}
-          className="flex-1"
-        >
-          Add
-        </Button>
-        <Button
-          variant="ghost"
-          className="flex-1"
-          onClick={() => setShowAddContact(false)}
-        >
-          Cancel
-        </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleAddContact} disabled={!name.trim()} className="flex-1">
+                Add
+              </Button>
+              <Button variant="ghost" className="flex-1" onClick={() => setShowAddContact(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  )}
-</div>
 
       {/* Plan Selector */}
       <div className="relative p-2">
@@ -195,8 +214,13 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
               <button
                 key={plan.id}
                 onClick={async () => {
-                  setActivePlan(plan);
-                  setPlansOpen(false); 
+                  try {
+                    const { plan: fullPlan } = await api.getPlanById(plan.id);
+                    setActivePlan(fullPlan);
+                    setPlansOpen(false);
+                  } catch (err) {
+                    console.error("Failed to load plan:", err);
+                  }
                 }}
                 className={`w-full px-4 py-3 flex items-center justify-between text-left hover:bg-muted ${
                   activePlan?.id === plan.id ? "bg-muted" : ""
@@ -215,10 +239,9 @@ const ConversationSidebar = ({ plans, activePlan, setActivePlan, plansOpen, setP
         {conversations.length === 0 ? (
           <p className="text-xs text-muted-foreground px-2 py-1">No contacts yet.</p>
         ) : (
-          conversations.map((conv, idx) => {
+          conversations.map((conv) => {
             const disabled = false;
 
-            // Fix: always use the name from the conversation object, not fallback to "Co-Parent"
             const displayName = conv.name || "Unnamed";
 
             return (

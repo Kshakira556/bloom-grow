@@ -1,6 +1,6 @@
 import { format, isToday, isYesterday } from "date-fns";
 import { Message, MessagePurpose } from "@/types/messages";
-import { useRef, useState } from "react";
+import { useRef, useState, useLayoutEffect } from "react";
 import Modal from "./Modal";
 
 type Props = {
@@ -8,6 +8,7 @@ type Props = {
   purposeFilter: MessagePurpose | "All";
   onEdit: (id: string, content: string) => void;
   onDelete: (id: string) => void;
+  scrollContainerRef?: React.RefObject<HTMLDivElement>; 
 };
 
 const MessageItem = ({ message, onEdit, onDelete }) => {
@@ -148,7 +149,7 @@ const groupMessagesByDate = (messages: Message[]) => {
   return groups;
 };
 
-const MessageList = ({ messages, purposeFilter, onEdit, onDelete }: Props) => {
+const MessageList = ({ messages, purposeFilter, onEdit, onDelete, scrollContainerRef }: Props) => {
   const filtered =
     purposeFilter === "All"
       ? messages
@@ -156,27 +157,36 @@ const MessageList = ({ messages, purposeFilter, onEdit, onDelete }: Props) => {
 
   const grouped = groupMessagesByDate(filtered);
 
+  // Scroll only if a ref is provided
+  useLayoutEffect(() => {
+    if (!scrollContainerRef?.current) return;
+    setTimeout(() => {
+      scrollContainerRef.current?.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 10);
+  }, [messages, scrollContainerRef]);
+
   return (
-    <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+    <>
       {Object.entries(grouped).map(([dateLabel, msgs]) => (
         <div key={dateLabel}>
-          {/* Date Header */}
           <div className="text-center text-xs text-muted-foreground my-4">
             {dateLabel}
           </div>
 
-        {msgs.map((msg) => (
-            <MessageItem 
-              key={msg.id} 
-              message={msg} 
+          {msgs.map((msg, index) => (
+            <MessageItem
+              key={`${msg.id}-${dateLabel}-${index}`}
+              message={msg}
               onEdit={onEdit}
               onDelete={onDelete}
             />
-        ))}
-
+          ))}
         </div>
       ))}
-    </div>
+    </>
   );
 };
 

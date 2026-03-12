@@ -154,15 +154,19 @@ export const vaultSaveService = {
             try {
               await http<{ medical: VaultAggregate["medical"] | null }>(`/vaults/medical/${aggregate.medical.id}`, "GET");
               const updated = await http<MedicalRequest & { id: string }>(
-                `/vaults/medical/${aggregate.medical.id}`,
-                "PUT",
-                {
-                  blood_type: aggregate.medical.bloodType?.trim() || undefined,
-                  allergies: aggregate.medical.allergies?.trim() || undefined,
-                  medication: aggregate.medical.medication?.trim() || undefined,
-                  doctor: aggregate.medical.doctor?.trim() || undefined
-                }
-              );
+              `/vaults/medical/${aggregate.medical.id}`,
+              "PUT",
+              {
+                blood_type: aggregate.medical.bloodType?.trim() || undefined,
+                allergies: Array.isArray(aggregate.medical.allergies)
+                  ? aggregate.medical.allergies.join(", ")
+                  : aggregate.medical.allergies?.trim() || undefined,
+                medication: Array.isArray(aggregate.medical.medication)
+                  ? aggregate.medical.medication.join(", ")
+                  : aggregate.medical.medication?.trim() || undefined,
+                doctor: aggregate.medical.doctor?.trim() || undefined
+              }
+            );
               aggregate.medical.id = updated.id;
               return updated;
             } catch {

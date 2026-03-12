@@ -1,6 +1,6 @@
 import { format, isToday, isYesterday } from "date-fns";
 import { Message } from "@/types/messages";
-import { FullPlan } from "@/lib/api";
+import { ApiMessage, FullPlan } from "@/lib/api";
 
 export const groupMessagesByDate = (messages: Message[]): Record<string, Message[]> => {
   const groups: Record<string, Message[]> = {};
@@ -21,6 +21,23 @@ export const groupMessagesByDate = (messages: Message[]): Record<string, Message
 
 export const getSenderName = (sender: "me" | "them", selectedConversation: { name: string }) => {
   return sender === "me" ? "You" : selectedConversation.name;
+};
+
+
+export const mapApiMessageToMessage = (msg: ApiMessage, userId: string): Message => {
+  return {
+    id: msg.id,
+    sender: msg.sender_id === userId ? "me" : "them",
+    sender_id: msg.sender_id,
+    receiver_id: msg.receiver_id,
+    content: msg.content,
+    createdAt: msg.created_at,
+    updated_at: msg.updated_at ?? null,
+    time: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    purpose: msg.purpose || "General",
+    status: msg.is_seen ? "Read" : "Delivered",
+    attachments: msg.attachments || [],
+  };
 };
 
 type PlanInviteWithResolved = {

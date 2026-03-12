@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { login as loginApi, register as registerApi, SafeUser } from "@/lib/api";
 import { setAuthToken } from "@/lib/http";
 
@@ -20,17 +20,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<SafeUser | null>(() => {
-    const stored = localStorage.getItem("user");
+    const stored = sessionStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
   });
+
+  useEffect(() => {
+    const token = sessionStorage.getItem("token");
+    if (token) {
+      setAuthToken(token);
+    }
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const { user, token } = await loginApi(email, password);
 
     setAuthToken(token);
-    localStorage.setItem("token", token);
+    sessionStorage.setItem("token", token);
     setUser(user);
-    localStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("user", JSON.stringify(user));
 
     return user; 
   }, []);
@@ -41,7 +48,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     setAuthToken(token);
     setUser(user);
-    localStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("token", token);
+    sessionStorage.setItem("user", JSON.stringify(user));
 
     return user;
   },
@@ -51,8 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = useCallback(() => {
     setAuthToken(null);
     setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("token");
   }, []);
 
   return (

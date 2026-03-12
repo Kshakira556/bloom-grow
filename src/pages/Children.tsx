@@ -278,9 +278,7 @@ const Children = () => {
         `}
         </style>
 
-
       <Navbar />
-
       <main className="flex-1 py-8 px-4">
         <div className="container max-w-5xl mx-auto">
           <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">

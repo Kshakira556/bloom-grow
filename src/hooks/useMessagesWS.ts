@@ -41,6 +41,7 @@ export const useMessagesWS = ({
       if (data.type !== "new_message") return;
 
       const msg: ApiMessage = data.message;
+      if (msg.plan_id !== activePlan.id) return;
 
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
@@ -62,3 +63,4 @@ export const useMessagesWS = ({
     };
   }, [user, activePlan, userId, markSeen, setMessages, selectedConversation]);
 };
+

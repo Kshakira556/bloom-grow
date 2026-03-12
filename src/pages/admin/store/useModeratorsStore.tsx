@@ -1,37 +1,38 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import * as api from "@/lib/api";
 
 export type Moderator = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: string;
   privileges?: string[];
 };
 
-/**
- * Module-level shared state
- */
-let moderatorsStore: Moderator[] = [
-  {
-    id: 1,
-    name: "Sarah Mitchell",
-    email: "sarah.mitchell@mediator.com",
-    role: "Family Mediator",
-    privileges: ["View Messages", "Approve Plans"],
-  },
-  {
-    id: 2,
-    name: "John Doe",
-    email: "john.doe@mediator.com",
-    role: "Moderator",
-    privileges: ["View Messages"],
-  },
-];
-
+let moderatorsStore: Moderator[] = [];
 let listeners: Array<(mods: Moderator[]) => void> = [];
+let hasLoaded = false;
 
 const notify = () => {
   listeners.forEach((l) => l([...moderatorsStore]));
+};
+
+const loadModerators = async () => {
+  try {
+    const users = await api.getUsers();
+    moderatorsStore = users
+      .filter((u) => u.role === "mediator" || u.role === "admin")
+      .map((u) => ({
+        id: u.id,
+        name: u.full_name,
+        email: u.email,
+        role: u.role,
+        privileges: [],
+      }));
+    notify();
+  } catch {
+    // leave store empty on failure
+  }
 };
 
 export const useModeratorsStore = () => {
@@ -40,6 +41,11 @@ export const useModeratorsStore = () => {
   useEffect(() => {
     const listener = (mods: Moderator[]) => setLocalModerators(mods);
     listeners.push(listener);
+
+    if (!hasLoaded) {
+      hasLoaded = true;
+      loadModerators();
+    }
 
     return () => {
       listeners = listeners.filter((l) => l !== listener);
@@ -55,3 +61,4 @@ export const useModeratorsStore = () => {
 
   return { moderators, setModerators };
 };
+

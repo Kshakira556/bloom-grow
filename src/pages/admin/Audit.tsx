@@ -1,224 +1,229 @@
-import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { FileText, Flag } from "lucide-react";
-import { useState } from "react";
-import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { FileText, Flag } from "lucide-react";
+import { format } from "date-fns";
 import jsPDF from "jspdf";
+import * as api from "@/lib/api";\nimport type { MessagePurpose } from "@/types/messages";
+import { buildUserNameMap, fetchAllPlanMessages } from "@/lib/adminData";
 
-// Extend types for audit tracking
-type MessagePurpose = "General" | "Legal" | "Medical" | "Safety" | "Emergency" | "Financial";
-
-type Attachment = {
-  id: string;
-  name: string;
-  type: string;
-  url: string;
-};
-
-type Message = {
-  id: number;
-  senderId: string; // user ID
-  senderName: string;
-  recipientId: string;
-  recipientName: string;
-  text: string;
-  time: string;
-  purpose: MessagePurpose;
-  attachments?: Attachment[];
-  flagged?: boolean;
-  edited?: { before: string; after: string };
-  read?: boolean;
-};
-
-// Demo data for multiple users
-const mockMessages: Message[] = [
-  {
-    id: 1,
-    senderId: "parentA",
-    senderName: "Parent A",
-    recipientId: "parentB",
-    recipientName: "Parent B",
-    text: "Please remember to bring her school uniform tomorrow.",
-    time: "13:56",
-    purpose: "General",
-    read: true,
-  },
-  {
-    id: 2,
-    senderId: "parentB",
-    senderName: "Parent B",
-    recipientId: "parentA",
-    recipientName: "Parent A",
-    text: "Noted. I’ll drop it off before 8am.",
-    time: "13:59",
-    purpose: "General",
-    read: true,
-    flagged: true,
-  },
-  {
-    id: 3,
-    senderId: "parentA",
-    senderName: "Parent A",
-    recipientId: "counselor",
-    recipientName: "Child Counselor",
-    text: "Here is the doctor’s note for Sophie.",
-    time: "14:04",
-    purpose: "Medical",
-    attachments: [
-      { id: "att-001", name: "Sophie_MedicalNote.pdf", type: "Medical Note", url: "/mock-files/Sophie_MedicalNote.pdf" },
-    ],
-    read: false,
-  },
-  {
-    id: 4,
-    senderId: "parentB",
-    senderName: "Parent B",
-    recipientId: "lawyer",
-    recipientName: "Lawyer",
-    text: "Received. Uploading the signed consent form.",
-    time: "14:16",
-    purpose: "Legal",
-    attachments: [
-      { id: "att-002", name: "ConsentForm_Signed.pdf", type: "Court Order", url: "/mock-files/ConsentForm_Signed.pdf" },
-    ],
-    read: true,
-    edited: { before: "Uploading consent form.", after: "Received. Uploading the signed consent form." },
-  },
-];
+const formatDateTime = (value: string) => format(new Date(value), "yyyy-MM-dd HH:mm");
 
 const AdminAudit = () => {
   const [purposeFilter, setPurposeFilter] = useState<MessagePurpose | "All">("All");
-    const [search, setSearch] = useState(""); // define search first
+  const [search, setSearch] = useState("");
+  const [messages, setMessages] = useState<api.ApiMessage[]>([]);
+  const [users, setUsers] = useState<api.SafeUser[]>([]);
+  const [historyById, setHistoryById] = useState<Record<string, api.ApiMessageHistory[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const filteredMessages = (purposeFilter === "All"
-      ? mockMessages
-      : mockMessages.filter((msg) => msg.purpose === purposeFilter)
-    ).filter((msg) =>
-      msg.senderName.toLowerCase().includes(search.toLowerCase()) ||
-      msg.recipientName.toLowerCase().includes(search.toLowerCase())
-    );
-  
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [usersRes, plansRes] = await Promise.all([
+          api.getUsers(),
+          api.getPlans(),
+        ]);
+
+        const planList = plansRes?.plans ?? [];
+        const allMessages = await fetchAllPlanMessages(planList, {
+          includeDeleted: true,
+        });
+
+        setUsers(usersRes);
+        setMessages(allMessages);
+
+        const historyEntries = await Promise.all(
+          allMessages.slice(0, 200).map(async (msg) =>
+            [msg.id, await api.getMessageHistory(msg.id)] as const
+          )
+        );
+        setHistoryById(Object.fromEntries(historyEntries));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load audit data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
+
+  const userMap = useMemo(() => buildUserNameMap(users), [users]);
+
+  const filteredMessages = useMemo(() => {
+    return messages
+      .filter((msg) => (purposeFilter === "All" ? true : msg.purpose === purposeFilter))
+      .filter((msg) => {
+        if (!search) return true;
+        const sender = userMap[msg.sender_id] || msg.sender_id;
+        const receiver = userMap[msg.receiver_id] || msg.receiver_id;
+        return (
+          sender.toLowerCase().includes(search.toLowerCase()) ||
+          receiver.toLowerCase().includes(search.toLowerCase()) ||
+          msg.content.toLowerCase().includes(search.toLowerCase())
+        );
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [messages, purposeFilter, search, userMap]);
+
+  const exportAudit = () => {
+    const doc = new jsPDF();
+    let y = 10;
+
+    doc.setFontSize(12);
+    doc.text("Audit Logs", 10, y);
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.text(`Exported: ${new Date().toLocaleString()}`, 10, y);
+    y += 8;
+
+    filteredMessages.forEach((msg, idx) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 10;
+      }
+
+      const sender = userMap[msg.sender_id] || msg.sender_id;
+      const receiver = userMap[msg.receiver_id] || msg.receiver_id;
+      const isDeleted = Boolean(msg.is_deleted);
+
+      doc.setFont(undefined, "bold");
+      doc.text(
+        `${idx + 1}. [${formatDateTime(msg.created_at)}] ${sender} ? ${receiver} (${msg.purpose || "General"})${
+          isDeleted ? " [Deleted]" : ""
+        }`,
+        10,
+        y
+      );
+      y += 6;
+
+      doc.setFont(undefined, "normal");
+      const currentLabel = isDeleted ? "Current (deleted)" : "Current";
+      const lines = doc.splitTextToSize(`${currentLabel}: ${msg.content}`, 180);
+      doc.text(lines, 10, y);
+      y += lines.length * 5 + 4;
+
+      const history = historyById[msg.id] ?? [];
+      if (history.length) {
+        doc.setFont(undefined, "bold");
+        doc.text("History", 12, y);
+        y += 6;
+
+        doc.setFont(undefined, "normal");
+        history.forEach((entry) => {
+          const label = `${entry.action_type.toUpperCase()} (${formatDateTime(entry.action_at)})`;
+          const labelLines = doc.splitTextToSize(label, 180);
+          doc.text(labelLines, 12, y);
+          y += labelLines.length * 5;
+
+          if (entry.content) {
+            const contentLines = doc.splitTextToSize(`Content: ${entry.content}`, 176);
+            doc.text(contentLines, 16, y);
+            y += contentLines.length * 5;
+          }
+
+          y += 3;
+        });
+      }
+
+      y += 4;
+    });
+
+    doc.save("audit-messages.pdf");
+  };
+
   return (
-    <ModeratorLayout>
-      <div className="space-y-6">
-        <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-          <FileText className="w-6 h-6 text-primary" />
-          Audit / Message History
-        </h1>
+    <div className="space-y-6">
+      <h1 className="font-display text-2xl font-bold flex items-center gap-2">
+        <FileText className="w-6 h-6 text-primary" />
+        Audit / Message History
+      </h1>
 
-        {/* Client Search Bar */}
-        <Input
-          placeholder="Search by sender or recipient..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="mb-4"
-        />
+      <Input
+        placeholder="Search by sender, recipient, or content..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="mb-4"
+      />
 
-        {/* Filter */}
-        <div className="flex gap-2">
-          {(["All", "General", "Legal", "Medical", "Safety", "Emergency", "Financial"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPurposeFilter(p)}
-              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                purposeFilter === p
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+      <div className="flex gap-2 flex-wrap">
+        {(["All", "General", "Legal", "Medical", "Safety", "Emergency", "Financial"] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => setPurposeFilter(p)}
+            className={`px-3 py-1 rounded-full text-sm font-medium ${
+              purposeFilter === p
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Audit Logs: (Case) Parent A</CardTitle>
-            <button
-              onClick={() => {
-                const doc = new jsPDF();
-                doc.setFontSize(12);
-                doc.text(`Audit Logs: (Case) Parent A`, 10, 10);
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Audit Logs</CardTitle>
+          <Button size="sm" onClick={exportAudit} className="gap-2">
+            Export
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-                let y = 20;
-                filteredMessages.forEach((msg, idx) => {
-                  doc.text(
-                    `${idx + 1}. [${msg.time}] ${msg.senderName} → ${msg.recipientName} (${msg.purpose})`,
-                    10,
-                    y
-                  );
-                  y += 7;
-                  const lines = doc.splitTextToSize(msg.text, 180);
-                  doc.text(lines, 10, y);
-                  y += lines.length * 7 + 3;
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading audit logs...</p>
+          ) : filteredMessages.length > 0 ? (
+            filteredMessages.map((msg) => {
+              const sender = userMap[msg.sender_id] || msg.sender_id;
+              const receiver = userMap[msg.receiver_id] || msg.receiver_id;
+              const history = historyById[msg.id] ?? [];
+              const lastEdit = history
+                .slice()
+                .reverse()
+                .find((entry) => entry.action_type === "update");
 
-                  if (msg.attachments?.length) {
-                    msg.attachments.forEach(att => {
-                      doc.text(`Attachment: ${att.name} (${att.type})`, 15, y);
-                      y += 7;
-                    });
-                  }
-                  if (y > 280) { doc.addPage(); y = 20; } // new page if overflow
-                });
-
-                doc.save(`ParentA_messages.pdf`);
-              }}
-              className="px-2 py-0.5 bg-primary text-white rounded text-xs hover:bg-primary/90"
-            >
-              Export
-            </button>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {filteredMessages.length > 0 ? (
-              filteredMessages.map((msg) => (
+              return (
                 <div key={msg.id} className="p-3 border rounded-xl flex flex-col gap-1">
-                  {/* Header with sender, recipient, time, purpose, flagged */}
-                  <div className="flex justify-between items-center text-xs text-muted-foreground">
-                    <span>{format(new Date(), "yyyy-MM-dd")} {msg.time}</span>
-                    <span>{msg.senderName} → {msg.recipientName}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary">{msg.purpose}</span>
-                    {msg.flagged && <Flag className="w-4 h-4 text-red-500" title="Flagged message" />}
-                    <span className={`ml-2 ${msg.read ? "text-green-600" : "text-gray-400"}`}>
-                      {msg.read ? "Read" : "Unread"}
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+                    <span>{formatDateTime(msg.created_at)}</span>
+                    <span>{sender} ? {receiver}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-secondary">
+                      {msg.purpose || "General"}
                     </span>
+                    {msg.is_flagged && <Flag className="w-4 h-4 text-red-500" />}
+                    {msg.is_deleted && (
+                      <span className="px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground">
+                        Deleted
+                      </span>
+                    )}
                   </div>
 
-                  {/* Edited messages */}
-                  {msg.edited ? (
+                  {lastEdit && (
                     <div className="text-xs text-orange-600 italic">
-                      Edited: "{msg.edited.before}" → "{msg.edited.after}"
-                    </div>
-                  ) : null}
-
-                  <p className="text-sm">{msg.text}</p>
-
-                  {/* Attachments */}
-                  {msg.attachments?.length > 0 && (
-                    <div className="flex flex-col gap-1 mt-1">
-                      {msg.attachments.map((att) => (
-                        <a
-                          key={att.id}
-                          href={att.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline"
-                        >
-                          {att.name} ({att.type})
-                        </a>
-                      ))}
+                      Edited on {formatDateTime(lastEdit.action_at)}
                     </div>
                   )}
+
+                  <p className="text-sm">{msg.content}</p>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No messages to display.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </ModeratorLayout>
+              );
+            })
+          ) : (
+            <p className="text-sm text-muted-foreground">No messages to display.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
 export default AdminAudit;
+

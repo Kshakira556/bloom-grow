@@ -1,99 +1,128 @@
+import { useEffect, useMemo, useState } from "react";
 import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Shield, Plus, AlertTriangle, CheckCircle, Clock, MessageSquare, FileText, 
-  User, Mail, Phone, Calendar, Eye, ThumbsUp, ThumbsDown, } from "lucide-react";
+import {
+  Shield,
+  Plus,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  FileText,
+  User,
+  Calendar,
+  Eye,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
-
-const moderator = {
-  name: "Sarah Mitchell",
-  role: "Family Mediator",
-  email: "sarah.mitchell@mediator.com",
-  phone: "(555) 123-4567",
-  avatar: "SM",
-  assignedSince: "December 2023",
-};
-
-const flaggedMessages = [
-  {
-    id: 1,
-    from: "Alex",
-    to: "Jordan",
-    date: "Today, 10:30 AM",
-    preview: "I can't believe you would...",
-    reason: "Detected negative language",
-    status: "pending",
-  },
-  {
-    id: 2,
-    from: "Jordan",
-    to: "Alex",
-    date: "Yesterday",
-    preview: "This is completely unfair and you know it...",
-    reason: "Conflict escalation detected",
-    status: "pending",
-  },
-  {
-    id: 3,
-    from: "Alex",
-    to: "Jordan",
-    date: "Jan 10, 2024",
-    preview: "We need to talk about the schedule...",
-    reason: "Mentioned schedule dispute",
-    status: "resolved",
-  },
-];
-
-const recentActions = [
-  {
-    id: 1,
-    action: "Message reviewed",
-    description: "Flagged message from Jan 10 was reviewed and approved",
-    date: "Jan 11, 2024",
-    icon: CheckCircle,
-    color: "text-success",
-  },
-  {
-    id: 2,
-    action: "Mediation session scheduled",
-    description: "Upcoming session to discuss holiday schedule",
-    date: "Jan 15, 2024",
-    icon: Calendar,
-    color: "text-primary",
-  },
-  {
-    id: 3,
-    action: "Report generated",
-    description: "Monthly communication summary sent to both parties",
-    date: "Jan 1, 2024",
-    icon: FileText,
-    color: "text-cub-lavender",
-  },
-];
-
-const stats = [
-  { label: "Messages Reviewed", value: "24", trend: "This month" },
-  { label: "Active Flags", value: "2", trend: "Pending review" },
-  { label: "Resolved Issues", value: "12", trend: "Last 30 days" },
-  { label: "Next Session", value: "Jan 15", trend: "Scheduled" },
-];
+import * as api from "@/lib/api";
+import type { ReviewHistory } from "@/lib/api";
+import { buildUserNameMap, fetchAllPlanMessages } from "@/lib/adminData";
+import { useAuth } from "@/hooks/useAuth";
 
 const Moderator = () => {
-  {/* Stats */}
-        const newStats = [
-          ...stats,
-          { label: "Clients Managed", value: "15", trend: "Active" },
-          { label: "Active Plans", value: "8", trend: "Current month" },
-          { label: "Children Linked", value: "12", trend: "Across all plans" },
-        ];
-        const [activeTab, setActiveTab] = useState("flagged");
-        
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("flagged");
+  const [users, setUsers] = useState<api.SafeUser[]>([]);
+  const [plans, setPlans] = useState<api.Plan[]>([]);
+  const [children, setChildren] = useState<api.Child[]>([]);
+  const [messages, setMessages] = useState<api.ApiMessage[]>([]);
+  const [reviews, setReviews] = useState<ReviewHistory[]>([]);
+  const [proposals, setProposals] = useState<api.Proposal[]>([]);
+  const [resolvedFlagIds, setResolvedFlagIds] = useState<string[]>([]);
+  const [reviewingIds, setReviewingIds] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [usersRes, plansRes, childrenRes, reviewRes, proposalRes] = await Promise.all([
+          api.getUsers(),
+          api.getPlans(),
+          api.getChildren(),
+          api.getReviewHistory(),
+          api.getProposals("pending"),
+        ]);
+
+        const planList = plansRes?.plans ?? [];
+        const allMessages = await fetchAllPlanMessages(planList, {
+          includeDeleted: true,
+        });
+
+        setUsers(usersRes);
+        setPlans(planList);
+        setChildren(childrenRes);
+        setMessages(allMessages);
+        setReviews(reviewRes);
+        setProposals(proposalRes);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load moderator data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
+
+  const userMap = useMemo(() => buildUserNameMap(users), [users]);
+
+  const flaggedMessages = useMemo(() => {
+    return messages
+      .filter((m) => m.is_flagged && !resolvedFlagIds.includes(m.id))
+      .map((msg) => ({
+        id: msg.id,
+        from: userMap[msg.sender_id] || msg.sender_id,
+        to: userMap[msg.receiver_id] || msg.receiver_id,
+        date: new Date(msg.created_at).toLocaleString(),
+        preview: msg.content,
+        reason: msg.flagged_reason || "Flagged message",
+        status: "pending" as const,
+      }));
+  }, [messages, userMap, resolvedFlagIds]);
+
+  const handleReview = async (messageId: string, action: "approved" | "rejected", reason?: string) => {
+    if (!user?.id) {
+      setError("You must be signed in to submit reviews.");
+      return;
+    }
+
+    try {
+      setReviewingIds((prev) => ({ ...prev, [messageId]: true }));
+      const review = await api.createReview({
+        message_id: messageId,
+        reviewer_id: user.id,
+        action,
+        notes: reason ? Reason:  : undefined,
+      });
+      if (review) {
+        setReviews((prev) => [review, ...prev]);
+      }
+      setResolvedFlagIds((prev) => (prev.includes(messageId) ? prev : [...prev, messageId]));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit review");
+    } finally {
+      setReviewingIds((prev) => ({ ...prev, [messageId]: false }));
+    }
+  };
+  const stats = useMemo(
+    () => [
+      { label: "Messages Reviewed", value: messages.length.toString(), trend: "All time" },
+      { label: "Active Flags", value: flaggedMessages.length.toString(), trend: "Pending review" },
+      { label: "Clients Managed", value: users.filter((u) => u.role === "parent").length.toString(), trend: "Active" },
+      { label: "Active Plans", value: plans.length.toString(), trend: "Current" },
+    ],
+    [messages.length, flaggedMessages.length, users, plans]
+  );
+
+  const filteredClients = useMemo(() => users.filter((u) => u.role === "parent"), [users]);
+
   return (
     <ModeratorLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold flex items-center gap-2">
@@ -110,12 +139,16 @@ const Moderator = () => {
           </Button>
         </div>
 
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {newStats.map((stat) => (
+          {stats.map((stat) => (
             <Card key={stat.label}>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="font-display font-bold text-2xl mt-1">{stat.value}</p>
+                <p className="font-display font-bold text-2xl mt-1">
+                  {loading ? "..." : stat.value}
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">{stat.trend}</p>
               </CardContent>
             </Card>
@@ -123,14 +156,13 @@ const Moderator = () => {
         </div>
 
         <div className="grid lg:grid-cols-12 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-8">
-            <Tabs defaultValue="flagged" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList className="flex-wrap gap-2">
                 <TabsTrigger value="flagged" className="gap-2">
                   <AlertTriangle className="w-4 h-4" /> Flagged Messages
                   <span className="ml-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
-                    2
+                    {flaggedMessages.length}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger value="history" className="gap-2">
@@ -150,13 +182,74 @@ const Moderator = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Flagged Messages */}
-              <TabsContent value="flagged"> ... </TabsContent>
+              <TabsContent value="flagged">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Flagged Messages</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {loading ? (
+                      <p className="text-sm text-muted-foreground">Loading flagged messages...</p>
+                    ) : flaggedMessages.length > 0 ? (
+                      flaggedMessages.map((msg) => (
+                        <div key={msg.id} className="p-3 border rounded-xl">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{msg.date}</span>
+                            <span>{msg.from} -> {msg.to}</span>
+                          </div>
+                          <p className="text-sm mt-1">{msg.preview}</p>
+                          <p className="text-xs text-destructive mt-1">{msg.reason}</p>
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleReview(msg.id, "approved", msg.reason)}
+                              disabled={reviewingIds[msg.id]}
+                            >
+                              {reviewingIds[msg.id] ? "Saving..." : "Approve"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleReview(msg.id, "rejected", msg.reason)}
+                              disabled={reviewingIds[msg.id]}
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No flagged messages.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-              {/* Review History */}
-              <TabsContent value="history"> ... </TabsContent>
+              <TabsContent value="history">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Review History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {reviews.length > 0 ? (
+                        reviews.map((review) => (
+                          <div key={review.id} className="p-3 border rounded-xl">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>{new Date(review.created_at).toLocaleString()}</span>
+                              <span>Action: {review.action}</span>
+                            </div>
+                            {review.notes && <p className="text-xs mt-1">{review.notes}</p>}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No review history available.</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-              {/* Clients Tab */}
               <TabsContent value="clients">
                 <Card>
                   <CardHeader>
@@ -165,22 +258,26 @@ const Moderator = () => {
                   <CardContent>
                     <Input placeholder="Search by name or plan ID..." className="mb-4" />
                     <div className="space-y-2">
-                      {/* Example client */}
-                      <div className="p-3 border rounded-xl flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">Alex Johnson</p>
-                          <p className="text-xs text-muted-foreground">Active Plans: 2</p>
-                        </div>
-                        <Button size="sm" variant="outline" className="gap-1">
-                          <Eye className="w-4 h-4" /> View
-                        </Button>
-                      </div>
+                      {filteredClients.length > 0 ? (
+                        filteredClients.map((client) => (
+                          <div key={client.id} className="p-3 border rounded-xl flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{client.full_name}</p>
+                              <p className="text-xs text-muted-foreground">Role: {client.role}</p>
+                            </div>
+                            <Button size="sm" variant="outline" className="gap-1">
+                              <Eye className="w-4 h-4" /> View
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No clients found.</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              {/* Plans Tab */}
               <TabsContent value="plans">
                 <Card>
                   <CardHeader>
@@ -189,23 +286,28 @@ const Moderator = () => {
                   <CardContent>
                     <Input placeholder="Search by Plan ID or client..." className="mb-4" />
                     <div className="space-y-2">
-                      <div className="p-3 border rounded-xl flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">Weekday / Weekend Split</p>
-                          <p className="text-xs text-muted-foreground">
-                            Clients: Alex Johnson, Jordan Smith
-                          </p>
-                        </div>
-                        <Button size="sm" variant="outline" className="gap-1">
-                          <Eye className="w-4 h-4" /> View
-                        </Button>
-                      </div>
+                      {plans.length > 0 ? (
+                        plans.map((plan) => (
+                          <div key={plan.id} className="p-3 border rounded-xl flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{plan.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Created by: {userMap[plan.created_by ?? ""] || plan.created_by || "Unknown"}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="outline" className="gap-1">
+                              <Eye className="w-4 h-4" /> View
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No plans found.</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              {/* Children Tab */}
               <TabsContent value="children">
                 <Card>
                   <CardHeader>
@@ -214,23 +316,28 @@ const Moderator = () => {
                   <CardContent>
                     <Input placeholder="Search by name or plan..." className="mb-4" />
                     <div className="space-y-2">
-                      <div className="p-3 border rounded-xl flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">Sophie Johnson</p>
-                          <p className="text-xs text-muted-foreground">
-                            Linked Parents: Alex Johnson, Jordan Smith
-                          </p>
-                        </div>
-                        <Button size="sm" variant="outline" className="gap-1">
-                          <Eye className="w-4 h-4" /> View
-                        </Button>
-                      </div>
+                      {children.length > 0 ? (
+                        children.map((child) => (
+                          <div key={child.id} className="p-3 border rounded-xl flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{child.first_name} {child.last_name ?? ""}</p>
+                              <p className="text-xs text-muted-foreground">
+                                DOB: {child.birth_date ? new Date(child.birth_date).toLocaleDateString() : "-"}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="outline" className="gap-1">
+                              <Eye className="w-4 h-4" /> View
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No children found.</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              {/* Proposed Changes Tab */}
               <TabsContent value="proposals">
                 <Card>
                   <CardHeader>
@@ -238,57 +345,45 @@ const Moderator = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <div className="p-3 border rounded-xl flex justify-between items-center bg-warning/10">
-                        <div>
-                          <p className="font-medium">Alex Johnson → Weekend Plan Change</p>
-                          <p className="text-xs text-muted-foreground">Proposed: Swap Saturday visit</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" className="gap-1 text-success">
-                            <ThumbsUp className="w-4 h-4" /> Approve
-                          </Button>
-                          <Button size="sm" variant="ghost" className="gap-1 text-destructive">
-                            <ThumbsDown className="w-4 h-4" /> Reject
-                          </Button>
-                        </div>
-                      </div>
+                      {proposals.length > 0 ? (
+                        proposals.map((proposal) => (
+                          <div key={proposal.id} className="p-3 border rounded-xl">
+                            <div>
+                              <p className="font-medium">{proposal.title}</p>
+                              <p className="text-xs text-muted-foreground">{proposal.description}</p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No pending proposals.</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
             </Tabs>
 
-
-            {/* Recent Activity */}
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle>Recent Moderator Activity</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActions.map((action) => {
-                    const Icon = action.icon;
-                    return (
-                      <div key={action.id} className="flex items-start gap-4">
-                        <div className={`w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0`}>
-                          <Icon className={`w-5 h-5 ${action.color}`} />
-                        </div>
-                        <div>
-                          <p className="font-display font-bold">{action.action}</p>
-                          <p className="text-sm text-muted-foreground">{action.description}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{action.date}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-display font-bold">No recent activity</p>
+                      <p className="text-sm text-muted-foreground">Activity will appear here once available.</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar */}
           <div className="lg:col-span-4 space-y-6">
-            {/* Moderator Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Moderator Info</CardTitle>
@@ -296,88 +391,40 @@ const Moderator = () => {
               <CardContent className="space-y-2">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold">
-                    {moderator.avatar}
+                    {(user?.full_name || "?")
+                      .split(" ")
+                      .map((p) => p[0])
+                      .join("")
+                      .slice(0, 2)}
                   </div>
                   <div>
-                    <p className="font-medium">{moderator.name}</p>
-                    <p className="text-sm text-muted-foreground">{moderator.role}</p>
-                    <p className="text-xs text-muted-foreground">{moderator.email}</p>
-                    <p className="text-xs text-muted-foreground">{moderator.phone}</p>
-                    <p className="text-xs text-muted-foreground">Assigned Since: {moderator.assignedSince}</p>
+                    <p className="font-medium">{user?.full_name || "Moderator"}</p>
+                    <p className="text-sm text-muted-foreground">{user?.role || "mediator"}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email || "-"}</p>
+                    <p className="text-xs text-muted-foreground">{user?.phone || "-"}</p>
+                    <p className="text-xs text-muted-foreground">Assigned Since: -</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Quick Access */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Access</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button 
-                  size="sm" 
-                  className="w-full justify-start gap-2" 
-                  onClick={() => setActiveTab("flagged")}
-                >
-                  <AlertTriangle className="w-4 h-4" /> Flagged Messages
+                <Button size="sm" className="w-full justify-start gap-2">
+                  <FileText className="w-4 h-4" /> Generate Report
                 </Button>
-                <Button 
-                  size="sm" 
-                  className="w-full justify-start gap-2" 
-                  onClick={() => setActiveTab("history")}
-                >
-                  <Clock className="w-4 h-4" /> Review History
+                <Button size="sm" variant="outline" className="w-full justify-start gap-2">
+                  <AlertTriangle className="w-4 h-4" /> Review Flags
                 </Button>
-                <Button 
-                  size="sm" 
-                  className="w-full justify-start gap-2" 
-                  onClick={() => setActiveTab("clients")}
-                >
-                  <User className="w-4 h-4" /> Clients
+                <Button size="sm" variant="outline" className="w-full justify-start gap-2">
+                  <User className="w-4 h-4" /> Manage Clients
                 </Button>
-                <Button 
-                  size="sm" 
-                  className="w-full justify-start gap-2" 
-                  onClick={() => setActiveTab("plans")}
-                >
-                  <Calendar className="w-4 h-4" /> Plans
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="w-full justify-start gap-2" 
-                  onClick={() => setActiveTab("children")}
-                >
-                  <User className="w-4 h-4" /> Children
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="w-full justify-start gap-2" 
-                  onClick={() => setActiveTab("proposals")}
-                >
-                  <FileText className="w-4 h-4" /> Proposed Changes
-                </Button>
-              </CardContent>
-            </Card>
-
-
-            {/* Communication Guidelines */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Communication Guidelines</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Always review messages flagged for sensitive language.</li>
-                  <li>Ensure proposed plan changes are logged in the audit trail.</li>
-                  <li>Moderation actions must be timely and justified with notes.</li>
-                  <li>Keep communications professional and neutral at all times.</li>
-                  <li>Escalate unresolved disputes to Admin when necessary.</li>
-                </ul>
               </CardContent>
             </Card>
           </div>
-
         </div>
       </div>
     </ModeratorLayout>
@@ -385,3 +432,9 @@ const Moderator = () => {
 };
 
 export default Moderator;
+
+
+
+
+
+

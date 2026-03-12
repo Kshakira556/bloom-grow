@@ -6,7 +6,7 @@ type ChatHeaderProps = {
   selectedConversation: Conversation | null;
   purposeFilter: MessagePurpose | "All";
   setPurposeFilter: (p: MessagePurpose | "All") => void;
-  exportConversation: (format: "pdf" | "docx") => void;
+  exportConversation: (format: "pdf" | "docx") => void | Promise<void>;
 };
 
 const ChatHeader = ({
@@ -79,3 +79,4 @@ const ChatHeader = ({
 };
 
 export default ChatHeader;
+

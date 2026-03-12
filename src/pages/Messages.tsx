@@ -15,7 +15,7 @@ import MessageInput from "@/components/MessageInput";
 //API & utilities
 import * as api from "@/lib/api";
 import { toast } from "@/lib/toastHelper";
-import { isUserParticipantOfPlan } from "@/lib/messages";
+import { isUserParticipantOfPlan, mapApiMessageToMessage } from "@/lib/messages";
 import { exportConversation } from "@/lib/exportConversation";
 
 // Types
@@ -141,6 +141,14 @@ const Messages = () => {
   }, [activePlan, fetchByPlan, userId]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const visibleMessages =
+    selectedConversation?.user_id && userId
+      ? messages.filter(
+          (m) =>
+            (m.sender_id === userId && m.receiver_id === selectedConversation.user_id) ||
+            (m.receiver_id === userId && m.sender_id === selectedConversation.user_id)
+        )
+      : [];
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -174,20 +182,64 @@ const Messages = () => {
                   selectedConversation={selectedConversation}
                   purposeFilter={purposeFilter}
                   setPurposeFilter={setPurposeFilter}
-                  exportConversation={(format: "pdf" | "docx") => {
+                  exportConversation={async (format: "pdf" | "docx") => {
                     if (!selectedConversation) return;
-                    exportConversation(
-                      messages,
-                      {
-                        user_id: selectedConversation.user_id,
-                        name: selectedConversation.name,
-                        role: selectedConversation.role,
-                        caseRef: selectedConversation.caseRef,
-                        childName: selectedConversation.childName,
-                      },
-                      purposeFilter,
-                      format
-                    );
+
+                    try {
+                      if (!activePlan || !selectedConversation) return;
+
+                      const apiMessages = await api.getMessagesByPlan(activePlan.id, {
+                        includeDeleted: true,
+                      });
+                      const allMessages = apiMessages.map((msg) =>
+                        mapApiMessageToMessage(msg, userId)
+                      );
+
+                      const conversationMessages = allMessages.filter(
+                        (m) =>
+                          (m.sender_id === userId && m.receiver_id === selectedConversation.user_id) ||
+                          (m.receiver_id === userId && m.sender_id === selectedConversation.user_id)
+                      );
+
+                      const exportMessages =
+                        purposeFilter === "All"
+                          ? conversationMessages
+                          : conversationMessages.filter((m) => m.purpose === purposeFilter);
+
+                      const historyEntries = await Promise.all(
+                        exportMessages.map(async (msg) =>
+                          [msg.id, await api.getMessageHistory(msg.id)] as const
+                        )
+                      );
+
+                      const historyById = Object.fromEntries(historyEntries);
+
+                      await exportConversation(
+                        conversationMessages,
+                        {
+                          user_id: selectedConversation.user_id,
+                          name: selectedConversation.name,
+                          role: selectedConversation.role,
+                          caseRef: selectedConversation.caseRef,
+                          childName: selectedConversation.childName,
+                        },
+                        purposeFilter,
+                        format,
+                        historyById
+                      );
+                    } catch (err: unknown) {
+                      let description = "Failed to export conversation";
+
+                      if (err instanceof Error) {
+                        description = err.message;
+                      }
+
+                      toast({
+                        title: "Export failed",
+                        description,
+                        variant: "destructive",
+                      });
+                    }
                   }}
                 />
 
@@ -206,7 +258,7 @@ const Messages = () => {
                   className="flex-1 overflow-y-auto"
                 >
                   <MessageList
-                    messages={messages}
+                    messages={visibleMessages}
                     purposeFilter={purposeFilter}
                     onEdit={handleEditMessage}
                     onDelete={handleDeleteMessage}
@@ -228,7 +280,7 @@ const Messages = () => {
                     }
 
                     try {
-                      await send({
+                      const sentMessage = await send({
                         sender_id: userId,
                         receiver_id: selectedConversation.user_id,
                         plan_id: activePlan.id,
@@ -236,6 +288,12 @@ const Messages = () => {
                         purpose: draft.purpose,
                         attachments: draft.attachments || [],
                       });
+
+                      setMessages((prev) =>
+                        prev.some((m) => m.id === sentMessage.id)
+                          ? prev
+                          : [...prev, sentMessage]
+                      );
 
                       setDraft({
                         content: "",
@@ -270,3 +328,9 @@ const Messages = () => {
 };
 
 export default Messages;
+
+
+
+
+
+

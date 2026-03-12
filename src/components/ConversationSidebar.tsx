@@ -42,7 +42,7 @@ const mapContactsToConversations = (
   userId: string
 ): Conversation[] => {
   return contacts.map((c) => {
-    const contactUserId = c.linked_user_id || c.user_id;
+    const contactUserId = c.linked_user_id ?? "";
     const msgsForUser = messages
       .filter(
         (m) =>
@@ -240,7 +240,7 @@ const ConversationSidebar = ({
           <p className="text-xs text-muted-foreground px-2 py-1">No contacts yet.</p>
         ) : (
           conversations.map((conv) => {
-            const disabled = false;
+            const disabled = !conv.user_id;
 
             const displayName = conv.name || "Unnamed";
 
@@ -264,6 +264,9 @@ const ConversationSidebar = ({
                 <p className="text-sm text-muted-foreground truncate">
                   {conv.lastMessage || "No messages yet"}
                 </p>
+                {disabled && (
+                  <p className="text-xs text-muted-foreground mt-1">Invite pending</p>
+                )}
               </button>
             );
           })
@@ -274,3 +277,5 @@ const ConversationSidebar = ({
 };
 
 export default ConversationSidebar;
+
+

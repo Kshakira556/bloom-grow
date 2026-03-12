@@ -80,7 +80,7 @@ export const getModerators = async (): Promise<Moderator[]> => {
 // --------------------
 export interface Plan {
   id: string;
-  title: string;
+  title: string;\n  created_by?: string;\n  status?: string;
 }
 
 export interface PlanInvitePayload {
@@ -229,14 +229,18 @@ export interface ApiMessage {
   created_at: string;
   updated_at?: string | null;
   purpose?: MessagePurpose;
-  is_flagged: boolean;
+  is_flagged: boolean;\n  flagged_reason?: string;\n  is_deleted?: boolean;
   is_seen?: boolean;
   attachments?: Attachment[];
 }
 
-export const getMessagesByPlan = async (planId: string) => {
+export const getMessagesByPlan = async (
+  planId: string,
+  options?: { includeDeleted?: boolean }
+) => {
+  const query = options?.includeDeleted ? "?include_deleted=true" : "";
   const res = await http<{ messages: ApiMessage[] }>(
-    `/messages/plan/${planId}`,
+    `/messages/plan/${planId}${query}`,
     "GET"
   );
   return res.messages;
@@ -268,6 +272,49 @@ export const markMessageAsSeen = async (id: string) => {
     "PUT"
   );
   return res.message;
+};
+export interface ApiMessageHistory {
+  id: string;
+  message_id: string;
+  sender_id: string;
+  receiver_id: string;
+  plan_id: string;
+  content: string;
+  action_type: "create" | "update" | "delete";
+  action_by: string;
+  action_at: string;
+  is_seen?: boolean;
+  seen_at?: string | null;
+  deleted_by?: string | null;
+}
+
+export interface Proposal {
+  id: string;
+  plan_id: string;
+  created_by: string;
+  title: string;
+  description: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  updated_at?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+}
+
+export interface ReviewHistory {
+  id: string;
+  message_id: string;
+  reviewer_id: string;
+  action: "approved" | "rejected" | "flagged" | "noted";
+  notes?: string | null;
+  created_at: string;
+}
+export const getMessageHistory = async (id: string) => {
+  const res = await http<{ history: ApiMessageHistory[] }>(
+    `/messages/history/${id}`,
+    "GET"
+  );
+  return res?.history ?? [];
 };
 
 export const flagMessage = async (id: string, reason?: string) => {
@@ -361,5 +408,101 @@ export interface ApiContact {
 export const getContacts = async (): Promise<ApiContact[]> => {
   const res = await http<{ contacts: ApiContact[] }>("/contacts", "GET");
   return res?.contacts ?? [];
+};
+
+
+
+
+
+
+
+
+export const getProposals = async (status?: "pending" | "approved" | "rejected") => {
+  const query = status ? `?status=${status}` : "";
+  const res = await http<{ proposals: Proposal[] }>(`/proposals${query}`, "GET");
+  return res?.proposals ?? [];
+};
+export const createProposal = async (payload: {
+  plan_id: string;
+  title: string;
+  description: string;
+  created_by: string;
+}) => {
+  const res = await http<{ proposal: Proposal }>("/proposals", "POST", payload);
+  return res?.proposal;
+};
+
+export const updateProposalStatus = async (
+  id: string,
+  payload: { status: "pending" | "approved" | "rejected"; reviewed_by?: string }
+) => {
+  const res = await http<{ proposal: Proposal }>(`/proposals/${id}`, "PUT", payload);
+  return res?.proposal;
+};
+
+export const getReviewHistory = async () => {
+  const res = await http<{ reviews: ReviewHistory[] }>("/moderation/reviews", "GET");
+  return res?.reviews ?? [];
+};
+
+export const createReview = async (payload: {
+  message_id: string;
+  reviewer_id: string;
+  action: "approved" | "rejected" | "flagged" | "noted";
+  notes?: string;
+}) => {
+  const res = await http<{ review: ReviewHistory }>("/moderation/reviews", "POST", payload);
+  return res?.review;
+};
+
+
+export interface AuditLog {
+  id: string;
+  actor_id: string;
+  action: string;
+  target_type?: string | null;
+  target_id?: string | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export const getAuditLogs = async () => {
+  const res = await http<{ logs: AuditLog[] }>("/admin/audit-logs", "GET");
+  return res?.logs ?? [];
+};
+
+export const getAdminMessages = async (options?: { includeDeleted?: boolean }) => {
+  const query = options?.includeDeleted ? "?include_deleted=true" : "";
+  const res = await http<{ messages: ApiMessage[] }>(`/admin/messages${query}`, "GET");
+  return res?.messages ?? [];
+};
+
+export interface ModeratorAssignment {
+  id: string;
+  moderator_id: string;
+  plan_id: string;
+  status: "active" | "pending";
+  created_at: string;
+}
+
+export const getModeratorAssignments = async () => {
+  const res = await http<{ assignments: ModeratorAssignment[] }>(
+    "/admin/moderator-assignments",
+    "GET"
+  );
+  return res?.assignments ?? [];
+};
+
+export const createModeratorAssignment = async (payload: {
+  moderator_id: string;
+  plan_id: string;
+  status?: "active" | "pending";
+}) => {
+  const res = await http<{ assignment: ModeratorAssignment }>(
+    "/admin/moderator-assignments",
+    "POST",
+    payload
+  );
+  return res?.assignment;
 };
 

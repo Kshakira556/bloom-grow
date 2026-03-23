@@ -3,9 +3,9 @@ import { cn } from "@/lib/utils";
 import { Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import CubLogoPng from "@/assets/images/cub logo.png";
 
 export function Navbar() {
+  const CubLogoPng = "/images/cublogo.png"
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth(); 

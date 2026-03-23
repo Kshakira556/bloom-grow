@@ -1,4 +1,4 @@
-import { http } from "@/lib/http"
+import * as api from "@/lib/api"
 import { VaultAggregate } from "@/types/vaultAggregate"
 
 /* -------------------- Backend request shapes -------------------- */
@@ -64,7 +64,7 @@ export const vaultSaveService = {
       }
 
       try {
-        const createdVault = await http<{ id: string }>("/vaults", "POST", payload)
+        const createdVault = await api.createVault(payload)
         if (!createdVault?.id) throw new Error("Vault creation failed: no ID returned")
         vaultId = createdVault.id
         aggregate.vaultId = vaultId
@@ -82,12 +82,12 @@ export const vaultSaveService = {
         // Guardians
       ...aggregate.guardians.map(g =>
         g.id
-          ? http<GuardianRequest>(`/guardians/${g.id}`, "PUT", { 
+          ? api.updateGuardian(g.id, { 
               name: g.name, 
               cell_no: g.cell?.trim() || undefined, 
               work_no: g.work?.trim() || undefined 
             })
-          : http<GuardianRequest>(`/vaults/${vaultId}/guardians`, "POST", { 
+          : api.createGuardian(vaultId!, { 
               name: g.name, 
               cell_no: g.cell?.trim() || undefined, 
               work_no: g.work?.trim() || undefined 
@@ -96,146 +96,123 @@ export const vaultSaveService = {
 
         // Legal
         aggregate.legal && (async () => {
-          if (aggregate.legal.id) {
+          const legal = aggregate.legal;
+          if (!legal) return null;
+          if (legal.id) {
             try {
               // Check if record exists
-              await http<{ legal: VaultAggregate["legal"] | null }>(`/vaults/legal-custody/${aggregate.legal.id}`, "GET");
+              await api.getLegalCustody(legal.id);
               // Exists → update
               const payload: LegalRequest = {};
-              if (aggregate.legal.custodyType?.trim()) payload.custody_type = aggregate.legal.custodyType.trim();
-              if (aggregate.legal.caseNo?.trim()) payload.case_no = aggregate.legal.caseNo.trim();
-              if (aggregate.legal.validUntil?.trim()) payload.valid_until = aggregate.legal.validUntil.trim();
-              if (aggregate.legal.contactType?.trim()) payload.contact_type = aggregate.legal.contactType.trim();
+              if (legal.custodyType?.trim()) payload.custody_type = legal.custodyType.trim();
+              if (legal.caseNo?.trim()) payload.case_no = legal.caseNo.trim();
+              if (legal.validUntil?.trim()) payload.valid_until = legal.validUntil.trim();
+              if (legal.contactType?.trim()) payload.contact_type = legal.contactType.trim();
 
-              const updated = await http<LegalRequest & { id: string }>(
-                `/vaults/legal-custody/${aggregate.legal.id}`,
-                "PUT",
-                payload
-              );
-              aggregate.legal.id = updated.id;
+              const updated = await api.updateLegalCustody(legal.id, payload);
+              if (!updated?.id) throw new Error("Failed to update legal custody");
+              legal.id = updated.id;
               return updated;
             } catch {
               // ID doesn't exist → create
-              const created = await http<LegalRequest & { id: string }>(
-                `/vaults/${vaultId}/legal-custody`,
-                "POST",
-                {
-                  vault_id: vaultId,
-                  custody_type: aggregate.legal.custodyType?.trim() || undefined,
-                  case_no: aggregate.legal.caseNo?.trim() || undefined,
-                  valid_until: aggregate.legal.validUntil?.trim() || undefined,
-                  contact_type: aggregate.legal.contactType?.trim() || undefined
-                }
-              );
-              aggregate.legal.id = created.id;
+              const created = await api.createLegalCustody(vaultId!, {
+                custody_type: legal.custodyType?.trim() || undefined,
+                case_no: legal.caseNo?.trim() || undefined,
+                valid_until: legal.validUntil?.trim() || undefined,
+                contact_type: legal.contactType?.trim() || undefined
+              });
+              if (!created?.id) throw new Error("Failed to create legal custody");
+              legal.id = created.id;
               return created;
             }
           } else {
             // No ID → create
-            const created = await http<LegalRequest & { id: string }>(
-              `/vaults/${vaultId}/legal-custody`,
-              "POST",
-              {
-                vault_id: vaultId,
-                custody_type: aggregate.legal.custodyType?.trim() || undefined,
-                case_no: aggregate.legal.caseNo?.trim() || undefined,
-                valid_until: aggregate.legal.validUntil?.trim() || undefined,
-                contact_type: aggregate.legal.contactType?.trim() || undefined
-              }
-            );
-            aggregate.legal.id = created.id;
+            const created = await api.createLegalCustody(vaultId!, {
+              custody_type: legal.custodyType?.trim() || undefined,
+              case_no: legal.caseNo?.trim() || undefined,
+              valid_until: legal.validUntil?.trim() || undefined,
+              contact_type: legal.contactType?.trim() || undefined
+            });
+            if (!created?.id) throw new Error("Failed to create legal custody");
+            legal.id = created.id;
             return created;
           }
         })(),
 
         // Medical
         aggregate.medical && (async () => {
-          if (aggregate.medical.id) {
+          const medical = aggregate.medical;
+          if (!medical) return null;
+          if (medical.id) {
             try {
-              await http<{ medical: VaultAggregate["medical"] | null }>(`/vaults/medical/${aggregate.medical.id}`, "GET");
-              const updated = await http<MedicalRequest & { id: string }>(
-              `/vaults/medical/${aggregate.medical.id}`,
-              "PUT",
-              {
-                blood_type: aggregate.medical.bloodType?.trim() || undefined,
-                allergies: Array.isArray(aggregate.medical.allergies)
-                  ? aggregate.medical.allergies.join(", ")
-                  : aggregate.medical.allergies?.trim() || undefined,
-                medication: Array.isArray(aggregate.medical.medication)
-                  ? aggregate.medical.medication.join(", ")
-                  : aggregate.medical.medication?.trim() || undefined,
-                doctor: aggregate.medical.doctor?.trim() || undefined
-              }
-            );
-              aggregate.medical.id = updated.id;
+              await api.getMedical(medical.id);
+              const updated = await api.updateMedical(medical.id, {
+                blood_type: medical.bloodType?.trim() || undefined,
+                allergies: Array.isArray(medical.allergies)
+                  ? medical.allergies.join(", ")
+                  : medical.allergies?.trim() || undefined,
+                medication: Array.isArray(medical.medication)
+                  ? medical.medication.join(", ")
+                  : medical.medication?.trim() || undefined,
+                doctor: medical.doctor?.trim() || undefined
+              });
+              if (!updated?.id) throw new Error("Failed to update medical");
+              medical.id = updated.id;
               return updated;
             } catch {
-              const created = await http<MedicalRequest & { id: string }>(
-                `/vaults/${vaultId}/medical`,
-                "POST",
-                {
-                  blood_type: aggregate.medical.bloodType?.trim() || undefined,
-                  allergies: aggregate.medical.allergies?.trim() || undefined,
-                  medication: aggregate.medical.medication?.trim() || undefined,
-                  doctor: aggregate.medical.doctor?.trim() || undefined
-                }
-              );
-              aggregate.medical.id = created.id;
+              const created = await api.createMedical(vaultId!, {
+                blood_type: medical.bloodType?.trim() || undefined,
+                allergies: medical.allergies?.trim() || undefined,
+                medication: medical.medication?.trim() || undefined,
+                doctor: medical.doctor?.trim() || undefined
+              });
+              if (!created?.id) throw new Error("Failed to create medical");
+              medical.id = created.id;
               return created;
             }
           } else {
-            const created = await http<MedicalRequest & { id: string }>(
-              `/vaults/${vaultId}/medical`,
-              "POST",
-              {
-                blood_type: aggregate.medical.bloodType?.trim() || undefined,
-                allergies: aggregate.medical.allergies?.trim() || undefined,
-                medication: aggregate.medical.medication?.trim() || undefined,
-                doctor: aggregate.medical.doctor?.trim() || undefined
-              }
-            );
-            aggregate.medical.id = created.id;
+            const created = await api.createMedical(vaultId!, {
+              blood_type: medical.bloodType?.trim() || undefined,
+              allergies: medical.allergies?.trim() || undefined,
+              medication: medical.medication?.trim() || undefined,
+              doctor: medical.doctor?.trim() || undefined
+            });
+            if (!created?.id) throw new Error("Failed to create medical");
+            medical.id = created.id;
             return created;
           }
         })(),
 
         // Safety
         aggregate.safety && (async () => {
-          if (aggregate.safety.id) {
+          const safety = aggregate.safety;
+          if (!safety) return null;
+          if (safety.id) {
             try {
-              await http<{ safety: VaultAggregate["safety"] | null }>(`/vaults/safety/${aggregate.safety.id}`, "GET");
-              const updated = await http<SafetyRequest & { id: string }>(
-                `/vaults/safety/${aggregate.safety.id}`,
-                "PUT",
-                {
-                  approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
-                  not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined
-                }
-              );
-              aggregate.safety.id = updated.id;
+              await api.getSafety(safety.id);
+              const updated = await api.updateSafety(safety.id, {
+                approved_pickup: safety.approvedPickup?.trim() || undefined,
+                not_allowed_pickup: safety.notAllowedPickup?.trim() || undefined
+              });
+              if (!updated?.id) throw new Error("Failed to update safety");
+              safety.id = updated.id;
               return updated;
             } catch {
-              const created = await http<SafetyRequest & { id: string }>(
-                `/vaults/${vaultId}/safety`,
-                "POST",
-                {
-                  approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
-                  not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined
-                }
-              );
-              aggregate.safety.id = created.id;
+              const created = await api.createSafety(vaultId!, {
+                approved_pickup: safety.approvedPickup?.trim() || undefined,
+                not_allowed_pickup: safety.notAllowedPickup?.trim() || undefined
+              });
+              if (!created?.id) throw new Error("Failed to create safety");
+              safety.id = created.id;
               return created;
             }
           } else {
-            const created = await http<SafetyRequest & { id: string }>(
-              `/vaults/${vaultId}/safety`,
-              "POST",
-              {
-                approved_pickup: aggregate.safety.approvedPickup?.trim() || undefined,
-                not_allowed_pickup: aggregate.safety.notAllowedPickup?.trim() || undefined
-              }
-            );
-            aggregate.safety.id = created.id;
+            const created = await api.createSafety(vaultId!, {
+              approved_pickup: safety.approvedPickup?.trim() || undefined,
+              not_allowed_pickup: safety.notAllowedPickup?.trim() || undefined
+            });
+            if (!created?.id) throw new Error("Failed to create safety");
+            safety.id = created.id;
             return created;
           }
         })(),
@@ -244,29 +221,29 @@ export const vaultSaveService = {
         ...aggregate.emergencyContacts.map(e => (async () => {
           if (e.id) {
             try {
-              await http<{ contact: VaultAggregate["emergencyContacts"][0] | null }>(`/vaults/emergency-contacts/${e.id}`, "GET");
-              const updated = await http<EmergencyRequest & { id: string }>(
-                `/vaults/emergency-contacts/${e.id}`,
-                "PUT",
-                { name: e.name, phone: e.phone?.trim() || undefined }
-              );
+              await api.getEmergencyContact(e.id);
+              const updated = await api.updateEmergencyContact(e.id, {
+                name: e.name,
+                phone: e.phone?.trim() || undefined
+              });
+              if (!updated?.id) throw new Error("Failed to update emergency contact");
               e.id = updated.id;
               return updated;
             } catch {
-              const created = await http<EmergencyRequest & { id: string }>(
-                `/vaults/${vaultId}/emergency-contacts`,
-                "POST",
-                { name: e.name, phone: e.phone?.trim() || undefined }
-              );
+              const created = await api.createEmergencyContact(vaultId!, {
+                name: e.name,
+                phone: e.phone?.trim() || undefined
+              });
+              if (!created?.id) throw new Error("Failed to create emergency contact");
               e.id = created.id;
               return created;
             }
           } else {
-            const created = await http<EmergencyRequest & { id: string }>(
-              `/vaults/${vaultId}/emergency-contacts`,
-              "POST",
-              { name: e.name, phone: e.phone?.trim() || undefined }
-            );
+            const created = await api.createEmergencyContact(vaultId!, {
+              name: e.name,
+              phone: e.phone?.trim() || undefined
+            });
+            if (!created?.id) throw new Error("Failed to create emergency contact");
             e.id = created.id;
             return created;
           }
@@ -301,7 +278,7 @@ export const vaultSaveService = {
           try {
             await retry(async () => {
               console.log(`[Vault Save] childId=${aggregate.childId} vaultId=${vaultId} -> saving document "${d.name}"`);
-              await http<DocumentRequest>(`/vaults/${vaultId}/documents`, "POST", {
+              await api.addDocument(vaultId!, {
                 name: d.name,
                 file_url: d.fileUrl,
                 category: d.category,

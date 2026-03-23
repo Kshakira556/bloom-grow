@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Eye } from "lucide-react";
 import * as api from "@/lib/api";
-import { buildUserNameMap } from "@/lib/adminData";
+import { buildUserNameMap, fetchAllPlanMessages } from "@/lib/adminData";
 
 const AdminMessages = () => {
   const [messages, setMessages] = useState<api.ApiMessage[]>([]);
@@ -78,7 +78,7 @@ const AdminMessages = () => {
                   <div key={msg.id} className="p-3 border rounded-xl flex justify-between items-center">
                     <div>
                       <p className="font-medium">
-                        {(userMap[msg.sender_id] || msg.sender_id)} -> {(userMap[msg.receiver_id] || msg.receiver_id)}
+                        {`${userMap[msg.sender_id] || msg.sender_id} -> ${userMap[msg.receiver_id] || msg.receiver_id}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Plan: {planMap[msg.plan_id] || msg.plan_id}

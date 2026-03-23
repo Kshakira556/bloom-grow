@@ -39,15 +39,24 @@ const ViewJournalModal = ({
   const saveEdit = async () => {
     try {
         const updated = await api.updateJournalEntry(entry.id, {
-        title: editTitle,
-        content: editContent,
-        mood: editMood,
-        image: editImage,
+            title: editTitle,
+            content: editContent,
+            mood: editMood,
+            image: editImage || undefined, // convert null/empty string to undefined
         });
 
+        if (!updated) throw new Error("Update failed"); // <-- handle null
+
         onUpdate({
-        ...updated,
-        type: entry.type, // preserve existing type
+            id: updated.id,
+            content: updated.content,
+            title: updated.title ?? "",
+            mood: updated.mood ?? "",
+            image: updated.image ?? undefined,
+            type: entry.type, // preserve existing type
+            child_id: updated.child_id,
+            author_id: updated.author_id,
+            entry_date: updated.entry_date,
         });
 
         setIsEditing(false);
@@ -55,7 +64,7 @@ const ViewJournalModal = ({
         console.error("Failed to update entry:", err);
         alert("Failed to save changes.");
     }
-    };
+};
 
   const handleDelete = async () => {
     if (!entry) return;
@@ -126,7 +135,7 @@ const ViewJournalModal = ({
                 onClick={() => {
                 if (!isEditing) {
                     setEditTitle(entry.title || "");
-                    setEditContent(entry.content);
+                    setEditContent(entry.content || "");
                     setEditMood(entry.mood || "");
                     setEditImage(entry.image || "");
                 }

@@ -5,9 +5,9 @@ import { User, Mail, Lock } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import RegisterPng from "@/assets/images/Register page.jpeg";
 
 export default function Register() {
+  const RegisterPng = "/images/registerpage.jpeg"
   const { register } = useAuth();
   const navigate = useNavigate();
 

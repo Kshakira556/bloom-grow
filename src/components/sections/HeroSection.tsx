@@ -1,8 +1,8 @@
-import IndexPng from "@/assets/images/index page.png";
 import { delayClass } from "@/utils/animation";
 import { Button } from "../ui/button";
 
 const HeroSection = () => {
+  const IndexPng = "/images/indexpage.png"
   return (
     <section className="py-16 px-4">
       <div className="w-full text-center px-4 md:px-8">

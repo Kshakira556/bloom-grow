@@ -2,8 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Lock, User } from "lucide-react";
-import { useState } from "react";
 
 export type AuthField = {
   name: string;
@@ -11,7 +9,8 @@ export type AuthField = {
   placeholder: string;
   icon: React.ReactNode;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  options?: { label: string; value: string }[];
 };
 
 type AuthFormProps = {
@@ -38,14 +37,33 @@ export const AuthForm = ({
       {fields.map((field) => (
         <div className="relative" key={field.name}>
           {field.icon}
-          <Input
-            type={field.type}
-            placeholder={field.placeholder}
-            value={field.value}
-            onChange={field.onChange}
-            className="pl-12 bg-cub-mint-light border-0 rounded-full h-12"
-            required
-          />
+          {field.type === "select" ? (
+            <select
+              aria-label="changed"
+              value={field.value}
+              onChange={field.onChange}
+              className="pl-12 bg-cub-mint-light border-0 rounded-full h-12 w-full"
+              required
+            >
+              <option value="" disabled>
+                {field.placeholder}
+              </option>
+              {field.options?.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input
+              type={field.type}
+              placeholder={field.placeholder}
+              value={field.value}
+              onChange={field.onChange}
+              className="pl-12 bg-cub-mint-light border-0 rounded-full h-12"
+              required
+            />
+          )}
         </div>
       ))}
 

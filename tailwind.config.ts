@@ -3,6 +3,17 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  safelist: [
+    "delay-0",
+    "delay-75",
+    "delay-100",
+    "delay-150",
+    "delay-200",
+    "delay-300",
+    "delay-500",
+    "delay-700",
+    "delay-1000",
+  ],
   prefix: "",
   theme: {
     container: {

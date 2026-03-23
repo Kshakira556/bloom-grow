@@ -37,7 +37,9 @@ const AdminClients = () => {
 
   const planCountsByUser = useMemo(() => {
     return plans.reduce<Record<string, number>>((acc, plan) => {
-      if (plan.created_by) {\n      acc[plan.created_by] = (acc[plan.created_by] ?? 0) + 1;\n    }
+      if (plan.created_by) {
+        acc[plan.created_by] = (acc[plan.created_by] ?? 0) + 1;
+      }
       return acc;
     }, {});
   }, [plans]);
@@ -47,7 +49,7 @@ const AdminClients = () => {
       .filter((u) => u.role === "parent")
       .filter((u) =>
         search
-          ? u.full_name.toLowerCase().includes(search.toLowerCase()) ||
+          ? (u.full_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
             u.id.toLowerCase().includes(search.toLowerCase())
           : true
       );

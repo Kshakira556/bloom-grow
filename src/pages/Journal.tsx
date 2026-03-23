@@ -68,32 +68,40 @@ const Journal = () => {
     }, [selectedChild]);
 
     useEffect(() => {
-    if (!activePlan) return;
+  if (!activePlan) return;
 
-    const fetchChildren = async () => {
-      try {
-        const allChildren = await api.getChildren(); // now returns Child[]
-        
-        setChildren(
-          allChildren.map((child) => ({
-            id: child.id,
-            name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
-          }))
-        );
+  const fetchChildren = async () => {
+    try {
+      // Replace getChildren with getChildById
+      // You need child IDs from the plan to fetch them individually
+      const childIds = activePlan.children?.map(c => c.id) || [];
+      const allChildren = await Promise.all(
+        childIds.map(async (id) => {
+          const child = await api.getChildById(id);
+          return child;
+        })
+      );
 
-        if (allChildren.length > 0) {
-          setSelectedChild({
-            id: allChildren[0].id,
-            name: `${allChildren[0].first_name}${allChildren[0].last_name ? ` ${allChildren[0].last_name}` : ""}`,
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch children:", err);
+      setChildren(
+        allChildren.map((child) => ({
+          id: child.id,
+          name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+        }))
+      );
+
+      if (allChildren.length > 0) {
+        setSelectedChild({
+          id: allChildren[0].id,
+          name: `${allChildren[0].first_name}${allChildren[0].last_name ? ` ${allChildren[0].last_name}` : ""}`,
+        });
       }
-    };
+    } catch (err) {
+      console.error("Failed to fetch children:", err);
+    }
+  };
 
-    fetchChildren();
-  }, [activePlan]);
+  fetchChildren();
+}, [activePlan]);
 
     // Add Journal Entry
     const addJournalEntry = async () => {
@@ -386,10 +394,16 @@ const Journal = () => {
         disableNext={selectedEntryIndex === filteredEntries.length - 1}
         onUpdate={(updatedEntry) => {
           setEntries((prev) =>
-            prev.map((e) =>
-              e.id === updatedEntry.id ? { ...updatedEntry, type: e.type } : e
-            )
+            prev.map((e) => e.id === updatedEntry.id ? updatedEntry : e)
           );
+
+          // Immediately update the modal to reflect the change
+          if (selectedEntryIndex !== null) {
+            const newFiltered = entries.filter(
+              (entry) => viewMode === "all" || entry.type === viewMode
+            );
+            setSelectedEntryIndex(newFiltered.findIndex(e => e.id === updatedEntry.id));
+          }
         }}
         onDelete={(id) => {
           setEntries((prev) => prev.filter((e) => e.id !== id));

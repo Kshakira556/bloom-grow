@@ -156,24 +156,32 @@ const Messages = () => {
 
       <main className="flex-1 py-8 px-4">
         <div className="container max-w-5xl mx-auto">
-          <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">Messages</h1>
+          <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">
+            {activePlan ? "Messages" : "Dashboard"}
+          </h1>
 
           <div className="bg-card rounded-3xl shadow-sm overflow-hidden">
             <div className="grid md:grid-cols-12">
-              <ConversationSidebar
-                plans={plans}
-                activePlan={activePlan}
-                setActivePlan={setActivePlan}
-                plansOpen={plansOpen}
-                setPlansOpen={setPlansOpen}
-                conversations={conversations}
-                setConversations={setConversations}
-                selectedConversation={selectedConversation}
-                setSelectedConversation={setSelectedConversation}
-                user={user}
-                isUserParticipantOfPlan={isUserParticipantOfPlan}
-                messages={messages}
-              />
+              {activePlan ? (
+                <ConversationSidebar
+                  plans={plans}
+                  activePlan={activePlan}
+                  setActivePlan={setActivePlan}
+                  plansOpen={plansOpen}
+                  setPlansOpen={setPlansOpen}
+                  conversations={conversations}
+                  setConversations={setConversations}
+                  selectedConversation={selectedConversation}
+                  setSelectedConversation={setSelectedConversation}
+                  user={user}
+                  isUserParticipantOfPlan={isUserParticipantOfPlan}
+                  messages={messages}
+                />
+              ) : (
+                <p className="text-center py-20 text-gray-500">
+                  No active plan selected. Please create or select a plan.
+                </p>
+              )}
 
               {/* Chat Area */}
               <div className="md:col-span-8 flex flex-col h-[600px]">
@@ -262,7 +270,7 @@ const Messages = () => {
                     purposeFilter={purposeFilter}
                     onEdit={handleEditMessage}
                     onDelete={handleDeleteMessage}
-                    scrollContainerRef={scrollContainerRef} 
+                    scrollContainerRef={scrollContainerRef as React.RefObject<HTMLDivElement>}
                   />
                 </div>
 
@@ -328,9 +336,3 @@ const Messages = () => {
 };
 
 export default Messages;
-
-
-
-
-
-

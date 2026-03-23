@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, Plus, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import * as api from "@/lib/api";
+import type { PlanChild } from "@/lib/api";
 import type { VisitEvent } from "@/types/visits";
 import { mapVisitsToEvents } from "@/lib/mappers/visitMapper";
 import { dateFnsLocalizer, Calendar } from "react-big-calendar";
@@ -14,6 +15,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { enUS } from 'date-fns/locale/en-US';
 import { DateTime } from "luxon"
 import { VisitModal } from "@/components/VisitModal";
+import { PlanModal } from "@/components/PlanModal";
 import { useAuthContext } from "@/context/AuthContext";
 
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
@@ -47,6 +49,7 @@ const mapToCalendarEvents = (events: VisitEvent[]) => {
 
 const Visits = () => {
   const [plansOpen, setPlansOpen] = useState(false);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
   const { user } = useAuthContext();
   const [proposalTitle, setProposalTitle] = useState("");
   const [proposalDescription, setProposalDescription] = useState("");
@@ -61,27 +64,66 @@ const Visits = () => {
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
 
   const [events, setEvents] = useState<VisitEvent[]>([]);
-  const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
-  const [selectedChild, setSelectedChild] = useState<{ id: string; name: string } | null>(null);
+  // Change these lines:
+const [children, setChildren] = useState<PlanChild[]>([]);
+const [selectedChild, setSelectedChild] = useState<PlanChild | null>(null);
+  const [allChildren, setAllChildren] = useState<PlanChild[]>([]);
   const [loadingChildren, setLoadingChildren] = useState(true);
+
+  useEffect(() => {
+    const fetchAllChildren = async () => {
+      if (!user?.id) {
+        setAllChildren([]);
+        return;
+      }
+      try {
+        const all = await api.getChildren();
+        const mapped = all.map((child) => ({
+          id: child.id,
+          first_name: child.first_name,
+          last_name: child.last_name,
+          name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+        })) as PlanChild[];
+        setAllChildren(mapped);
+      } catch (err) {
+        console.error("Failed to load children:", err);
+        setAllChildren([]);
+      }
+    };
+
+    fetchAllChildren();
+  }, [user]);
 
   useEffect(() => {
   const fetchChildren = async () => {
     try {
-      const allChildren = await api.getChildren();
-      const mapped = allChildren.map(child => ({
-        id: child.id,
-        name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
-      }));
-      setChildren(mapped);
-
-      if (mapped.length > 0) {
-        setSelectedChild(mapped[0]); // default to first child
-      } else {
+      // Replace getChildren with getChildById using active plan's children IDs
+      if (!activePlan) {
+        setChildren([]);
         setSelectedChild(null);
+        setLoadingChildren(false);
+        return;
       }
+
+      const childIds = activePlan.children?.map(c => c.id) || [];
+      const allChildren = await Promise.all(
+        childIds.map(async (id) => {
+          const child = await api.getChildById(id);
+          return child;
+        })
+      );
+
+      const mapped = allChildren.map(child => ({
+  id: child.id,
+  first_name: child.first_name,
+  last_name: child.last_name,
+  name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+})) as PlanChild[];
+setChildren(mapped);
+setSelectedChild(mapped.length > 0 ? mapped[0] : null);
     } catch (err) {
       console.error("Error fetching children:", err);
+      setChildren([]);
       setSelectedChild(null);
     } finally {
       setLoadingChildren(false);
@@ -89,20 +131,11 @@ const Visits = () => {
   };
 
   fetchChildren();
-}, []);
+}, [activePlan]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const dropdown = document.getElementById("plans-dropdown");
-      const button = document.getElementById("plans-button");
-      if (plansOpen && dropdown && button && !dropdown.contains(event.target as Node) && !button.contains(event.target as Node)) {
-        setPlansOpen(false);
-      }
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    const handleProposalSubmit = async () => {
+    // Close dropdown when clicking outside
+    // Define at the top of your component, along with useState hooks
+  const handleProposalSubmit = async () => {
     setProposalError(null);
     setProposalSuccess(null);
 
@@ -138,15 +171,12 @@ const Visits = () => {
       setProposalSubmitting(false);
     }
   };
-  return () => {
-      document.removeEventListener("click", handleClickOutside);
-    };
-  }, [plansOpen]);
 
   useEffect(() => {
   const fetchPlans = async () => {
     try {
       const { plans } = await api.getPlans();
+
       setPlans(plans);
 
       if (plans.length > 0) {
@@ -165,7 +195,7 @@ const Visits = () => {
   };
 
   fetchPlans();
-}, []);
+}, [user]);
 
   useEffect(() => {
   if (!activePlan) return;
@@ -204,37 +234,46 @@ const Visits = () => {
     <Check className="w-4 h-4 text-primary" />
   </Button>
 
-  {plansOpen && Array.isArray(plans) && plans.length > 0 && (
-    <div
-      id="plans-dropdown"
-      className="absolute top-12 left-0 z-10 w-64 bg-card border rounded-2xl shadow-lg overflow-hidden"
-    >
-      {plans.map((plan) => (
-        <button
-          key={plan.id}
-          onClick={async () => {
-            setPlansOpen(false);
-            try {
-              const { plan: fullPlan } = await api.getPlanById(plan.id);
-              setActivePlan(fullPlan);
-            } catch (err) {
-              console.error("Failed to fetch full plan:", err);
-              alert("Unable to fetch full plan details.");
-              setActivePlan(null);
-            }
-          }}
-          className={`w-full px-4 py-3 flex items-center justify-between hover:bg-muted text-left ${
-            activePlan?.id === plan.id ? "bg-muted" : ""
-          }`}
-        >
-          <span className="text-sm">{plan.title}</span>
-          {activePlan?.id === plan.id && <Check className="w-4 h-4 text-primary" />}
-        </button>
-      ))}
+  {plansOpen && (
+    <div id="plans-dropdown" className="absolute top-12 left-0 z-10 w-64 bg-card border rounded-2xl shadow-lg overflow-hidden">
+      {plans.length > 0 &&
+        plans.map((plan) => (
+          <button
+            key={plan.id}
+            onClick={async () => {
+              setPlansOpen(false);
+              try {
+                const { plan: fullPlan } = await api.getPlanById(plan.id);
+                setActivePlan(fullPlan);
+              } catch (err) {
+                console.error("Failed to fetch full plan:", err);
+                alert("Unable to fetch full plan details.");
+                setActivePlan(null);
+              }
+            }}
+            className={`w-full px-4 py-3 flex items-center justify-between hover:bg-muted text-left ${
+              activePlan?.id === plan.id ? "bg-muted" : ""
+            }`}
+          >
+            <span className="text-sm">{plan.title}</span>
+            {activePlan?.id === plan.id && <Check className="w-4 h-4 text-primary" />}
+          </button>
+        ))}
+
+      {/* NEW BUTTON */}
+      <button
+        className="w-full px-4 py-3 text-sm font-medium text-primary hover:bg-muted text-left border-t"
+        onClick={() => {
+          setPlansOpen(false);
+          setPlanModalOpen(true);
+        }}
+      >
+        + Create Plan
+      </button>
     </div>
   )}
 
-    
+  
   {/* Child Selector */}
   {children.length > 0 && (
     <div>
@@ -263,7 +302,7 @@ const Visits = () => {
       <ul className="list-disc list-inside">
         {activePlan.invites.map((invite) => (
           <li key={invite.id}>
-            {invite.email} — {invite.status}
+            {invite.email} | {invite.status}
           </li>
         ))}
       </ul>
@@ -376,6 +415,10 @@ const Visits = () => {
     if (isCreate) {
       // CREATE
       const created = await api.createVisit(payload);
+      if (!created) {
+        alert("Failed to create visit. No data returned.");
+        return;
+      }
 
       finalEvent = {
         ...updatedEvent,
@@ -390,6 +433,10 @@ const Visits = () => {
     } else {
       // UPDATE
       const updated = await api.updateVisit(updatedEvent.id, payload);
+      if (!updated) {
+        alert("Failed to update visit. No data returned.");
+        return;
+      }
 
       finalEvent = {
         ...updatedEvent,
@@ -455,22 +502,82 @@ const Visits = () => {
               <Plus className="w-6 h-6" />
             </Button>
           </div>
-        </div>
-      </main>
-    </div>
+        {/* Plan Modal */}
+        <PlanModal
+  isOpen={planModalOpen}
+  onClose={() => setPlanModalOpen(false)}
+  childrenOptions={allChildren}
+  onChildCreated={(child) => {
+    const mapped: PlanChild = {
+      id: child.id,
+      first_name: child.first_name,
+      last_name: child.last_name,
+      name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+    };
+    setAllChildren((prev) => {
+      if (prev.some((c) => c.id === mapped.id)) return prev;
+      return [...prev, mapped];
+    });
+  }}
+  onCreate={async (payload, childIds) => {
+    if (!user?.id) {
+      alert("Please sign in to create a plan.");
+      return;
+    }
+
+    const newPlan = await api.createPlan({ ...payload, child_ids: childIds });
+
+    setPlans((prev) => {
+      const next = prev.filter((p) => p.id !== newPlan.id);
+      return [newPlan, ...next];
+    });
+
+    try {
+      const { plan: fullPlan } = await api.getPlanById(newPlan.id);
+      if (fullPlan.children && fullPlan.children.length > 0) {
+        setActivePlan(fullPlan);
+      } else {
+        setActivePlan({
+          ...fullPlan,
+          children: childIds.map((id) => {
+            const c = allChildren.find((child) => child.id === id);
+            return {
+              id,
+              first_name: c?.first_name || "",
+              last_name: c?.last_name,
+              name: c ? `${c.first_name}${c.last_name ? ` ${c.last_name}` : ""}` : "",
+            } as PlanChild;
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch created plan details:", err);
+      setActivePlan({
+        ...newPlan,
+        description: "",
+        start_date: new Date().toISOString(),
+        end_date: new Date().toISOString(),
+        status: "active",
+        created_by: user.id,
+        created_at: new Date().toISOString(),
+        invites: [],
+        children: childIds.map((id) => {
+          const c = allChildren.find((child) => child.id === id);
+          return {
+            id,
+            first_name: c?.first_name || "",
+            last_name: c?.last_name,
+            name: c ? `${c.first_name}${c.last_name ? ` ${c.last_name}` : ""}` : "",
+          } as PlanChild;
+        }),
+      });
+    }
+  }}
+/>
+      </div>
+    </main>
+  </div>
   );
 };
 
 export default Visits;
-
-
-
-
-
-
-
-
-
-
-
-

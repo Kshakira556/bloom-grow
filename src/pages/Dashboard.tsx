@@ -160,19 +160,31 @@ export default function Dashboard() {
   const [children, setChildren] = useState<api.Child[]>([]);
   const [journalEntriesCount, setJournalEntriesCount] = useState(0);
 
-  // Fetch children along with plans
+  // Fetch children based on active plan
   useEffect(() => {
     const fetchChildren = async () => {
       try {
-        const allChildren = await api.getChildren();
+        if (!activePlan || !activePlan.children?.length) {
+          setChildren([]);
+          return;
+        }
+
+        const allChildren = await Promise.all(
+          activePlan.children.map(async (child) => {
+            const data = await api.getChildById(child.id);
+            return data;
+          })
+        );
+
         setChildren(allChildren);
       } catch (err) {
         console.error("Failed to load children:", err);
+        setChildren([]);
       }
     };
 
     fetchChildren();
-  }, []);
+  }, [activePlan]);
 
   const quickLinks = [
     {

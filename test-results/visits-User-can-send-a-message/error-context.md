@@ -1,0 +1,66 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "CUB Logo" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "CUB Logo" [ref=e7]
+        - navigation [ref=e8]:
+          - link "Dashboard" [ref=e9] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Visits" [ref=e10] [cursor=pointer]:
+            - /url: /visits
+          - link "Messages" [ref=e11] [cursor=pointer]:
+            - /url: /messages
+          - link "Journal" [ref=e12] [cursor=pointer]:
+            - /url: /journal
+          - link "Children" [ref=e13] [cursor=pointer]:
+            - /url: /children
+        - generic [ref=e14]:
+          - button "Logout" [ref=e15] [cursor=pointer]
+          - link [ref=e16] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e17]
+    - main [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e23]:
+          - img [ref=e24]
+          - heading "Dashboard" [level=1] [ref=e26]
+          - img [ref=e27]
+        - generic [ref=e29]:
+          - 'button "Vault: takes you to the vault of child info" [ref=e30] [cursor=pointer]':
+            - img [ref=e31]
+            - generic [ref=e34]: "1"
+            - generic [ref=e35]:
+              - paragraph [ref=e36]: Vault
+              - paragraph [ref=e37]: takes you to the vault of child info
+          - button "takes you to the visits page" [ref=e38] [cursor=pointer]:
+            - img [ref=e39]
+            - generic [ref=e43]: "1"
+            - paragraph [ref=e45]: takes you to the visits page
+          - button "takes you to your list of plans" [ref=e46] [cursor=pointer]:
+            - img [ref=e47]
+            - generic [ref=e50]: "1"
+            - paragraph [ref=e52]: takes you to your list of plans
+          - button "takes you to the journal page" [ref=e53] [cursor=pointer]:
+            - img [ref=e54]
+            - generic [ref=e56]: "1"
+            - paragraph [ref=e58]: takes you to the journal page
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - heading "Next Upcoming Visit" [level=2] [ref=e61]
+            - paragraph [ref=e62]: No upcoming visits
+          - 'link "Unread Messages Unread message: Hello there, received at 11:24 AM" [ref=e64] [cursor=pointer]':
+            - /url: /messages
+            - heading "Unread Messages" [level=2] [ref=e65]
+            - list [ref=e66]:
+              - 'listitem "Unread message: Hello there, received at 11:24 AM" [ref=e67]':
+                - paragraph [ref=e68]: Hello there
+                - generic [ref=e69]: 11:24 AM
+```

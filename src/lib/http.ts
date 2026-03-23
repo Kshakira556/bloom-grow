@@ -32,6 +32,11 @@ export const http = async <T>(
     throw new Error("Unauthorized");
   }
 
+  if (res.status === 403) {
+    console.error(`Access denied to ${url}`);
+    throw new Error("Access denied"); 
+  }
+
   if (res.status === 404) {
     return null;
   }

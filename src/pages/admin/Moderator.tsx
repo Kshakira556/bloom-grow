@@ -96,7 +96,7 @@ const Moderator = () => {
         message_id: messageId,
         reviewer_id: user.id,
         action,
-        notes: reason ? Reason:  : undefined,
+        notes: reason ? `Reason: ${reason}` : undefined,
       });
       if (review) {
         setReviews((prev) => [review, ...prev]);
@@ -195,7 +195,7 @@ const Moderator = () => {
                         <div key={msg.id} className="p-3 border rounded-xl">
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>{msg.date}</span>
-                            <span>{msg.from} -> {msg.to}</span>
+                            <span>{msg.from} → {msg.to}</span>
                           </div>
                           <p className="text-sm mt-1">{msg.preview}</p>
                           <p className="text-xs text-destructive mt-1">{msg.reason}</p>

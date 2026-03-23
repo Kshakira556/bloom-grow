@@ -1,13 +1,12 @@
-// pages/SignIn.tsx
 import { AuthPage } from "@/components/auth/AuthPage";
 import { AuthForm, AuthField } from "@/components/auth/AuthForm";
 import { Mail, Lock } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import SignInPng from "@/assets/images/Sign in page.png";
 
 export default function SignIn() {
+  const SignInPng = "/images/signinpage.png";
   const { login } = useAuth();
   const navigate = useNavigate();
 

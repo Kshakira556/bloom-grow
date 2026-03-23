@@ -1,4 +1,4 @@
-# CUB App
+# CUB Co-Parenting App
 
 CUB is a secure, privacy‑first parenting plan and co‑parenting support application designed to help parents manage custody, visitation, and communication in a structured, respectful, and legally‑aligned way.
 

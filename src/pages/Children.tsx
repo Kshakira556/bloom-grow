@@ -10,9 +10,12 @@ import { vaultReadService } from "@/lib/vaultReadService";
 import { VaultAggregate } from "@/types/vaultAggregate";
 import { vaultSaveService } from "@/lib/vaultSaveService";
 
-type VaultAggregateWithMissing = VaultAggregate & {
+type VaultAggregateWithMissing = Omit<VaultAggregate, "legal" | "medical" | "safety"> & {
+  legal: NonNullable<VaultAggregate["legal"]>;
+  medical: NonNullable<VaultAggregate["medical"]>;
+  safety: NonNullable<VaultAggregate["safety"]>;
   vaultMissing?: boolean;
-  vaultMissingNote?: string; 
+  vaultMissingNote?: string;
 };
 
 const Children = () => {  
@@ -22,88 +25,95 @@ const Children = () => {
   const [loading, setLoading] = useState(true);
   const restrictedNames = selectedChild?.legal?.contactType || "";
 
-
   const fetchChildren = async () => {
     try {
-      const allChildren = await api.getChildren();
-      const mapped = allChildren.map(child => ({
+      setLoading(true);
+
+      // 1. Get plans
+      const { plans } = await api.getPlans();
+
+      if (!plans.length) {
+        setChildren([]);
+        return;
+      }
+
+      const activePlan = plans[0];
+
+      const { plan } = await api.getPlanById(activePlan.id);
+
+      // Correct mapping: infer child type from plan.children
+      const mapped = (plan.children || []).map((child) => ({
         id: child.id,
-        name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+        name: `${child.first_name || ""}${child.last_name ? ` ${child.last_name}` : ""}`,
       }));
+
       setChildren(mapped);
 
+      // 4. Load first child
       if (mapped.length > 0) {
-        const firstChild = mapped[0];
-        console.log("Fetching first child vault:", firstChild);
-        await handleChildChange(firstChild.id, firstChild.name);
-        console.log("First child loaded:", firstChild.id);
+        await handleChildChange(mapped[0].id, mapped[0].name);
       } else {
-        console.log("No children found, initializing empty child");
-        setSelectedChild({
-          childId: "",
-          vault: { fullName: "", nickname: "", dob: "", idPassportNo: "", homeAddress: "" },
+        setSelectedChild(undefined);
+      }
+    } catch (err) {
+      console.error("Error fetching children:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+const handleChildChange = async (
+  childId: string,
+  childName?: string,
+  vaultId?: string
+) => {
+  setLoading(true);
+  try {
+    let vaultAggregate: VaultAggregate | null = null;
+    let vaultMissingNote: string | undefined;
+
+    const result = await vaultReadService
+      .getVaultAggregate(vaultId || childId, childName)
+      .catch((err) => {
+        if (err?.response?.status === 404) {
+          vaultMissingNote = "No vault exists for this child yet.";
+          return null;
+        }
+        throw err;
+      });
+
+    vaultAggregate = result;
+
+    const aggregate: VaultAggregateWithMissing = vaultAggregate
+      ? {
+          ...vaultAggregate,
+          vault: { ...vaultAggregate.vault, fullName: vaultAggregate.vault.fullName || childName || "Unnamed Child" },
+          legal: vaultAggregate.legal || { custodyType: "", caseNo: "", validUntil: "", contactType: "" },
+          medical: vaultAggregate.medical || { bloodType: "", allergies: "", medication: "", doctor: "" },
+          safety: vaultAggregate.safety || { approvedPickup: "", notAllowedPickup: "" },
+        }
+      : {
+          childId,
+          vault: { fullName: childName || "Unnamed Child", nickname: "", dob: "", idPassportNo: "", homeAddress: "" },
           guardians: [],
           legal: { custodyType: "", caseNo: "", validUntil: "", contactType: "" },
           medical: { bloodType: "", allergies: "", medication: "", doctor: "" },
           safety: { approvedPickup: "", notAllowedPickup: "" },
           emergencyContacts: [],
           documents: [],
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching children:", err);
-    } finally {
-      setLoading(false); // ✅ only set false after everything finishes
-    }
-  };
-  
-  const handleChildChange = async (
-    childId: string,
-    childName?: string,
-    vaultId?: string // ✅ optional vaultId to fetch newly created vault immediately
-  ) => {
-    setLoading(true);
-    try {
-      let vaultAggregate: VaultAggregate | null = null;
-      let vaultMissingNote: string | undefined;
+        };
 
-      const result = await vaultReadService
-        .getVaultAggregate(vaultId || childId, childName) // ✅ use vaultId if available
-        .catch((err) => {
-          if (err?.response?.status === 404) {
-            vaultMissingNote = "No vault exists for this child yet.";
-            return null;
-          }
-          throw err;
-        });
-
-      vaultAggregate = result;
-
-      const aggregate: VaultAggregateWithMissing = vaultAggregate
-        ? { ...vaultAggregate, vault: { ...vaultAggregate.vault, fullName: vaultAggregate.vault.fullName || childName || "Unnamed Child" } }
-        : {
-            childId,
-            vault: { fullName: childName || "Unnamed Child", nickname: "", dob: "", idPassportNo: "", homeAddress: "" },
-            guardians: [],
-            legal: { custodyType: "", caseNo: "", validUntil: "", contactType: "" },
-            medical: { bloodType: "", allergies: "", medication: "", doctor: "" },
-            safety: { approvedPickup: "", notAllowedPickup: "" },
-            emergencyContacts: [],
-            documents: [],
-          };
-
-      setSelectedChild({
-        ...aggregate,
-        vaultMissing: vaultAggregate === null,
-        vaultMissingNote: vaultAggregate === null ? vaultMissingNote : undefined,
-        legal: aggregate.legal || { custodyType: "", caseNo: "", validUntil: "", contactType: "" },
-        medical: aggregate.medical || { bloodType: "", allergies: "", medication: "", doctor: "" },
-        safety: aggregate.safety || { approvedPickup: "", notAllowedPickup: "" },
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    setSelectedChild({
+      ...aggregate,
+      vaultMissing: vaultAggregate === null,
+      vaultMissingNote: vaultAggregate === null ? vaultMissingNote : undefined,
+      legal: aggregate.legal || { custodyType: "", caseNo: "", validUntil: "", contactType: "" },
+      medical: aggregate.medical || { bloodType: "", allergies: "", medication: "", doctor: "" },
+      safety: aggregate.safety || { approvedPickup: "", notAllowedPickup: "" },
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchChildren();
@@ -168,8 +178,13 @@ const Children = () => {
       (!selectedSubcategory || f.subcategory === selectedSubcategory)
   );
 
-   if (loading) return <div>Loading...</div>;
-
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
   return (  
     <div className="min-h-screen gradient-bg flex flex-col">
       <style>
@@ -318,24 +333,26 @@ const Children = () => {
                 <CardContent className="p-6 space-y-6">
                   <div id="print-area">
                     <div style={{ marginBottom: "16px" }}>
-                    {!selectedChild || selectedChild.vaultMissing ? (
-                      <Card>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedChild?.vaultMissingNote || "No vault exists for this child yet."}
-                        </p>
-                      </Card>
-                    ) : (
-                      <Card>
-                        <div className="space-y-1">
-                          {selectedChild.documents.map((doc, idx) => (
-                            <div key={doc.id || idx} className="flex items-center gap-2 text-sm">
-                              <FileText className="w-4 h-4 text-primary" />
-                              <span>{doc.category} → {doc.subcategory}: {doc.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    )}
+                    <Card>
+                      {selectedChild ? (
+                        selectedChild.vaultMissing ? (
+                          <p className="text-sm text-muted-foreground">
+                            {selectedChild.vaultMissingNote || "No vault exists for this child yet."}
+                          </p>
+                        ) : (
+                          <div className="space-y-1">
+                            {(selectedChild.documents || []).map((doc, idx) => (
+                              <div key={doc.id || idx} className="flex items-center gap-2 text-sm">
+                                <FileText className="w-4 h-4 text-primary" />
+                                <span>{doc.category} → {doc.subcategory}: {doc.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No child selected.</p>
+                      )}
+                    </Card>
 
                       <h1 style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold" }}>
                         CHILD INFORMATION & LEGAL RECORD
@@ -442,13 +459,8 @@ const Children = () => {
                                       documents: [],
                                     };
 
-                                    // ✅ save and get newly created vault ID
-                                    // Save and get newly created vault ID
                                     const vaultId = await vaultSaveService.saveVaultAggregate(aggregate);
-
                                     setCurrentStep(2);
-
-                                    // ✅ pass vaultId so handleChildChange fetches the correct vault immediately
                                     await handleChildChange(selectedChild.childId, selectedChild.vault.fullName, vaultId);
                                   } catch (err) {
                                     console.error("Error creating vault:", err);
@@ -480,14 +492,13 @@ const Children = () => {
                             <Input
                               value={selectedChild?.vault?.dob || ""}
                               onChange={(e) =>
-                                setSelectedChild({ 
-                                  ...selectedChild, 
-                                  vault: {...selectedChild?.vault, dob: e.target.value} 
-                                })
+                                setSelectedChild((prev) =>
+                                  prev ? { ...prev, vault: { ...prev.vault, dob: e.target.value } } : prev
+                                )
                               }
                             />
                           ) : (
-                            selectedChild.vault.dob
+                            selectedChild?.vault.dob
                           )}
                         </div>
                         <div>
@@ -496,14 +507,13 @@ const Children = () => {
                             <Input
                               value={selectedChild?.vault?.idPassportNo || ""}
                               onChange={(e) =>
-                                setSelectedChild({ 
-                                  ...selectedChild, 
-                                  vault: {...selectedChild?.vault, idPassportNo: e.target.value} 
-                                })
+                                setSelectedChild((prev) =>
+                                  prev ? { ...prev, vault: { ...prev.vault, idPassportNo: e.target.value } } : prev
+                                )
                               }
                             />
                           ) : (
-                            selectedChild.vault.idPassportNo
+                            selectedChild?.vault.idPassportNo
                           )}
                         </div>
                       </div>
@@ -517,14 +527,14 @@ const Children = () => {
                             }
                           />
                         ) : (
-                          selectedChild.vault.homeAddress
+                          selectedChild?.vault.homeAddress
                         )}
                       </p>
                     </div>
 
                     {/* Guardian Info */}
                     <div className="grid md:grid-cols-2 gap-4">
-                      {selectedChild.guardians.map((g, idx) => (
+                      {selectedChild?.guardians.map((g, idx) => (
                         <div
                           key={idx}
                           className="p-4 bg-cub-mint-light rounded-2xl"
@@ -538,9 +548,12 @@ const Children = () => {
                               <Input
                                 value={g.name}
                                 onChange={(e) => {
-                                  const newGuardians = [...selectedChild.guardians];
-                                  newGuardians[idx].name = e.target.value;
-                                  setSelectedChild({ ...selectedChild, guardians: newGuardians });
+                                  setSelectedChild((prev) => {
+                                    if (!prev) return prev;
+                                    const newGuardians = [...prev.guardians];
+                                    newGuardians[idx] = { ...newGuardians[idx], name: e.target.value };
+                                    return { ...prev, guardians: newGuardians };
+                                  });
                                 }}
                                 placeholder="Name"
                                 className="mb-1"
@@ -548,9 +561,12 @@ const Children = () => {
                               <Input
                                 value={g.cell}
                                 onChange={(e) => {
-                                  const newGuardians = [...selectedChild.guardians];
-                                  newGuardians[idx].cell = e.target.value;
-                                  setSelectedChild({ ...selectedChild, guardians: newGuardians });
+                                  setSelectedChild((prev) => {
+                                    if (!prev) return prev;
+                                    const newGuardians = [...prev.guardians];
+                                    newGuardians[idx] = { ...newGuardians[idx], cell: e.target.value };
+                                    return { ...prev, guardians: newGuardians };
+                                  });
                                 }}
                                 placeholder="Cell"
                                 className="mb-1"
@@ -558,9 +574,12 @@ const Children = () => {
                               <Input
                                 value={g.work}
                                 onChange={(e) => {
-                                  const newGuardians = [...selectedChild.guardians];
-                                  newGuardians[idx].work = e.target.value;
-                                  setSelectedChild({ ...selectedChild, guardians: newGuardians });
+                                  setSelectedChild((prev) => {
+                                    if (!prev) return prev;
+                                    const newGuardians = [...prev.guardians];
+                                    newGuardians[idx] = { ...newGuardians[idx], work: e.target.value };
+                                    return { ...prev, guardians: newGuardians };
+                                  });
                                 }}
                                 placeholder="Work"
                               />
@@ -584,34 +603,33 @@ const Children = () => {
                           {editMode ? (
                             <>
                               <Input
-                                value={selectedChild.legal.custodyType}
+                                value={selectedChild?.legal.custodyType}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    legal: { ...selectedChild.legal, custodyType: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev
+                                      ? { ...prev, legal: { ...prev.legal, custodyType: e.target.value } }
+                                      : prev
+                                  )
                                 }
                                 placeholder="Custody"
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.legal.caseNo}
+                                value={selectedChild?.legal.caseNo}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    legal: { ...selectedChild.legal, caseNo: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev ? { ...prev, legal: { ...prev.legal, caseNo: e.target.value } } : prev
+                                  )
                                 }
                                 placeholder="Court order ref"
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.legal.validUntil}
+                                value={selectedChild?.legal.validUntil}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    legal: { ...selectedChild.legal, validUntil: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev ? { ...prev, legal: { ...prev.legal, validUntil: e.target.value } } : prev
+                                  )
                                 }
                                 placeholder="Valid until"
                                 className="mb-1"
@@ -619,10 +637,9 @@ const Children = () => {
                               <Input
                                 value={selectedChild?.legal?.contactType || ""}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild!,
-                                    legal: { ...selectedChild!.legal, contactType: e.target.value }
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev ? { ...prev, legal: { ...prev.legal, contactType: e.target.value } } : prev
+                                  )
                                 }
                               />
                             </>
@@ -632,15 +649,15 @@ const Children = () => {
                                 <tbody>
                                   <tr>
                                     <td className="legal-label">Custody Arrangement</td>
-                                    <td>{selectedChild.legal.custodyType}</td>
+                                    <td>{selectedChild?.legal.custodyType}</td>
                                   </tr>
                                   <tr>
                                     <td className="legal-label">Court Reference Number</td>
-                                    <td>{selectedChild.legal.caseNo}</td>
+                                    <td>{selectedChild?.legal.caseNo}</td>
                                   </tr>
                                   <tr>
                                     <td className="legal-label">Valid Until</td>
-                                    <td>{selectedChild.legal.validUntil}</td>
+                                    <td>{selectedChild?.legal.validUntil}</td>
                                   </tr>
                                   <tr>
                                     <td className="legal-label">Legally Restricted Persons</td>
@@ -650,7 +667,7 @@ const Children = () => {
                               </table>
                               <p>
                                 <span className="text-muted-foreground">Valid until:</span>{" "}
-                                {selectedChild.legal.validUntil}
+                                {selectedChild?.legal.validUntil}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Names legally restricted:</span>{" "}
@@ -667,45 +684,49 @@ const Children = () => {
                           {editMode ? (
                             <>
                               <Input
-                                value={selectedChild.medical.bloodType}
+                                value={selectedChild?.medical.bloodType}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    medical: { ...selectedChild.medical, bloodType: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev
+                                      ? { ...prev, medical: { ...prev.medical, bloodType: e.target.value } }
+                                      : prev
+                                  )
                                 }
                                 placeholder="Blood type"
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.medical.allergies}
+                                value={selectedChild?.medical.allergies}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    medical: { ...selectedChild.medical, allergies: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev
+                                      ? { ...prev, medical: { ...prev.medical, allergies: e.target.value } }
+                                      : prev
+                                  )
                                 }
                                 placeholder="Allergies"
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.medical.medication}
+                                value={selectedChild?.medical.medication}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    medical: { ...selectedChild.medical, medication: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev
+                                      ? { ...prev, medical: { ...prev.medical, medication: e.target.value } }
+                                      : prev
+                                  )
                                 }
                                 placeholder="Medication"
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.medical.doctor}
+                                value={selectedChild?.medical.doctor}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    medical: { ...selectedChild.medical, doctor: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev
+                                      ? { ...prev, medical: { ...prev.medical, doctor: e.target.value } }
+                                      : prev
+                                  )
                                 }
                                 placeholder="Doctor contact"
                               />
@@ -714,19 +735,19 @@ const Children = () => {
                             <>
                               <p>
                                 <span className="text-muted-foreground">Blood type:</span>{" "}
-                                {selectedChild.medical.bloodType}
+                                {selectedChild?.medical.bloodType}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Allergies:</span>{" "}
-                                {selectedChild.medical.allergies}
+                                {selectedChild?.medical.allergies}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Medication:</span>{" "}
-                                {selectedChild.medical.medication}
+                                {selectedChild?.medical.medication}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Doctor contact:</span>{" "}
-                                {selectedChild.medical.doctor}
+                                {selectedChild?.medical.doctor}
                               </p>
                             </>
                           )}
@@ -741,23 +762,25 @@ const Children = () => {
                           {editMode ? (
                             <>
                               <Input
-                                value={selectedChild.safety.approvedPickup}
+                                value={selectedChild?.safety.approvedPickup}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    safety: { ...selectedChild.safety, approvedPickup: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev
+                                      ? { ...prev, safety: { ...prev.safety, approvedPickup: e.target.value } }
+                                      : prev
+                                  )
                                 }
                                 placeholder="Approved pick-up persons"
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.safety.notAllowedPickup}
+                                value={selectedChild?.safety.notAllowedPickup}
                                 onChange={(e) =>
-                                  setSelectedChild({
-                                    ...selectedChild,
-                                    safety: { ...selectedChild.safety, notAllowedPickup: e.target.value },
-                                  })
+                                  setSelectedChild((prev) =>
+                                    prev
+                                      ? { ...prev, safety: { ...prev.safety, notAllowedPickup: e.target.value } }
+                                      : prev
+                                  )
                                 }
                                 placeholder="Not allowed persons"
                               />
@@ -766,11 +789,11 @@ const Children = () => {
                             <>
                               <p>
                                 <span className="text-muted-foreground">Approved pick-up persons:</span>{" "}
-                                {selectedChild.safety.approvedPickup}
+                                {selectedChild?.safety.approvedPickup}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">NOT allowed:</span>{" "}
-                                {selectedChild.safety.notAllowedPickup}
+                                {selectedChild?.safety.notAllowedPickup}
                               </p>
                             </>
                           )}
@@ -787,18 +810,24 @@ const Children = () => {
                                 <Input
                                   value={selectedChild?.emergencyContacts?.[0]?.phone || ""}
                                   onChange={(e) => {
-                                    const newContacts = [...(selectedChild?.emergencyContacts || [])];
-                                    newContacts[0] = { ...newContacts[0], phone: e.target.value, name: newContacts[0]?.name || "" };
-                                    setSelectedChild({ ...selectedChild!, emergencyContacts: newContacts });
+                                    setSelectedChild((prev) => {
+                                      if (!prev) return prev;
+                                      const newContacts = [...(prev.emergencyContacts || [])];
+                                      newContacts[0] = { ...newContacts[0], phone: e.target.value, name: newContacts[0]?.name || "" };
+                                      return { ...prev, emergencyContacts: newContacts };
+                                    });
                                   }}
                                 />
 
                                 <Input
                                   value={selectedChild?.emergencyContacts?.[1]?.phone || ""}
                                   onChange={(e) => {
-                                    const newContacts = [...(selectedChild?.emergencyContacts || [])];
-                                    newContacts[1] = { ...newContacts[1], phone: e.target.value, name: newContacts[1]?.name || "" };
-                                    setSelectedChild({ ...selectedChild!, emergencyContacts: newContacts });
+                                    setSelectedChild((prev) => {
+                                      if (!prev) return prev;
+                                      const newContacts = [...(prev.emergencyContacts || [])];
+                                      newContacts[1] = { ...newContacts[1], phone: e.target.value, name: newContacts[1]?.name || "" };
+                                      return { ...prev, emergencyContacts: newContacts };
+                                    });
                                   }}
                                 />
                             </>
@@ -976,7 +1005,7 @@ const Children = () => {
 
                         try {
                           setLoading(true);
-                          await vaultSaveService.saveVaultAggregate(selectedChild!);
+                          await vaultSaveService.saveVaultAggregate(safeAggregate);
                           setEditMode(false);
                           alert("Vault saved successfully!");
                         } finally {

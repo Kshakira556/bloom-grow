@@ -1,5 +1,5 @@
 // File: /services/vaultReadService.ts
-import { http } from "@/lib/http"
+import * as api from "@/lib/api"
 import { VaultAggregate } from "@/types/vaultAggregate"
 
 /* -------------------- Backend response shapes -------------------- */
@@ -26,17 +26,12 @@ export const vaultReadService = {
     childId: string,
     childName?: string
   ): Promise<VaultAggregate | null> => {
-    const vaultWrapper = await http<{ vault: VaultResponse }>(
-      `/vaults/${childId}`,
-      "GET"
-    ).catch(() => null)
+    const vaultRes = await api.getVaultByChild(childId).catch(() => null)
 
-    if (!vaultWrapper?.vault) {
+    if (!vaultRes) {
       // Vault not found
       return null
     }
-
-    const vaultRes = vaultWrapper.vault
 
     // Safe discovery fetch with fallback defaults
     let discovery: VaultDiscoveryResponse = {
@@ -49,11 +44,8 @@ export const vaultReadService = {
     }
 
     try {
-      const disc = await http<VaultDiscoveryResponse>(
-        `/vaults/${vaultRes.id}/discovery`,
-        "GET"
-      )
-      if (disc) discovery = disc
+      const disc = await api.getVaultDiscovery(vaultRes.id)
+      if (disc) discovery = disc as VaultDiscoveryResponse
     } catch {
       console.warn(`Vault discovery not found for vaultId=${vaultRes.id}, defaulting to empty`)
     }
@@ -68,27 +60,27 @@ export const vaultReadService = {
       documentsRes
     ] = await Promise.all([
       discovery.guardians?.exists
-        ? http<{ guardians: GuardianResponse[] }>(`/vaults/${vaultRes.id}/guardians`,"GET").then(r => r.guardians)
+        ? api.getGuardians(vaultRes.id).then(r => r ?? [])
         : [],
 
       discovery.medical?.exists && discovery.medical.id
-        ? http<{ medical: MedicalResponse }>(`/vaults/medical/${discovery.medical.id}`,"GET").then(r => r.medical)
+        ? api.getMedical(discovery.medical.id).then(r => r ?? null)
         : null,
 
       discovery.legal?.exists && discovery.legal.id
-        ? http<{ legal: LegalResponse }>(`/vaults/legal-custody/${discovery.legal.id}`,"GET").then(r => r.legal)
+        ? api.getLegalCustody(discovery.legal.id).then(r => r ?? null)
         : null,
 
       discovery.safety?.exists && discovery.safety.id
-        ? http<{ safety: SafetyResponse }>(`/vaults/safety/${discovery.safety.id}`,"GET").then(r => r.safety)
+        ? api.getSafety(discovery.safety.id).then(r => r ?? null)
         : null,
 
       discovery.emergency_contacts?.exists && discovery.emergency_contacts.id
-        ? http<{ contact: EmergencyResponse }>(`/vaults/emergency-contacts/${discovery.emergency_contacts.id}`,"GET").then(r => [r.contact])
+        ? api.getEmergencyContact(discovery.emergency_contacts.id).then(r => r ? [r as EmergencyResponse] : [])
         : [],
 
       discovery.documents?.exists && discovery.documents.id
-        ? http<{ document: DocumentResponse }>(`/vaults/documents/${discovery.documents.id}`, "GET").then(r => [r.document])
+        ? api.getDocument(discovery.documents.id).then(r => r ? [r as DocumentResponse] : [])
         : []
     ])
 

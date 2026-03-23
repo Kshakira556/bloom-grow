@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import { Document, Packer, Paragraph, TextRun } from "docx";
-import { saveAs } from "file-saver";
+import FileSaver from "file-saver";
 import { format } from "date-fns";
 import { Message } from "@/types/messages";
 import { ApiMessageHistory } from "@/lib/api";
@@ -72,17 +72,18 @@ export const exportConversation = async (
         y = 10;
       }
 
-      const senderName = getSenderName(msg.sender, conversation);
-      const recipientName = msg.sender === "me" ? conversation.name : "You";
+      const senderName = getSenderName(msg.sender, conversation) ?? "Unknown";
+      const recipientName = (msg.sender === "me" ? conversation.name : "You") ?? "Unknown";
+      const messagePurpose = msg.purpose ?? "";
       const historyEntries = historyByMessageId[msg.id] ?? [];
       const sortedHistory = historyEntries
         .slice()
         .sort((a, b) => new Date(a.action_at).getTime() - new Date(b.action_at).getTime());
       const isDeleted = sortedHistory.some((entry) => entry.action_type === "delete");
 
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text(
-        `${index + 1}. [${formatDateTime(msg.createdAt)}] ${senderName} ? ${recipientName} (${msg.purpose})${
+        `${index + 1}. [${formatDateTime(msg.createdAt)}] ${senderName} ? ${recipientName} (${messagePurpose})${
           isDeleted ? " [Deleted]" : ""
         }`,
         10,
@@ -90,8 +91,9 @@ export const exportConversation = async (
       );
       y += 6;
 
-      doc.setFont(undefined, "normal");
-      const currentLabel = isDeleted ? "Current (deleted)" : "Current";\n      const lines = doc.splitTextToSize(`${currentLabel}: ${msg.content}`, 180);
+      doc.setFont("helvetica", "normal");;
+      const currentLabel = isDeleted ? "Current (deleted)" : "Current";
+      const lines = doc.splitTextToSize(`${currentLabel}: ${msg.content}`, 180);
       doc.text(lines, 10, y);
       y += lines.length * 5 + 4;
 
@@ -101,11 +103,11 @@ export const exportConversation = async (
       });
 
       if (sortedHistory.length > 0) {
-        doc.setFont(undefined, "bold");
+        doc.setFont("helvetica", "bold");
         doc.text("History", 12, y);
         y += 6;
 
-        doc.setFont(undefined, "normal");
+        doc.setFont("helvetica", "normal");
         sortedHistory.forEach((entry) => {
           if (y > 270) {
             doc.addPage();
@@ -157,8 +159,8 @@ export const exportConversation = async (
             new Paragraph(`Filter: ${purposeFilter}`),
             new Paragraph(" "),
             ...exportedMessages.flatMap((msg, index) => {
-              const senderName = getSenderName(msg.sender, conversation);
-              const recipientName = msg.sender === "me" ? conversation.name : "You";
+              const senderName = getSenderName(msg.sender, conversation) ?? "Unknown";
+              const recipientName = (msg.sender === "me" ? conversation.name : "You") ?? "Unknown";
               const historyEntries = historyByMessageId[msg.id] ?? [];
               const sortedHistory = historyEntries
                 .slice()
@@ -212,7 +214,7 @@ export const exportConversation = async (
     });
 
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `conversation-${conversation.user_id}.docx`);
+    FileSaver.saveAs(blob, `conversation-${conversation.user_id}.docx`);
   }
 };
 

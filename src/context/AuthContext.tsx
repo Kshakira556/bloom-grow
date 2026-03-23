@@ -2,15 +2,30 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { login as loginApi, register as registerApi, SafeUser } from "@/lib/api";
 import { setAuthToken } from "@/lib/http";
 
+type ParentRegisterData = {
+  full_name: string;
+  email: string;
+  password: string;
+  role?: "parent";
+  phone?: string;
+};
+
+type MediatorRegisterData = {
+  full_name: string;
+  email: string;
+  password: string;
+  role: "mediator";
+  phone?: string;
+  job_title: string;
+  company_name: string;
+  company_address: string;
+};
+
 type AuthContextValue = {
   user: SafeUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<SafeUser>;
-  register: (data: {
-    full_name: string;
-    email: string;
-    password: string;
-  }) => Promise<SafeUser>;
+  register: (data: ParentRegisterData | MediatorRegisterData) => Promise<SafeUser>;
   logout: () => void;
 };
 
@@ -19,6 +34,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const storedToken = sessionStorage.getItem("token");
+  if (storedToken) {
+    setAuthToken(storedToken);
+  }
+
   const [user, setUser] = useState<SafeUser | null>(() => {
     const stored = sessionStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
@@ -43,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const register = useCallback(
-  async (data: { full_name: string; email: string; password: string }) => {
+  async (data: ParentRegisterData | MediatorRegisterData) => {
     const { user, token } = await registerApi(data);
 
     setAuthToken(token);

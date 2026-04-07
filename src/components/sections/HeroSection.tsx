@@ -1,4 +1,4 @@
-import IndexPng from "@/assets/images/index-page.png"
+import img from "@/assets/images/index-page.png"
 import { delayClass } from "@/utils/animation";
 import { Button } from "../ui/button";
 
@@ -22,7 +22,7 @@ const HeroSection = () => {
         <div className={`max-w-md mx-auto mb-10 animate-fade-in ${delayClass(2, 100)}`}>
             <div className="aspect-[4/3] bg-gradient-to-br from-cub-teal-light to-cub-mint-light rounded-3xl flex items-center justify-center shadow-md">
                 <img
-                    src={IndexPng}
+                    src={img}
                     alt="Illustration of calm co-parenting coordination"
                     className="w-full max-w-[220px] h-auto object-contain"
                     />

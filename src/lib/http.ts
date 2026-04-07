@@ -33,7 +33,7 @@ export const http = async <T>(
   }
 
   if (res.status === 404) {
-    return null;
+    throw new Error(`Endpoint not found: ${url}`);
   }
 
   if (!res.ok) {

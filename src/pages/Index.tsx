@@ -5,6 +5,7 @@ import HeroSection from "@/components/sections/HeroSection";
 import ProblemSection from "@/components/sections/ProblemSection";
 import HowItWorksSection from "@/components/sections/HowItWorksSection";
 import FeaturesSection from "@/components/sections/FeaturesSection";
+import PricingSection from "@/components/sections/PricingSection";
 import TrustSection from "@/components/sections/TrustSection";
 import CtaSection from "@/components/sections/CtaSection";
 import { Helmet } from "react-helmet";
@@ -58,6 +59,7 @@ const Index = () => {
           <ProblemSection />
           <HowItWorksSection />
           <FeaturesSection />
+          <PricingSection />
           <TrustSection />
           <CtaSection />
         </main>

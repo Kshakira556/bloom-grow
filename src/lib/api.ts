@@ -80,7 +80,9 @@ export const getModerators = async (): Promise<Moderator[]> => {
 // --------------------
 export interface Plan {
   id: string;
-  title: string;\n  created_by?: string;\n  status?: string;
+  title: string;
+  created_by?: string;
+  status?: string;
 }
 
 export interface PlanInvitePayload {
@@ -229,7 +231,9 @@ export interface ApiMessage {
   created_at: string;
   updated_at?: string | null;
   purpose?: MessagePurpose;
-  is_flagged: boolean;\n  flagged_reason?: string;\n  is_deleted?: boolean;
+  is_flagged: boolean;
+  flagged_reason?: string;
+  is_deleted?: boolean;
   is_seen?: boolean;
   attachments?: Attachment[];
 }
@@ -354,10 +358,8 @@ export const deleteJournalEntry = async (
 };
 
 export const getChildren = async (): Promise<Child[]> => {
-  const res = await fetch("/api/children");
-  if (!res.ok) throw new Error("Failed to fetch children");
-  const data = await res.json();
-  return data.children; 
+  const res = await http<{ children: Child[] }>("/children", "GET");
+  return res.children;
 };
 
 // Update message
@@ -506,3 +508,16 @@ export const createModeratorAssignment = async (payload: {
   return res?.assignment;
 };
 
+export const fetchAllPlanMessages = async (
+  plans: { id: string }[],
+  options?: { includeDeleted?: boolean }
+): Promise<ApiMessage[]> => {
+  const allMessages: ApiMessage[] = [];
+
+  for (const plan of plans) {
+    const messages = await getMessagesByPlan(plan.id, options);
+    allMessages.push(...messages);
+  }
+
+  return allMessages;
+};

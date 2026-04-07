@@ -91,18 +91,7 @@ const Visits = () => {
   fetchChildren();
 }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const dropdown = document.getElementById("plans-dropdown");
-      const button = document.getElementById("plans-button");
-      if (plansOpen && dropdown && button && !dropdown.contains(event.target as Node) && !button.contains(event.target as Node)) {
-        setPlansOpen(false);
-      }
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    const handleProposalSubmit = async () => {
+const handleProposalSubmit = async () => {
     setProposalError(null);
     setProposalSuccess(null);
 
@@ -138,6 +127,19 @@ const Visits = () => {
       setProposalSubmitting(false);
     }
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const dropdown = document.getElementById("plans-dropdown");
+      const button = document.getElementById("plans-button");
+      if (plansOpen && dropdown && button && !dropdown.contains(event.target as Node) && !button.contains(event.target as Node)) {
+        setPlansOpen(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
   return () => {
       document.removeEventListener("click", handleClickOutside);
     };
@@ -263,7 +265,7 @@ const Visits = () => {
       <ul className="list-disc list-inside">
         {activePlan.invites.map((invite) => (
           <li key={invite.id}>
-            {invite.email} — {invite.status}
+            {invite.email} ï¿½ {invite.status}
           </li>
         ))}
       </ul>

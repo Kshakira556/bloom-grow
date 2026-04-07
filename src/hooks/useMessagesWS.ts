@@ -26,41 +26,41 @@ export const useMessagesWS = ({
     const token = sessionStorage.getItem("token");
     if (!token) return;
 
-    const wsBaseUrl =
-      import.meta.env.VITE_WS_URL ??
-      (import.meta.env.VITE_API_URL
-        ? import.meta.env.VITE_API_URL.replace(/^http/, "ws")
-        : "");
+    const wsBaseUrl = import.meta.env.VITE_WS_URL;
 
     if (!wsBaseUrl) return;
 
-    const ws = new WebSocket(`${wsBaseUrl}/messages/ws?token=${token}`);
+    try {
+      const ws = new WebSocket(`${wsBaseUrl}/messages/ws?token=${token}`);
 
-    const handleMessage = async (event: MessageEvent) => {
-      const data = JSON.parse(event.data);
-      if (data.type !== "new_message") return;
+      const handleMessage = async (event: MessageEvent) => {
+        const data = JSON.parse(event.data);
+        if (data.type !== "new_message") return;
 
-      const msg: ApiMessage = data.message;
-      if (msg.plan_id !== activePlan.id) return;
+        const msg: ApiMessage = data.message;
+        if (msg.plan_id !== activePlan.id) return;
 
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
 
-        const mappedMsg = mapApiMessageToMessage(msg, userId);
+          const mappedMsg = mapApiMessageToMessage(msg, userId);
 
-        return [...prev, mappedMsg];
-      });
+          return [...prev, mappedMsg];
+        });
 
-      if (msg.receiver_id === user.id && !msg.is_seen) {
-        await markSeen(msg.id);
-      }
-    };
+        if (msg.receiver_id === user.id && !msg.is_seen) {
+          await markSeen(msg.id);
+        }
+      };
 
-    ws.addEventListener("message", handleMessage);
-    return () => {
-      ws.removeEventListener("message", handleMessage);
-      ws.close();
-    };
+      ws.addEventListener("message", handleMessage);
+
+      return () => {
+        ws.removeEventListener("message", handleMessage);
+        ws.close();
+      };
+    } catch {
+      // silent failure (prevents console noise)
+    }
   }, [user, activePlan, userId, markSeen, setMessages, selectedConversation]);
 };
-

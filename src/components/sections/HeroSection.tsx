@@ -30,12 +30,20 @@ const HeroSection = () => {
         </div>
 
         <div className="flex justify-center gap-4 flex-wrap">
-          <Button variant="coral" size="lg">
+          <Button
+            variant="coral"
+            size="lg"
+            onClick={() => {
+              document
+                .getElementById("pricing-section")
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
             Get Started
-            </Button>
-            <Button variant="outline" size="lg">
+          </Button>
+          <Button variant="outline" size="lg">
             Learn More
-            </Button>
+          </Button>
         </div>
       </div>
     </section>

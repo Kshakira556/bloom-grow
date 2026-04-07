@@ -91,7 +91,8 @@ export const exportConversation = async (
       y += 6;
 
       doc.setFont(undefined, "normal");
-      const currentLabel = isDeleted ? "Current (deleted)" : "Current";\n      const lines = doc.splitTextToSize(`${currentLabel}: ${msg.content}`, 180);
+      const currentLabel = isDeleted ? "Current (deleted)" : "Current";
+      const lines = doc.splitTextToSize(`${currentLabel}: ${msg.content}`, 180);
       doc.text(lines, 10, y);
       y += lines.length * 5 + 4;
 

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { FileText, Flag } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
-import * as api from "@/lib/api";\nimport type { MessagePurpose } from "@/types/messages";
+import * as api from "@/lib/api";
+import type { MessagePurpose } from "@/types/messages";
 import { buildUserNameMap, fetchAllPlanMessages } from "@/lib/adminData";
 
 const formatDateTime = (value: string) => format(new Date(value), "yyyy-MM-dd HH:mm");

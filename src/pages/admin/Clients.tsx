@@ -37,7 +37,9 @@ const AdminClients = () => {
 
   const planCountsByUser = useMemo(() => {
     return plans.reduce<Record<string, number>>((acc, plan) => {
-      if (plan.created_by) {\n      acc[plan.created_by] = (acc[plan.created_by] ?? 0) + 1;\n    }
+      if (plan.created_by) {
+        acc[plan.created_by] = (acc[plan.created_by] ?? 0) + 1;
+      }
       return acc;
     }, {});
   }, [plans]);

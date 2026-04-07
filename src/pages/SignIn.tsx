@@ -5,7 +5,7 @@ import { Mail, Lock } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import SignInPng from "@/assets/images/Sign in page.png";
+import SignInPng from "@/assets/images/sign-in-page.png";
 
 export default function SignIn() {
   const { login } = useAuth();

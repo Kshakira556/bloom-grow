@@ -52,11 +52,8 @@ export const register = async (
   return http<RegisterResponse>("/users/register", "POST", payload);
 };
 
-export const login = async (
-  email: string,
-  password: string
-): Promise<LoginResponse> => {
-  return http<LoginResponse>("/auth/login", "POST", { email, password });
+export const login = async (email: string, password: string) => {
+  return http<LoginResponse>("/api/auth/login", "POST", { email, password });
 };
 
 export const getUsers = async (): Promise<SafeUser[]> => {

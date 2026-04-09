@@ -116,10 +116,10 @@ const ConversationSidebar = ({
         toast({ title: "User found", description: `${contactName} added to conversations.` });
       } else {
         const contactPayload: api.InviteUserPayload = {
-          name: contactName,
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
-          relationship: relationship || "Co-Parent",
+          name: contactName.trim(),
+          email: email.trim() ? email.trim() : undefined,
+          phone: phone.trim() ? phone.trim() : undefined,
+          relationship: relationship?.trim() || "Co-Parent",
         };
 
         await api.inviteUser(contactPayload);

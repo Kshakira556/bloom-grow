@@ -133,7 +133,7 @@ export interface ApiJournalEntry  {
 }
 export async function getPlans(): Promise<{ plans: Plan[] }> {
   try {
-    return await http<{ plans: Plan[] }>("/plans", "GET"); 
+    return await http<{ plans: Plan[] }>("/api/plans", "GET"); 
   } catch (err) {
     console.error("Failed to fetch plans:", err);
     return { plans: [] }; 
@@ -141,19 +141,19 @@ export async function getPlans(): Promise<{ plans: Plan[] }> {
 }
 
 export const createPlan = async (name: string): Promise<Plan> => {
-  return http<Plan>("/plans", "POST", { name });
+  return http<Plan>("/api/plans", "POST", { name });
 };
 
 export const getPlanById = async (id: string): Promise<{ plan: FullPlan }> => {
-  return http<{ plan: FullPlan }>(`/plans/${id}`, "GET");
+  return http<{ plan: FullPlan }>(`/api/plans/${id}`, "GET");
 };
 
 export const inviteToPlan = async (payload: PlanInvitePayload) => {
-  return http("/plans/invite", "POST", payload);
+  return http("/api/plans/invite", "POST", payload);
 };
 
 export const acceptPlanInvite = async (planId: number) => {
-  return http("/plans/accept", "POST", { planId });
+  return http("/api/plans/accept", "POST", { planId });
 };
 
 // --------------------

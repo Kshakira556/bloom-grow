@@ -355,7 +355,7 @@ export const deleteJournalEntry = async (
 };
 
 export const getChildren = async (): Promise<Child[]> => {
-  const res = await http<{ children: Child[] }>("/children", "GET");
+  const res = await http<{ children: Child[] }>("/api/children", "GET");
   return res.children;
 };
 

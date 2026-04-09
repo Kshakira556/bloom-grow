@@ -49,7 +49,7 @@ type RegisterResponse = {
 export const register = async (
   payload: RegisterPayload
 ): Promise<RegisterResponse> => {
-  return http<RegisterResponse>("/users/register", "POST", payload);
+  return http<RegisterResponse>("/api/users/register", "POST", payload);
 };
 
 export const login = async (email: string, password: string) => {
@@ -57,7 +57,7 @@ export const login = async (email: string, password: string) => {
 };
 
 export const getUsers = async (): Promise<SafeUser[]> => {
-  const res = await http<{ users: SafeUser[] }>("/users", "GET");
+  const res = await http<{ users: SafeUser[] }>("/api/users", "GET");
   return res.users;
 };
 

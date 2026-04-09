@@ -10,7 +10,7 @@ export const http = async <T>(
   url: string,
   method: HttpMethod,
   body?: unknown
-): Promise<T | null> => {
+): Promise<T> => {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
@@ -41,5 +41,6 @@ export const http = async <T>(
     throw new Error(error.error || "Request failed");
   }
 
-  return res.json();
+  const data = await res.json();
+  return data as T;
 };

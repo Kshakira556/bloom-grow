@@ -82,7 +82,7 @@ const ConversationSidebar = ({
 }: Props) => {
   const { user: authUser } = useAuth();
   const userId = authUser?.id || "";
-  const [name, setName] = useState("");
+  const [name, setName] = useState<string>("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [relationship, setRelationship] = useState("Co-Parent");
@@ -90,9 +90,19 @@ const ConversationSidebar = ({
   const [contacts, setContacts] = useState<api.ApiContact[]>([]);
 
   const handleAddContact = async () => {
-    if (!name.trim() || !activePlan) {
-      toast({ title: "Name required", description: "Please enter a name.", variant: "destructive" });
+    if (!name || !name.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a name.",
+        variant: "destructive",
+      });
       return;
+      console.log("DEBUG CONTACT INPUT:", {
+        name,
+        email,
+        phone,
+        relationship,
+      });
     }
 
     try {

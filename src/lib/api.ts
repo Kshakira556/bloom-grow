@@ -389,7 +389,7 @@ export interface InviteUserPayload {
 }
 
 export const inviteUser = async (payload: InviteUserPayload) => {
-  return http("/contacts", "POST", payload);
+  return http("/api/contacts", "POST", payload);
 };
 export interface ApiContact {
   id: string;
@@ -405,16 +405,9 @@ export interface ApiContact {
 }
 
 export const getContacts = async (): Promise<ApiContact[]> => {
-  const res = await http<{ contacts: ApiContact[] }>("/contacts", "GET");
+  const res = await http<{ contacts: ApiContact[] }>("/api/contacts", "GET");
   return res?.contacts ?? [];
 };
-
-
-
-
-
-
-
 
 export const getProposals = async (status?: "pending" | "approved" | "rejected") => {
   const query = status ? `?status=${status}` : "";

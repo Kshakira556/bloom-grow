@@ -388,8 +388,13 @@ export interface InviteUserPayload {
   relationship?: string;
 }
 
-export const inviteUser = async (payload: InviteUserPayload) => {
-  return http("/api/contacts", "POST", payload);
+export const inviteUser = async (
+  payload: InviteUserPayload & { linked_user_id?: string | null }
+) => {
+  return http("/api/contacts", "POST", {
+    ...payload,
+    linked_user_id: payload.linked_user_id ?? null, // ✅ enforce null instead of ""
+  });
 };
 export interface ApiContact {
   id: string;

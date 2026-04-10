@@ -112,19 +112,32 @@ const ConversationSidebar = ({
       let contactName: string = name.trim();
 
       if (matchedUser) {
-        contactName = matchedUser.full_name;
-        toast({ title: "User found", description: `${contactName} added to conversations.` });
-      } else {
-        const contactPayload: api.InviteUserPayload = {
-          name: contactName,
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
-          relationship: relationship || "Co-Parent",
-        };
+  contactName = matchedUser.full_name;
 
-        await api.inviteUser(contactPayload);
-        toast({ title: "Contact added", description: `${contactName} will receive an invitation.` });
-      }
+  await api.inviteUser({
+    name: contactName,
+    email: matchedUser.email,
+    phone: matchedUser.phone,
+    relationship: relationship || "Co-Parent",
+    linked_user_id: matchedUser.id, // ✅ link to existing user
+  });
+
+  toast({ title: "User found", description: `${contactName} added to conversations.` });
+    } else {
+      const contactPayload: api.InviteUserPayload = {
+        name: contactName,
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        relationship: relationship || "Co-Parent",
+      };
+
+      await api.inviteUser({
+        ...contactPayload,
+        linked_user_id: null, // ✅ explicitly null
+      });
+
+      toast({ title: "Contact added", description: `${contactName} will receive an invitation.` });
+    }
 
       const refreshedContacts = await api.getContacts();
       setContacts(refreshedContacts);

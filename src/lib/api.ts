@@ -49,15 +49,15 @@ type RegisterResponse = {
 export const register = async (
   payload: RegisterPayload
 ): Promise<RegisterResponse> => {
-  return http<RegisterResponse>("/api/users/register", "POST", payload);
+  return http<RegisterResponse>("/users/register", "POST", payload);
 };
 
 export const login = async (email: string, password: string) => {
-  return http<LoginResponse>("/api/auth/login", "POST", { email, password });
+  return http<LoginResponse>("/auth/login", "POST", { email, password });
 };
 
 export const getUsers = async (): Promise<SafeUser[]> => {
-  const res = await http<{ users: SafeUser[] }>("/api/users", "GET");
+  const res = await http<{ users: SafeUser[] }>("/users", "GET");
   return res.users;
 };
 
@@ -133,7 +133,7 @@ export interface ApiJournalEntry  {
 }
 export async function getPlans(): Promise<{ plans: Plan[] }> {
   try {
-    return await http<{ plans: Plan[] }>("/api/plans", "GET"); 
+    return await http<{ plans: Plan[] }>("/plans", "GET"); 
   } catch (err) {
     console.error("Failed to fetch plans:", err);
     return { plans: [] }; 
@@ -141,19 +141,19 @@ export async function getPlans(): Promise<{ plans: Plan[] }> {
 }
 
 export const createPlan = async (name: string): Promise<Plan> => {
-  return http<Plan>("/api/plans", "POST", { name });
+  return http<Plan>("/plans", "POST", { name });
 };
 
 export const getPlanById = async (id: string): Promise<{ plan: FullPlan }> => {
-  return http<{ plan: FullPlan }>(`/api/plans/${id}`, "GET");
+  return http<{ plan: FullPlan }>(`/plans/${id}`, "GET");
 };
 
 export const inviteToPlan = async (payload: PlanInvitePayload) => {
-  return http("/api/plans/invite", "POST", payload);
+  return http("/plans/invite", "POST", payload);
 };
 
 export const acceptPlanInvite = async (planId: number) => {
-  return http("/api/plans/accept", "POST", { planId });
+  return http("/plans/accept", "POST", { planId });
 };
 
 // --------------------
@@ -355,7 +355,7 @@ export const deleteJournalEntry = async (
 };
 
 export const getChildren = async (): Promise<Child[]> => {
-  const res = await http<{ children: Child[] }>("/api/children", "GET");
+  const res = await http<{ children: Child[] }>("/children", "GET");
   return res.children;
 };
 
@@ -391,7 +391,7 @@ export interface InviteUserPayload {
 export const inviteUser = async (
   payload: InviteUserPayload & { linked_user_id?: string | null }
 ) => {
-  return http("/api/contacts", "POST", {
+  return http("/contacts", "POST", {
     ...payload,
     linked_user_id: payload.linked_user_id ?? null, // ✅ enforce null instead of ""
   });
@@ -410,7 +410,7 @@ export interface ApiContact {
 }
 
 export const getContacts = async (): Promise<ApiContact[]> => {
-  const res = await http<{ contacts: ApiContact[] }>("/api/contacts", "GET");
+  const res = await http<{ contacts: ApiContact[] }>("/contacts", "GET");
   return res?.contacts ?? [];
 };
 

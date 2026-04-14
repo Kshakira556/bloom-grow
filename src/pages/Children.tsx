@@ -17,7 +17,7 @@ type VaultAggregateWithMissing = VaultAggregate & {
 
 const Children = () => {  
   // New state
-  const [selectedChild, setSelectedChild] = useState<VaultAggregateWithMissing | undefined>(undefined);
+  const [selectedChild, setSelectedChild] = useState<VaultAggregateWithMissing | null>(null);
   const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const restrictedNames = selectedChild?.legal?.contactType || "";
@@ -41,6 +41,8 @@ const Children = () => {
         console.log("No children found, initializing empty child");
         setSelectedChild({
           childId: "",
+          vaultMissing: true,
+          vaultMissingNote: "No children found.",
           vault: { fullName: "", nickname: "", dob: "", idPassportNo: "", homeAddress: "" },
           guardians: [],
           legal: { custodyType: "", caseNo: "", validUntil: "", contactType: "" },
@@ -141,10 +143,14 @@ const Children = () => {
       isNew: true
     }));
 
-    setSelectedChild(prev => ({
-      ...prev!,
-      documents: [...(prev?.documents || []), ...newDocs]
-    }));
+    setSelectedChild(prev => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        documents: [...(prev.documents || []), ...newDocs]
+      };
+    });
   };
 
   const downloadFiles = (files: { file: File }[]) => {
@@ -168,7 +174,7 @@ const Children = () => {
       (!selectedSubcategory || f.subcategory === selectedSubcategory)
   );
 
-   if (loading) return <div>Loading...</div>;
+   if (loading || !selectedChild) return <div>Loading...</div>;
 
   return (  
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -293,7 +299,7 @@ const Children = () => {
                 onChange={async (e) => {
                   const id = e.target.value;
                   const name = children.find(c => c.id === id)?.name; // grab name directly
-                  setSelectedChild(undefined); 
+                  setSelectedChild(null); 
                   await handleChildChange(id, name);
                 }}
                 className="w-full p-3 rounded-2xl bg-card/50 border text-sm font-display"
@@ -584,7 +590,7 @@ const Children = () => {
                           {editMode ? (
                             <>
                               <Input
-                                value={selectedChild.legal.custodyType}
+                                value={selectedChild?.legal?.custodyType}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -595,7 +601,7 @@ const Children = () => {
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.legal.caseNo}
+                                value={selectedChild?.legal?.caseNo}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -606,7 +612,7 @@ const Children = () => {
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.legal.validUntil}
+                                value={selectedChild?.legal?.validUntil}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -632,15 +638,15 @@ const Children = () => {
                                 <tbody>
                                   <tr>
                                     <td className="legal-label">Custody Arrangement</td>
-                                    <td>{selectedChild.legal.custodyType}</td>
+                                    <td>{selectedChild?.legal?.custodyType}</td>
                                   </tr>
                                   <tr>
                                     <td className="legal-label">Court Reference Number</td>
-                                    <td>{selectedChild.legal.caseNo}</td>
+                                    <td>{selectedChild?.legal?.caseNo}</td>
                                   </tr>
                                   <tr>
                                     <td className="legal-label">Valid Until</td>
-                                    <td>{selectedChild.legal.validUntil}</td>
+                                    <td>{selectedChild?.legal?.validUntil}</td>
                                   </tr>
                                   <tr>
                                     <td className="legal-label">Legally Restricted Persons</td>
@@ -650,7 +656,7 @@ const Children = () => {
                               </table>
                               <p>
                                 <span className="text-muted-foreground">Valid until:</span>{" "}
-                                {selectedChild.legal.validUntil}
+                                {selectedChild?.legal?.validUntil}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Names legally restricted:</span>{" "}
@@ -667,7 +673,7 @@ const Children = () => {
                           {editMode ? (
                             <>
                               <Input
-                                value={selectedChild.medical.bloodType}
+                                value={selectedChild?.medical?.bloodType}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -678,7 +684,7 @@ const Children = () => {
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.medical.allergies}
+                                value={selectedChild?.medical?.allergies}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -689,7 +695,7 @@ const Children = () => {
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.medical.medication}
+                                value={selectedChild?.medical?.medication}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -700,7 +706,7 @@ const Children = () => {
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.medical.doctor}
+                                value={selectedChild?.medical?.doctor}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -714,19 +720,19 @@ const Children = () => {
                             <>
                               <p>
                                 <span className="text-muted-foreground">Blood type:</span>{" "}
-                                {selectedChild.medical.bloodType}
+                                {selectedChild?.medical?.bloodType}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Allergies:</span>{" "}
-                                {selectedChild.medical.allergies}
+                                {selectedChild?.medical?.allergies}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Medication:</span>{" "}
-                                {selectedChild.medical.medication}
+                                {selectedChild?.medical?.medication}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Doctor contact:</span>{" "}
-                                {selectedChild.medical.doctor}
+                                {selectedChild?.medical?.doctor}
                               </p>
                             </>
                           )}
@@ -741,7 +747,7 @@ const Children = () => {
                           {editMode ? (
                             <>
                               <Input
-                                value={selectedChild.safety.approvedPickup}
+                                value={selectedChild?.safety?.approvedPickup}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -752,7 +758,7 @@ const Children = () => {
                                 className="mb-1"
                               />
                               <Input
-                                value={selectedChild.safety.notAllowedPickup}
+                                value={selectedChild?.safety?.notAllowedPickup}
                                 onChange={(e) =>
                                   setSelectedChild({
                                     ...selectedChild,
@@ -766,11 +772,11 @@ const Children = () => {
                             <>
                               <p>
                                 <span className="text-muted-foreground">Approved pick-up persons:</span>{" "}
-                                {selectedChild.safety.approvedPickup}
+                                {selectedChild?.safety?.approvedPickup}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">NOT allowed:</span>{" "}
-                                {selectedChild.safety.notAllowedPickup}
+                                {selectedChild?.safety?.notAllowedPickup}
                               </p>
                             </>
                           )}
@@ -976,7 +982,7 @@ const Children = () => {
 
                         try {
                           setLoading(true);
-                          await vaultSaveService.saveVaultAggregate(selectedChild!);
+                          await vaultSaveService.saveVaultAggregate(safeAggregate);
                           setEditMode(false);
                           alert("Vault saved successfully!");
                         } finally {

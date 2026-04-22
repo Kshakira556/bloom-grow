@@ -21,9 +21,18 @@ export default function SignIn() {
     try {
       const loggedInUser = await login(email, password);
 
-      if (loggedInUser.role === "admin") navigate("/admin/system", { replace: true });
-      else if (loggedInUser.role === "mediator") navigate("/admin/moderator", { replace: true });
-      else navigate("/dashboard", { replace: true });
+      if (!loggedInUser) {
+        setError("Invalid email or password");
+        return;
+      }
+
+      if (loggedInUser.role === "admin") {
+        navigate("/admin/system", { replace: true });
+      } else if (loggedInUser.role === "mediator") {
+        navigate("/admin/moderator", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err) {
       setError((err as Error).message || "Login failed");
     }

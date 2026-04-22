@@ -19,7 +19,9 @@ export const http = async <T>(
     headers.Authorization = `Bearer ${authToken}`;
   }
 
-  const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
+  const API_URL = import.meta.env.VITE_API_URL
+    ?.replace(/\/$/, "")
+    .replace(/\/api$/, "");
   const res = await fetch(`${API_URL}${url}`, {
     method,
     headers,

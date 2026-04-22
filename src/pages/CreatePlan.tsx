@@ -17,11 +17,11 @@ const CreatePlan = () => {
         setLoading(true);
 
         if (!user?.id) {
-        alert("You must be logged in to create a plan");
-        setLoading(false)
-        return;
+            alert("You must be logged in to create a plan");
+            setLoading(false);
+            return;
         }
-
+        
         // 1. Create plan
         const plan = await api.createPlan({
         title,

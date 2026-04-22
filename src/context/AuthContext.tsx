@@ -10,6 +10,8 @@ type AuthContextValue = {
     full_name: string;
     email: string;
     password: string;
+    role?: "parent" | "mediator" | "admin";
+    phone?: string;
   }) => Promise<SafeUser>;
   logout: () => void;
 };
@@ -43,8 +45,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const register = useCallback(
-  async (data: { full_name: string; email: string; password: string }) => {
-    const { user, token } = await registerApi(data);
+    async (data: {
+      full_name: string;
+      email: string;
+      password: string;
+      role?: "parent" | "mediator" | "admin";
+      phone?: string;
+    }) => {
+      const { user, token } = await registerApi(data);
 
     setAuthToken(token);
     setUser(user);

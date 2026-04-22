@@ -113,7 +113,7 @@ export interface Plan {
 }
 
 export interface PlanInvitePayload {
-  planId: number;
+  planId: string;
   email: string;
 }
 

@@ -31,8 +31,8 @@ const CreatePlan = () => {
         // 2. Invite co-parent
         if (coParentEmail.trim()) {
         await api.inviteToPlan({
-            planId: Number(plan.id),
-            email: coParentEmail.trim(),
+          planId: plan.id,
+          email: coParentEmail.trim(),
         });
         }
 

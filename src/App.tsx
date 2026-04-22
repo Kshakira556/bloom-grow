@@ -18,6 +18,7 @@ const Messages = lazy(() => import("./pages/Messages"));
 const Journal = lazy(() => import("./pages/Journal"));
 const Children = lazy(() => import("./pages/Children"));
 const Admin = lazy(() => import("./pages/admin/System"));
+const CreatePlan = lazy(() => import("./pages/CreatePlan"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -72,6 +73,11 @@ const App = () => (
                 <Children />
               </RoleProtectedRoute>
             } /> 
+            <Route path="/create-plan" element={
+              <RoleProtectedRoute allowedRoles={["parent"]}>
+                <CreatePlan />
+              </RoleProtectedRoute>
+            } />
 
             {/* Admin / Moderator protected routes */}
             <Route path="/admin/dashboard" element={

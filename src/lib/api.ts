@@ -185,8 +185,8 @@ export const inviteToPlan = async (payload: PlanInvitePayload) => {
   return http("/plans/invite", "POST", payload);
 };
 
-export const acceptPlanInvite = async (planId: number) => {
-  return http("/plans/accept", "POST", { planId });
+export const acceptPlanInvite = async (invite_id: string) => {
+  return http("/plans/accept", "POST", { invite_id });
 };
 
 // --------------------

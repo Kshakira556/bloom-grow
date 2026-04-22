@@ -165,8 +165,11 @@ export async function getPlans(): Promise<{ plans: Plan[] }> {
   }
 }
 
-export const createPlan = async (name: string): Promise<Plan> => {
-  return http<Plan>("/plans", "POST", { name });
+export const createPlan = async (payload: {
+  title: string;
+  created_by: string;
+}) => {
+  return http<Plan>("/plans", "POST", payload);
 };
 
 export const getPlanById = async (id: string): Promise<{ plan: FullPlan }> => {

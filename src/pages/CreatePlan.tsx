@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuthContext } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -9,31 +10,42 @@ const CreatePlan = () => {
   const [coParentEmail, setCoParentEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuthContext();
 
   const handleCreatePlan = async () => {
     try {
-      setLoading(true);
+        setLoading(true);
 
-      // 1. Create plan
-      const plan = await api.createPlan(title);
+        if (!user?.id) {
+        alert("You must be logged in to create a plan");
+        setLoading(false)
+        return;
+        }
 
-      // 2. Invite co-parent (ONLY via plan invite system)
-      if (coParentEmail.trim()) {
-        await api.inviteToPlan({
-          planId: Number(plan.id),
-          email: coParentEmail.trim(),
+        // 1. Create plan
+        const plan = await api.createPlan({
+        title,
+        created_by: user.id,
         });
-      }
 
-      // 3. Redirect into app
-      navigate("/visits");
-    } catch (err) {
-      console.error("Failed to create plan:", err);
-      alert("Failed to create plan");
-    } finally {
-      setLoading(false);
-    }
-  };
+        // 2. Invite co-parent
+        if (coParentEmail.trim()) {
+        await api.inviteToPlan({
+            planId: Number(plan.id),
+            email: coParentEmail.trim(),
+        });
+        }
+
+        // 3. Redirect
+        navigate("/visits");
+
+            } catch (err) {
+                console.error("Failed to create plan:", err);
+                alert("Failed to create plan");
+            } finally {
+                setLoading(false);
+            }
+        };
 
   return (
     <div className="max-w-md mx-auto mt-20 space-y-4">

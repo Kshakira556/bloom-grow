@@ -164,32 +164,28 @@ const handleProposalSubmit = async () => {
   }, [plansOpen]);
 
   useEffect(() => {
-  const fetchPlans = async () => {
-    try {
-      const { plans } = await api.getPlans();
-      setPlans(plans);
+    const fetchPlans = async () => {
+      try {
+        const { plans } = await api.getPlans();
 
-      if (!plans || plans.length === 0) {
-        setActivePlan(null);
+        if (!plans?.length) {
+          setActivePlan(null);
+          navigate("/create-plan");
+          return;
+        }
 
-        // ✅ AUTO REDIRECT IF NO PLAN EXISTS
-        navigate("/create-plan");
-        return;
+        setPlans(plans);
+
+        const full = await api.getPlanById(plans[0].id);
+        setActivePlan(full.plan);
+
+      } catch (err) {
+        console.error("Failed to load plans:", err);
       }
+    };
 
-      const firstPlan = plans[0];
-
-      const { plan: fullPlan } = await api.getPlanById(firstPlan.id);
-      setActivePlan(fullPlan);
-
-    } catch (err) {
-      console.error("Failed to load plans:", err);
-      alert("Unable to load plans. Please refresh or login again.");
-    }
-  };
-
-  fetchPlans();
-}, [navigate]);
+    fetchPlans();
+  }, [navigate]);
 
   useEffect(() => {
   if (!activePlan) return;

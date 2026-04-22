@@ -25,11 +25,34 @@ export interface Child {
 }
 
 export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
-  return http<{ invites: PlanInvite[] }>("/plans/invites", "GET");
+  const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
+
+  const res = await fetch(`${API_URL}/plans/invites`, {
+    headers: {
+      Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch invites");
+
+  return res.json();
 };
 
 export const acceptInvite = async (invite_id: string) => {
-  return http("/plans/accept", "POST", { invite_id });
+  const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
+
+  const res = await fetch(`${API_URL}/plans/accept`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+    },
+    body: JSON.stringify({ invite_id }),
+  });
+
+  if (!res.ok) throw new Error("Failed to accept invite");
+  return res.json();
 };
 
 export interface Moderator extends SafeUser {

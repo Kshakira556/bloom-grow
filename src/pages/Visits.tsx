@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Plus, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import * as api from "@/lib/api";
 import type { VisitEvent } from "@/types/visits";
+import type { PlanInvite } from "@/lib/api";
 import { mapVisitsToEvents } from "@/lib/mappers/visitMapper";
 import { dateFnsLocalizer, Calendar } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from 'date-fns';
@@ -15,6 +16,7 @@ import { enUS } from 'date-fns/locale/en-US';
 import { DateTime } from "luxon"
 import { VisitModal } from "@/components/VisitModal";
 import { useAuthContext } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
 const locales = { 'en-US': enUS };
@@ -58,6 +60,7 @@ const Visits = () => {
   const [modalEvent, setModalEvent] = useState<VisitEvent | null>(null);
 
   const [plans, setPlans] = useState<api.Plan[]>([]);
+  const [invites, setInvites] = useState<PlanInvite[]>([]);
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
 
   const [events, setEvents] = useState<VisitEvent[]>([]);
@@ -90,6 +93,21 @@ const Visits = () => {
 
   fetchChildren();
 }, []);
+
+useEffect(() => {
+  const fetchInvites = async () => {
+    try {
+      const res = await api.getMyInvites();
+      setInvites(res.invites ?? []);
+    } catch (err) {
+      console.error("Failed to load invites:", err);
+    }
+  };
+
+  fetchInvites();
+}, []);
+
+const navigate = useNavigate();
 
 const handleProposalSubmit = async () => {
     setProposalError(null);
@@ -151,15 +169,19 @@ const handleProposalSubmit = async () => {
       const { plans } = await api.getPlans();
       setPlans(plans);
 
-      if (plans.length > 0) {
-        const firstPlan = plans[0];
-
-        // Fetch full plan for the selected plan
-        const { plan: fullPlan } = await api.getPlanById(firstPlan.id);
-        setActivePlan(fullPlan);
-      } else {
+      if (!plans || plans.length === 0) {
         setActivePlan(null);
+
+        // ✅ AUTO REDIRECT IF NO PLAN EXISTS
+        navigate("/create-plan");
+        return;
       }
+
+      const firstPlan = plans[0];
+
+      const { plan: fullPlan } = await api.getPlanById(firstPlan.id);
+      setActivePlan(fullPlan);
+
     } catch (err) {
       console.error("Failed to load plans:", err);
       alert("Unable to load plans. Please refresh or login again.");
@@ -167,7 +189,7 @@ const handleProposalSubmit = async () => {
   };
 
   fetchPlans();
-}, []);
+}, [navigate]);
 
   useEffect(() => {
   if (!activePlan) return;
@@ -271,45 +293,42 @@ const handleProposalSubmit = async () => {
       </ul>
     </div>
   )}
-
 </div>
 
-              {activePlan && (
-                <div className="mt-2 p-4 border rounded-2xl bg-card-light w-full">
-                  <p className="font-display font-bold text-sm">Create Proposal</p>
-                  <p className="text-xs text-muted-foreground">
-                    Request a plan change for moderator review.
-                  </p>
-                  <div className="mt-3 grid gap-3">
-                    <Input
-                      placeholder="Proposal title"
-                      value={proposalTitle}
-                      onChange={(e) => setProposalTitle(e.target.value)}
-                    />
-                    <Textarea
-                      placeholder="Describe the change you want to propose"
-                      value={proposalDescription}
-                      onChange={(e) => setProposalDescription(e.target.value)}
-                    />
-                    {proposalError && (
-                      <p className="text-xs text-destructive">{proposalError}</p>
-                    )}
-                    {proposalSuccess && (
-                      <p className="text-xs text-emerald-600">{proposalSuccess}</p>
-                    )}
-                    <Button
-                      size="sm"
-                      className="w-fit"
-                      onClick={handleProposalSubmit}
-                      disabled={proposalSubmitting}
-                    >
-                      {proposalSubmitting ? "Submitting..." : "Submit Proposal"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
               {/* Calendar */}
+              {invites.length > 0 && (
+  <div className="mb-4 p-4 border rounded-2xl bg-yellow-50">
+    <p className="font-semibold text-sm mb-2">
+      You’ve been invited to join a parenting plan
+    </p>
+
+    {invites.map((invite) => (
+      <div key={invite.id} className="flex items-center justify-between mb-2">
+        <span className="text-sm">{invite.email}</span>
+
+        <Button
+          size="sm"
+          onClick={async () => {
+            try {
+              await api.acceptInvite(invite.id);
+
+              // remove from UI
+              setInvites((prev) => prev.filter((i) => i.id !== invite.id));
+
+              // refresh plans
+              const { plans } = await api.getPlans();
+              setPlans(plans);
+            } catch (err) {
+              alert("Failed to accept invite");
+            }
+          }}
+        >
+          Accept
+        </Button>
+      </div>
+    ))}
+  </div>
+)}
               <div className="border rounded-2xl overflow-hidden p-4">
                 <Calendar
                   localizer={localizer}
@@ -353,10 +372,10 @@ const handleProposalSubmit = async () => {
                   onClose={() => setModalMode(null)}
                   onEdit={() => setModalMode("edit")}
                   onSave={async (updatedEvent) => {
-  if (!activePlan || !selectedChild) {
-    alert("Please select a child first.");
-    return;
-  }
+  if (!activePlan || !selectedChild || !user?.id) {
+  alert("Missing required context (plan, child, or user).");
+  return;
+}
 
   // Explicitly handle create vs update
   const isCreate = !updatedEvent.id || updatedEvent.id === "";
@@ -364,7 +383,7 @@ const handleProposalSubmit = async () => {
   const payload = {
     plan_id: activePlan.id,
     child_id: selectedChild.id,
-    parent_id: activePlan?.invites?.[0]?.id || "",
+    parent_id: user.id,
     start_time: updatedEvent.start_time,
     end_time: updatedEvent.end_time,
     location: updatedEvent.location || "",
@@ -464,15 +483,3 @@ const handleProposalSubmit = async () => {
 };
 
 export default Visits;
-
-
-
-
-
-
-
-
-
-
-
-

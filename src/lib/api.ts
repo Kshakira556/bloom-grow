@@ -24,6 +24,31 @@ export interface Child {
   updated_at?: string;
 }
 
+export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
+  const res = await fetch("/api/plans/invites", {
+    headers: {
+      Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+    },
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch invites");
+
+  return res.json();
+};
+
+export const acceptInvite = async (invite_id: string) => {
+  const res = await fetch("/api/plans/accept", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+    },
+    body: JSON.stringify({ invite_id }),
+  });
+
+  if (!res.ok) throw new Error("Failed to accept invite");
+  return res.json();
+};
 
 export interface Moderator extends SafeUser {
   isActive: boolean;
@@ -516,3 +541,4 @@ export const fetchAllPlanMessages = async (
 
   return allMessages;
 };
+

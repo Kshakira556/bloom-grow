@@ -27,7 +27,7 @@ export interface Child {
 export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
   const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
 
-  const res = await fetch(`${API_URL}/api/plans/invites`, {
+  const res = await fetch(`${API_URL}/plans/invites`, {
     headers: {
       Authorization: `Bearer ${sessionStorage.getItem("token")}`,
       "Content-Type": "application/json",
@@ -42,7 +42,7 @@ export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
 export const acceptInvite = async (invite_id: string) => {
   const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
 
-  const res = await fetch(`${API_URL}/api/plans/accept`, {
+  const res = await fetch(`${API_URL}/plans/accept`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

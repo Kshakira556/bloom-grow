@@ -25,16 +25,26 @@ export interface Child {
 }
 
 export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
+  const token = sessionStorage.getItem("token");
+
+  if (!token) {
+    return { invites: [] };
+  }
+
   const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
 
   const res = await fetch(`${API_URL}/plans/invites`, {
     headers: {
-      Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
   });
 
-  if (!res.ok) throw new Error("Failed to fetch invites");
+  if (!res.ok) {
+    // Prevent breaking UI flow on visits page
+    console.warn("Failed to fetch invites:", res.status);
+    return { invites: [] };
+  }
 
   return res.json();
 };
@@ -161,8 +171,14 @@ export interface ApiJournalEntry  {
   image?: string;
   entry_date: string;
 }
+
 export async function getPlans(): Promise<{ plans: Plan[] }> {
-  return await http<{ plans: Plan[] }>("/plans", "GET");
+  try {
+    return await http<{ plans: Plan[] }>("/plans", "GET");
+  } catch (err) {
+    console.warn("Failed to fetch plans:", err);
+    return { plans: [] };
+  }
 }
 
 export const createPlan = async (payload: {

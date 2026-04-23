@@ -100,7 +100,9 @@ useEffect(() => {
       const res = await api.getMyInvites();
       setInvites(res.invites ?? []);
     } catch (err) {
-      console.error("Failed to load invites:", err);
+      // prevent UI crash on 500
+      console.warn("Invites endpoint failed (non-blocking):", err);
+      setInvites([]);
     }
   };
 

@@ -34,7 +34,7 @@ export const http = async <T>(
     sessionStorage.removeItem("user");
 
     // Redirect to login instead of dashboard
-    window.location.href = "/login";
+    window.location.href = "/";
 
     throw new Error("Unauthorized");
   }

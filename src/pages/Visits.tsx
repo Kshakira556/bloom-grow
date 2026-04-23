@@ -263,7 +263,7 @@ const handleProposalSubmit = async () => {
 
     
   {/* Child Selector */}
-  <div className="flex items-end gap-2">
+  <div className="flex items-end gap-2 relative z-10">
     <div>
       <label className="block text-sm font-medium mb-1">Child</label>
       <select
@@ -285,7 +285,7 @@ const handleProposalSubmit = async () => {
 
     <Button
       size="sm"
-      className="rounded-full"
+      className="rounded-full bg-primary text-white hover:bg-primary/90 shadow-sm"
       onClick={() => setShowAddChild(true)}
     >
       + Add

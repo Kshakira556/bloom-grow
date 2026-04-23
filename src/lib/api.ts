@@ -162,12 +162,7 @@ export interface ApiJournalEntry  {
   entry_date: string;
 }
 export async function getPlans(): Promise<{ plans: Plan[] }> {
-  try {
-    return await http<{ plans: Plan[] }>("/plans", "GET"); 
-  } catch (err) {
-    console.error("Failed to fetch plans:", err);
-    return { plans: [] }; 
-  }
+  return await http<{ plans: Plan[] }>("/plans", "GET");
 }
 
 export const createPlan = async (payload: {

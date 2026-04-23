@@ -188,7 +188,10 @@ const handleProposalSubmit = async () => {
   }, [navigate]);
 
   useEffect(() => {
-  if (!activePlan) return;
+  if (!activePlan) return;if (!activePlan) {
+    navigate("/plans/create");
+    return;
+  }
 
   const fetchVisits = async () => {
     const { data } = await api.getVisitsByPlan(activePlan.id);

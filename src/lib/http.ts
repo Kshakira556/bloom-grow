@@ -29,13 +29,10 @@ export const http = async <T>(
   if (res.status === 401) {
     setAuthToken(null);
 
-    // Optional: clear session
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
 
-    // Redirect to login instead of dashboard
-    window.location.href = "/";
-
+    // Let React Router handle navigation instead of hard reload
     throw new Error("Unauthorized");
   }
 

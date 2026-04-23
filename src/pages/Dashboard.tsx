@@ -62,6 +62,10 @@ export default function Dashboard() {
       setUnreadMessages(pagedUnread);
 
     } catch (err) {
+      if (err instanceof Error && err.message === "Unauthorized") {
+        setUnreadMessages([]);
+        return;
+      }
       console.error("Failed to fetch unread messages:", err);
       toast({
         title: "Failed to load messages",
@@ -137,6 +141,10 @@ export default function Dashboard() {
       const { data } = await api.getVisitsByPlan(activePlan.id);
       setEvents(mapVisitsToEvents(data));
     } catch (err) {
+      if (err instanceof Error && err.message === "Unauthorized") {
+        setEvents([]);
+        return;
+      }
       console.error("Failed to load visits:", err);
 
       toast({

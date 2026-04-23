@@ -36,28 +36,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = useCallback(async (email: string, password: string) => {
     const { user, token } = await loginApi(email, password);
 
-    setAuthToken(token);
+    // 1. Persist first
     sessionStorage.setItem("token", token);
-    setUser(user);
     sessionStorage.setItem("user", JSON.stringify(user));
+
+    // 2. Then apply
+    setAuthToken(token);
+    setUser(user);
 
     return user; 
   }, []);
 
   const register = useCallback(
-    async (data: {
-      full_name: string;
-      email: string;
-      password: string;
-      role?: "parent" | "mediator" | "admin";
-      phone?: string;
-    }) => {
-      const { user, token } = await registerApi(data);
+  async (data) => {
+    const { user, token } = await registerApi(data);
 
-    setAuthToken(token);
-    setUser(user);
+    // 1. Persist FIRST (critical)
     sessionStorage.setItem("token", token);
     sessionStorage.setItem("user", JSON.stringify(user));
+
+    // 2. Set token globally BEFORE React updates
+    setAuthToken(token);
+
+    // 3. Then update React state
+    setUser(user);
 
     return user;
   },

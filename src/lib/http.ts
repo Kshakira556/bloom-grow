@@ -28,7 +28,14 @@ export const http = async <T>(
 
   if (res.status === 401) {
     setAuthToken(null);
-    window.location.href = "/dashboard";
+
+    // Optional: clear session
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+
+    // Redirect to login instead of dashboard
+    window.location.href = "/login";
+
     throw new Error("Unauthorized");
   }
 

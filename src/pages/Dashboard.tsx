@@ -32,7 +32,7 @@ export default function Dashboard() {
 
   useEffect(() => {
   const fetchUnreadMessages = async (retry = 0) => {
-    if (!activePlan) {
+    if (!activePlan || !user) {
       setUnreadMessages([]);
       return;
     }
@@ -85,6 +85,8 @@ export default function Dashboard() {
 }, [activePlan, toast, currentPage]);
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchPlans = async (retry = 0) => {
       setIsLoadingPlans(true);
       try {
@@ -97,8 +99,10 @@ export default function Dashboard() {
         } else {
           setActivePlan(null);
         }
-      } catch (err) {
-        console.error("Failed to load plans:", err);
+      } catch (err: unknown) {
+          if (err instanceof Error && err.message === "Unauthorized") return;
+
+          console.error("Failed to load plans:", err);
 
         toast({
           title: "Failed to load plans",
@@ -123,7 +127,7 @@ export default function Dashboard() {
 
   useEffect(() => {
   const fetchVisits = async (retry = 0) => {
-    if (!activePlan) {
+    if (!activePlan || !user) {
       setEvents([]);
       return;
     }
@@ -162,6 +166,8 @@ export default function Dashboard() {
 
   // Fetch children along with plans
   useEffect(() => {
+    if (!user) return;
+
     const fetchChildren = async () => {
       try {
         const allChildren = await api.getChildren();
@@ -218,34 +224,6 @@ export default function Dashboard() {
         new Date(a.start_time).getTime() - new Date(b.start_time).getTime() // ascending
       )[0]; // take first
   }, [events]);
-
-    useEffect(() => {
-      if (!activePlan || !user) {
-        setUnreadMessages([]);
-        return;
-      }
-
-      const fetchUnreadMessages = async () => {
-        try {
-          const msgs = await api.getMessagesByPlan(activePlan.id);
-          const unread = msgs
-            .filter(msg => !msg.is_seen && msg.receiver_id === user.id)
-            .map(msg => ({
-              message: msg.content,
-              time: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              href: "/messages",
-              description: "Unread Messages",
-            }));
-
-          setUnreadMessages(unread);
-        } catch (err) {
-          console.error("Failed to fetch unread messages:", err);
-          setUnreadMessages([]);
-        }
-      };
-
-      fetchUnreadMessages();
-    }, [activePlan, user]);
 
     useEffect(() => {
       const fetchJournalCount = async () => {

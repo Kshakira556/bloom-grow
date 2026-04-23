@@ -193,7 +193,10 @@ export const getPlanById = async (id: string): Promise<{ plan: FullPlan }> => {
 };
 
 export const inviteToPlan = async (payload: PlanInvitePayload) => {
-  return http("/plans/invite", "POST", payload);
+  return http("/plans/invite", "POST", {
+    plan_id: payload.planId,   
+    email: payload.email,
+  });
 };
 
 export const acceptPlanInvite = async (invite_id: string) => {

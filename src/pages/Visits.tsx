@@ -17,6 +17,7 @@ import { DateTime } from "luxon"
 import { VisitModal } from "@/components/VisitModal";
 import { useAuthContext } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { AddChildModal } from "@/components/AddChildModal";
 
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
 const locales = { 'en-US': enUS };
@@ -65,6 +66,7 @@ const Visits = () => {
 
   const [events, setEvents] = useState<VisitEvent[]>([]);
   const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
+  const [showAddChild, setShowAddChild] = useState(false);
   const [selectedChild, setSelectedChild] = useState<{ id: string; name: string } | null>(null);
   const [loadingChildren, setLoadingChildren] = useState(true);
 
@@ -261,7 +263,7 @@ const handleProposalSubmit = async () => {
 
     
   {/* Child Selector */}
-  {children.length > 0 && (
+  <div className="flex items-end gap-2">
     <div>
       <label className="block text-sm font-medium mb-1">Child</label>
       <select
@@ -280,7 +282,15 @@ const handleProposalSubmit = async () => {
         ))}
       </select>
     </div>
-  )}
+
+    <Button
+      size="sm"
+      className="rounded-full"
+      onClick={() => setShowAddChild(true)}
+    >
+      + Add
+    </Button>
+  </div>
 
   {activePlan && activePlan.invites.length > 0 && (
     <div className="mt-2 p-2 text-sm text-muted-foreground border rounded-lg bg-card-light">
@@ -479,6 +489,26 @@ const handleProposalSubmit = async () => {
           </div>
         </div>
       </main>
+      {showAddChild && (
+        <AddChildModal
+          onClose={() => setShowAddChild(false)}
+          onCreated={async () => {
+            // refresh children after creation
+            const allChildren = await api.getChildren();
+
+            const mapped = allChildren.map(child => ({
+              id: child.id,
+              name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+            }));
+
+            setChildren(mapped);
+
+            if (mapped.length > 0) {
+              setSelectedChild(mapped[0]);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

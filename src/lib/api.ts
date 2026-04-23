@@ -406,6 +406,15 @@ export const getChildren = async (): Promise<Child[]> => {
   return res.children;
 };
 
+export const createChild = async (payload: {
+  first_name: string;
+  last_name?: string;
+  birth_date?: string;
+  notes?: string;
+}) => {
+  return http<{ child: Child }>("/children", "POST", payload);
+};
+
 // Update message
 export const updateMessage = async (
   id: string,

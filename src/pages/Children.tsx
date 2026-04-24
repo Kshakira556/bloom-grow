@@ -9,6 +9,7 @@ import * as api from "@/lib/api";
 import { vaultReadService } from "@/lib/vaultReadService";
 import { VaultAggregate } from "@/types/vaultAggregate";
 import { vaultSaveService } from "@/lib/vaultSaveService";
+import { AddChildModal } from "@/components/AddChildModal";
 
 type VaultAggregateWithMissing = VaultAggregate & {
   vaultMissing?: boolean;
@@ -21,7 +22,7 @@ const Children = () => {
   const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const restrictedNames = selectedChild?.legal?.contactType || "";
-
+  const [showAddChild, setShowAddChild] = useState(false);
 
   const fetchChildren = async () => {
     try {
@@ -32,33 +33,11 @@ const Children = () => {
       }));
       setChildren(mapped);
 
-      if (mapped.length > 0) {
-        const firstChild = mapped[0];
-        console.log("Fetching first child vault:", firstChild);
-        await handleChildChange(firstChild.id, firstChild.name);
-        console.log("First child loaded:", firstChild.id);
-      } else {
-        console.log("No children found, initializing empty child");
-        setSelectedChild({
-          childId: "",
-          vaultMissing: true,
-          vaultMissingNote: "No children found.",
-          vault: { fullName: "", nickname: "", dob: "", idPassportNo: "", homeAddress: "" },
-          guardians: [],
-          legal: { custodyType: "", caseNo: "", validUntil: "", contactType: "" },
-          medical: { bloodType: "", allergies: "", medication: "", doctor: "" },
-          safety: { approvedPickup: "", notAllowedPickup: "" },
-          emergencyContacts: [],
-          documents: [],
-        });
-      }
     } catch (err) {
-      console.error("Error fetching children:", err);
-    } finally {
-      setLoading(false); // ✅ only set false after everything finishes
+      console.error(err);
     }
   };
-  
+
   const handleChildChange = async (
     childId: string,
     childName?: string,
@@ -130,7 +109,6 @@ const Children = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [editMode, setEditMode] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files || !selectedCategory || !selectedSubcategory) return;
@@ -311,12 +289,14 @@ const Children = () => {
                 ))}
               </select>
 
-              <button className="w-full p-4 rounded-2xl bg-card/50 hover:bg-card text-left flex items-center gap-2 text-muted-foreground">
+              <button
+                onClick={() => setShowAddChild(true)}
+                className="w-full p-4 rounded-2xl bg-card/50 hover:bg-card text-left flex items-center gap-2 text-muted-foreground"
+              >
                 <Plus className="w-4 h-4" />
-                Add profile
+                Add Child
               </button>
             </div>
-
 
             {/* Child Details */}
             <div className="lg:col-span-9">
@@ -368,114 +348,6 @@ const Children = () => {
                         >
                           <Edit3 className="w-5 h-5 text-primary" />
                         </button>
-                        {/* Show note if vault missing */}
-                        {selectedChild?.vaultMissing && (
-                          <p className="text-sm text-destructive mb-2">
-                            {selectedChild.vaultMissingNote}
-                          </p>
-                        )}
-
-                        {/* Step 1: Vault Creation */}
-                        {currentStep === 1 && selectedChild?.vaultMissing && (
-                          <Card className="p-4 mb-4">
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {selectedChild?.vaultMissingNote || "No vault exists for this child yet."}
-                            </p>
-
-                            <div className="grid gap-3">
-                              <Input
-                                placeholder="Full Name"
-                                value={selectedChild.vault.fullName}
-                                onChange={(e) =>
-                                  setSelectedChild(prev => prev ? { ...prev, vault: { ...prev.vault, fullName: e.target.value } } : prev)
-                                }
-                              />
-                              <Input
-                                placeholder="Nickname"
-                                value={selectedChild.vault.nickname}
-                                onChange={(e) =>
-                                  setSelectedChild(prev => prev ? { ...prev, vault: { ...prev.vault, nickname: e.target.value } } : prev)
-                                }
-                              />
-                              <Input
-                                placeholder="Date of Birth"
-                                value={selectedChild.vault.dob}
-                                type="date"
-                                onChange={(e) =>
-                                  setSelectedChild(prev => prev ? { ...prev, vault: { ...prev.vault, dob: e.target.value } } : prev)
-                                }
-                              />
-                              <Input
-                                placeholder="ID / Passport Number"
-                                value={selectedChild.vault.idPassportNo}
-                                onChange={(e) =>
-                                  setSelectedChild(prev => prev ? { ...prev, vault: { ...prev.vault, idPassportNo: e.target.value } } : prev)
-                                }
-                              />
-                              <Input
-                                placeholder="Home Address"
-                                value={selectedChild.vault.homeAddress}
-                                onChange={(e) =>
-                                  setSelectedChild(prev => prev ? { ...prev, vault: { ...prev.vault, homeAddress: e.target.value } } : prev)
-                                }
-                              />
-                              <Button
-                                className="rounded-full mt-2"
-                                onClick={async () => {
-                                  if (!selectedChild) return;
-                                  if (!selectedChild.vault.fullName.trim()) {
-                                    alert("Child full name is required");
-                                    return;
-                                  }
-
-                                  try {
-                                    setLoading(true);
-
-                                    const aggregate: VaultAggregate = {
-                                      childId: selectedChild.childId,
-                                      vault: {
-                                        fullName: selectedChild.vault.fullName.trim(),
-                                        nickname: selectedChild.vault.nickname?.trim() || undefined,
-                                        dob: selectedChild.vault.dob?.trim() || undefined,
-                                        idPassportNo: selectedChild.vault.idPassportNo?.trim() || undefined,
-                                        homeAddress: selectedChild.vault.homeAddress?.trim() || undefined,
-                                      },
-                                      guardians: [],
-                                      legal: undefined,
-                                      medical: undefined,
-                                      safety: undefined,
-                                      emergencyContacts: [],
-                                      documents: [],
-                                    };
-
-                                    // ✅ save and get newly created vault ID
-                                    // Save and get newly created vault ID
-                                    const vaultId = await vaultSaveService.saveVaultAggregate(aggregate);
-
-                                    setCurrentStep(2);
-
-                                    // ✅ pass vaultId so handleChildChange fetches the correct vault immediately
-                                    await handleChildChange(selectedChild.childId, selectedChild.vault.fullName, vaultId);
-                                  } catch (err) {
-                                    console.error("Error creating vault:", err);
-                                    alert("Unable to create vault. Please check required fields.");
-                                  } finally {
-                                    setLoading(false);
-                                  }
-                                }}
-                              >
-                                Create Vault
-                              </Button>
-                            </div>
-                          </Card>
-                        )}
-
-                        {/* Step 2: Everything else */}
-                        {currentStep === 2 && selectedChild && (
-                          <>
-                            {/* The entire existing form below (guardians, legal, medical, safety, documents, etc.) stays exactly as is */}
-                          </>
-                        )}
 
                       </div>
 
@@ -1006,6 +878,15 @@ const Children = () => {
           </div>
         </div>
       </main>
+      {showAddChild && (
+        <AddChildModal
+          onClose={() => setShowAddChild(false)}
+          onCreated={async () => {
+            await fetchChildren();     // refresh dropdown
+            setShowAddChild(false);
+          }}
+        />
+      )}
     </div>
   );
 };

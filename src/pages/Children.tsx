@@ -27,14 +27,24 @@ const Children = () => {
   const fetchChildren = async () => {
     try {
       const allChildren = await api.getChildren();
+
       const mapped = allChildren.map(child => ({
         id: child.id,
         name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
       }));
+
       setChildren(mapped);
+
+      // ✅ AUTO-SELECT FIRST CHILD (critical fix)
+      if (mapped.length > 0) {
+        await handleChildChange(mapped[0].id, mapped[0].name);
+      } else {
+        setLoading(false); // no children case
+      }
 
     } catch (err) {
       console.error(err);
+      setLoading(false); // ❗ ensure UI never locks
     }
   };
 
@@ -152,7 +162,11 @@ const Children = () => {
       (!selectedSubcategory || f.subcategory === selectedSubcategory)
   );
 
-   if (loading || !selectedChild) return <div>Loading...</div>;
+  if (loading) return <div>Loading...</div>;
+
+  if (!selectedChild) {
+    return <div>No child selected</div>;
+  }
 
   return (  
     <div className="min-h-screen gradient-bg flex flex-col">

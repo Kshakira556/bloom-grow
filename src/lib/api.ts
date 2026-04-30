@@ -12,8 +12,11 @@ export interface SafeUser {
   email: string;
   role: UserRole;
   phone?: string;
+  account_type?: "trial" | "paid";
+  subscription_status?: "trial" | "active" | "pending_payment" | "canceled";
   is_trial_active?: boolean;
-  trial_ends_at?: string | Date | null; 
+  trial_ends_at?: string | Date | null;
+  requires_payment?: boolean;
 }
 
 export interface Child {

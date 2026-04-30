@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import SignInPng from "@/assets/images/sign-in-page.png";
+import { requiresPaywall } from "@/lib/billing";
 
 export default function SignIn() {
   const { login } = useAuth();
@@ -23,6 +24,11 @@ export default function SignIn() {
 
       if (!loggedInUser) {
         setError("Invalid email or password");
+        return;
+      }
+
+      if (requiresPaywall(loggedInUser)) {
+        navigate("/paywall", { replace: true });
         return;
       }
 

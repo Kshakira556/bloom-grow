@@ -10,6 +10,7 @@ import { ProtectedRoute, RoleProtectedRoute } from "./components/auth/ProtectedR
 const Index = lazy(() => import("./pages/Index"));
 const SignIn = lazy(() => import("./pages/SignIn"));
 const Register = lazy(() => import("./pages/Register"));
+const Paywall = lazy(() => import("./pages/Paywall"));
 
 // Client pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -46,6 +47,14 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/register" element={<Register />} />
+            <Route
+              path="/paywall"
+              element={
+                <ProtectedRoute>
+                  <Paywall />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Client (parent-only) pages */}
             <Route path="/dashboard" element={

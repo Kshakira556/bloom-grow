@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { requiresPaywall } from "@/lib/billing";
 
 type ProtectedRouteProps = {
   children: ReactNode;
@@ -26,6 +27,10 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
+  }
+
+  if (requiresPaywall(user)) {
+    return <Navigate to="/paywall" replace />;
   }
 
   if (!user || !allowedRoles.includes(user.role)) {

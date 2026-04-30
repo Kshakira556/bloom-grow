@@ -4,12 +4,17 @@ import { Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import CubLogoPng from "@/assets/images/cub-logo.png";
+import TrialBanner from "./TrialBanner";
+import { TrialStatusPill } from "./TrialStatusPill";
 
 export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth(); 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const trialEndsAt = user?.trial_ends_at ?? null;
+  const hasTrialEnd = trialEndsAt != null && trialEndsAt !== "";
+  const showTrial = Boolean(hasTrialEnd || user?.is_trial_active);
 
   // Add Moderator link if user is a mediator
   const navLinks = [
@@ -34,8 +39,9 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur border-b border-border">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <>
+      <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur border-b border-border">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <img
@@ -79,6 +85,15 @@ export function Navbar() {
             ))
           ) : (
             <>
+              {showTrial &&
+                (hasTrialEnd ? (
+                  <TrialStatusPill trialEndsAt={trialEndsAt} />
+                ) : (
+                  <div className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    Trial active
+                  </div>
+                ))}
+
               <button
                 onClick={handleLogout}
                 className="nav-link text-red-500 hover:text-red-600"
@@ -105,10 +120,22 @@ export function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden absolute top-16 left-0 right-0 bg-card border-b border-border shadow-lg animate-slide-up">
-          <nav className="container mx-auto px-4 py-4 flex flex-col gap-2">
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-16 left-0 right-0 bg-card border-b border-border shadow-lg animate-slide-up">
+            <nav className="container mx-auto px-4 py-4 flex flex-col gap-2">
+              {isAuthenticated && showTrial && (
+                <div className="px-4 py-2">
+                  {hasTrialEnd ? (
+                    <TrialStatusPill trialEndsAt={trialEndsAt} />
+                  ) : (
+                    <div className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Trial active
+                    </div>
+                  )}
+                </div>
+              )}
+
             {isAuthenticated &&
               navLinks.map((link) => (
                 <Link
@@ -155,9 +182,24 @@ export function Navbar() {
                   Logout
                 </button>
               )}
-          </nav>
+            </nav>
+          </div>
+        )}
+      </header>
+
+      {isAuthenticated && showTrial && (
+        <div className="bg-background border-b border-border">
+          <div className="container mx-auto px-4 pt-3">
+            {hasTrialEnd ? (
+              <TrialBanner trialEndsAt={trialEndsAt} />
+            ) : (
+              <div className="bg-yellow-100 text-yellow-900 p-3 rounded-md mb-4">
+                Trial active.
+              </div>
+            )}
+          </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

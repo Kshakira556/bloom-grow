@@ -12,6 +12,7 @@ type AuthContextValue = {
     password: string;
     role?: "parent" | "mediator" | "admin";
     phone?: string;
+    account_type?: "trial" | "paid";
   }) => Promise<SafeUser>;
   logout: () => void;
 };
@@ -23,7 +24,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<SafeUser | null>(() => {
     const stored = sessionStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+
+    try {
+      const parsed = JSON.parse(stored);
+
+      // ensure backend-added fields are preserved
+      return {
+        ...parsed,
+        is_trial_active: parsed.is_trial_active ?? false,
+      };
+    } catch {
+      return null;
+    }
   });
 
   useEffect(() => {

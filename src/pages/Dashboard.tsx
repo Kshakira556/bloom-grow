@@ -1,4 +1,4 @@
-import { Navbar } from "@/components/layout/Navbar";
+﻿import { Navbar } from "@/components/layout/Navbar";
 import { Link } from "react-router-dom";
 import { Lock, Car, ClipboardList, Star, Bookmark } from "lucide-react";
 import * as api from "@/lib/api";
@@ -28,7 +28,8 @@ export default function Dashboard() {
   const [isLoadingPlans, setIsLoadingPlans] = useState(false); 
   const [isLoadingVisits, setIsLoadingVisits] = useState(false);
   const { user } = useAuthContext();
-
+  console.log("DASHBOARD USER:", user);
+  console.log("DASHBOARD TRIAL:", user?.trial_ends_at);
 
   useEffect(() => {
   const fetchUnreadMessages = async (retry = 0) => {
@@ -260,6 +261,8 @@ export default function Dashboard() {
 
       <main className="flex-1 py-8 px-4">
         <div className="container max-w-5xl mx-auto space-y-6">
+
+
           {/* Dashboard Title Banner */}
           <div className="relative">
             <div className="bg-card rounded-full py-4 px-12 shadow-sm flex items-center justify-center">

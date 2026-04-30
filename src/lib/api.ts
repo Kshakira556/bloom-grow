@@ -12,6 +12,8 @@ export interface SafeUser {
   email: string;
   role: UserRole;
   phone?: string;
+  is_trial_active?: boolean;
+  trial_ends_at?: string | Date | null; 
 }
 
 export interface Child {
@@ -79,6 +81,9 @@ type RegisterPayload = {
   full_name: string;
   email: string;
   password: string;
+  role?: UserRole;
+  phone?: string;
+  account_type?: "trial" | "paid";
 };
 
 type RegisterResponse = {

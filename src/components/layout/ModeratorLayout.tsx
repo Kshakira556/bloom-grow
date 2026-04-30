@@ -8,6 +8,8 @@ import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { TrialStatusPill } from "./TrialStatusPill";
+import TrialBanner from "./TrialBanner";
 
 interface ModeratorLayoutProps {
   children: React.ReactNode;
@@ -127,6 +129,11 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
             {sidebarLinks.find((l) => l.href === location.pathname)?.label || "Dashboard"}
           </h1>
           <div className="flex items-center gap-4">
+
+            {user?.trial_ends_at != null && user.trial_ends_at !== "" && (
+              <TrialStatusPill trialEndsAt={user.trial_ends_at} />
+            )}
+
             <div className="w-10 h-10 rounded-full bg-cub-coral-light flex items-center justify-center">
               <span className="font-display font-bold text-cub-coral">
                 {initials}
@@ -136,6 +143,7 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
         </header>
 
         {/* Page Content */}
+        <TrialBanner trialEndsAt={user?.trial_ends_at || null} />
         <div className="p-6">{children}</div>
       </main>
     </div>

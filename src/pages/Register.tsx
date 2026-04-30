@@ -17,6 +17,7 @@ const [password, setPassword] = useState("");
 const [role, setRole] = useState<"parent" | "mediator" | "admin">("parent");
 const [phone, setPhone] = useState("");
 const [error, setError] = useState("");
+const [accountType, setAccountType] = useState<"trial" | "paid">("trial");
 
 const handleRegister = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -28,6 +29,7 @@ const handleRegister = async (e: React.FormEvent) => {
       password,
       role,
       phone,
+      account_type: accountType,
     });
 
     if (user.role === "admin") navigate("/admin/system", { replace: true });
@@ -80,11 +82,44 @@ const fields: AuthField[] = [
     value: phone,
     onChange: (e) => setPhone(e.target.value),
   },
+  {
+    name: "accountType",
+    type: "select",
+    placeholder: "Choose plan (Trial or Paid)",
+    icon: <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />,
+    value: accountType,
+    onChange: (e) => setAccountType(e.target.value as "trial" | "paid"),
+  },
 ];
 
   return (
     <AuthPage title="Register" illustration={RegisterPng}>
       <AuthForm fields={fields} onSubmit={handleRegister} buttonLabel="Register" error={error} />
+      <div className="space-y-3 mb-4">
+        <label className="text-sm font-medium">Choose Plan</label>
+
+        <div className="flex gap-4">
+          <button
+            type="button"
+            onClick={() => setAccountType("trial")}
+            className={`px-4 py-2 rounded-full border ${
+              accountType === "trial" ? "bg-primary text-white" : ""
+            }`}
+          >
+            Trial (2 days)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAccountType("paid")}
+            className={`px-4 py-2 rounded-full border ${
+              accountType === "paid" ? "bg-primary text-white" : ""
+            }`}
+          >
+            Paid
+          </button>
+        </div>
+      </div>
     </AuthPage>
   );
 }

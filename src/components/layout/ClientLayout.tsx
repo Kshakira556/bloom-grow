@@ -1,6 +1,6 @@
 // ClientLayout
 // Used ONLY by parents/end-users
-
+import { TrialStatusPill } from "./TrialStatusPill";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
@@ -8,7 +8,7 @@ import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-
+import TrialBanner from "./TrialBanner";
 interface ClientLayoutProps {
   children: React.ReactNode;
 }
@@ -17,6 +17,9 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  console.log("USER:", user);
+  console.log("TRIAL:", user?.trial_ends_at);
 
   const sidebarLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -124,7 +127,15 @@ export function ClientLayout({ children }: ClientLayoutProps) {
           <h1 className="font-display font-bold text-xl">
             {sidebarLinks.find((l) => l.href === location.pathname)?.label || "Dashboard"}
           </h1>
+
           <div className="flex items-center gap-4">
+
+            {/* ✅ NEW: Trial status pill (non-breaking) */}
+            {user?.trial_ends_at != null && user.trial_ends_at !== "" && (
+              <TrialStatusPill trialEndsAt={user.trial_ends_at} />
+            )}
+
+            {/* Profile Avatar */}
             <div className="w-10 h-10 rounded-full bg-cub-coral-light flex items-center justify-center">
               <span className="font-display font-bold text-cub-coral">
                 {initials}
@@ -134,6 +145,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
         </header>
 
         {/* Page Content */}
+        <TrialBanner trialEndsAt={user?.trial_ends_at || null} />
         <div className="p-6">{children}</div>
       </main>
     </div>

@@ -56,6 +56,10 @@ const formatRequestDateTime = (value: unknown): string | null => {
 };
 
 const getVisitRequestSummary = (request: api.VisitChangeRequest): string => {
+  if (request.request_type === "create") {
+    return "Requested creation of a new visit.";
+  }
+
   if (request.request_type === "delete") {
     return "Requested deletion of this visit.";
   }
@@ -110,6 +114,20 @@ const Visits = () => {
   const [selectedChild, setSelectedChild] = useState<{ id: string; name: string } | null>(null);
   const [loadingChildren, setLoadingChildren] = useState(true);
   const { toast } = useToast();
+
+  const markVisitAsDeleted = useCallback((visitId: string) => {
+    setEvents((prev) =>
+      prev.map((event) =>
+        event.id === visitId
+          ? {
+              ...event,
+              type: "deleted",
+              status: "cancelled",
+            }
+          : event,
+      ),
+    );
+  }, []);
 
   useEffect(() => {
   const fetchChildren = async () => {
@@ -239,7 +257,7 @@ useEffect(() => {
   }
 
   const fetchVisits = async () => {
-    const { data } = await api.getVisitsByPlan(activePlan.id);
+    const { data } = await api.getVisitsByPlan(activePlan.id, { includeDeleted: true });
     setEvents(mapVisitsToEvents(data, user?.id));
   };
 
@@ -446,7 +464,11 @@ useEffect(() => {
       <div key={request.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3 last:mb-0">
         <div className="text-sm">
           <p className="font-medium">
-            {request.request_type === "update" ? "Visit update request" : "Visit delete request"}
+            {request.request_type === "create"
+              ? "Visit create request"
+              : request.request_type === "update"
+              ? "Visit update request"
+              : "Visit delete request"}
           </p>
           <p className="text-muted-foreground">{getVisitRequestSummary(request)}</p>
         </div>
@@ -457,17 +479,24 @@ useEffect(() => {
               try {
                 const result = await api.reviewVisitRequest(request.id, "approved");
 
-                if (request.request_type === "delete" && result.data && "id" in result.data) {
-                  const deleted = result.data as { id: string; is_deleted: boolean };
-                  setEvents((prev) => prev.filter((ev) => ev.id !== deleted.id));
-                }
-
-                if (request.request_type === "update" && result.data && "plan_id" in result.data) {
+                if (request.request_type === "create" && result.data && "plan_id" in result.data) {
+                  const created = result.data as api.ApiVisit;
+                  const mapped = mapVisitsToEvents([created], user?.id)[0];
+                  if (mapped) {
+                    setEvents((prev) => {
+                      if (prev.some((event) => event.id === mapped.id)) return prev;
+                      return [...prev, mapped];
+                    });
+                  }
+                } else if (request.request_type === "update" && result.data && "plan_id" in result.data) {
                   const updated = result.data as api.ApiVisit;
                   const mapped = mapVisitsToEvents([updated], user?.id)[0];
                   if (mapped) {
                     setEvents((prev) => prev.map((ev) => (ev.id === mapped.id ? mapped : ev)));
                   }
+                } else if (request.request_type === "delete" && result.data && "id" in result.data) {
+                  const deleted = result.data as { id: string; is_deleted: boolean };
+                  markVisitAsDeleted(deleted.id);
                 }
 
                 setPendingVisitRequests((prev) => prev.filter((r) => r.id !== request.id));
@@ -475,7 +504,9 @@ useEffect(() => {
                 toast({
                   title: "Request approved",
                   description:
-                    request.request_type === "delete"
+                    request.request_type === "create"
+                      ? "The visit was created."
+                      : request.request_type === "delete"
                       ? "The visit was deleted."
                       : "The visit was updated.",
                 });
@@ -594,14 +625,23 @@ useEffect(() => {
     let finalEvent: VisitEvent;
 
     if (isCreate) {
-      // CREATE
-      const created = await api.createVisit(createPayload);
-      const mappedCreated = mapVisitsToEvents([created], user.id)[0];
+      const createResult = await api.requestVisitCreate(createPayload);
+      if (createResult.mode === "pending") {
+        setModalMode(null);
+        setModalEvent(null);
+        toast({
+          title: "Create request sent",
+          description: "Waiting for the other parent to approve.",
+        });
+        return;
+      }
+
+      const mappedCreated = mapVisitsToEvents([createResult.data], user.id)[0];
       finalEvent = mappedCreated ?? {
         ...updatedEvent,
-        id: created.id,
-        title: created.notes || updatedEvent.title || "Visit",
-        status: created.status || "scheduled",
+        id: createResult.data.id,
+        title: createResult.data.notes || updatedEvent.title || "Visit",
+        status: createResult.data.status || "scheduled",
       };
 
       setEvents((prev) => [...prev, finalEvent]);
@@ -655,9 +695,17 @@ useEffect(() => {
                         return;
                       }
 
-                      setEvents((prev) => prev.filter((ev) => ev.id !== result.data.id));
-                      setModalMode(null);
-                      setModalEvent(null);
+                      markVisitAsDeleted(result.data.id);
+                      setModalEvent((prev) =>
+                        prev && prev.id === result.data.id
+                          ? {
+                              ...prev,
+                              type: "deleted",
+                              status: "cancelled",
+                            }
+                          : prev,
+                      );
+                      setModalMode("view");
                     } catch (err) {
                       console.error("Failed to delete visit:", err);
                       toast({

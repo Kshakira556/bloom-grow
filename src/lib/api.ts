@@ -241,14 +241,15 @@ export interface ApiVisit {
   location: string;
   notes: string;
   status: "scheduled" | "completed" | "cancelled" | "missed";
+  is_deleted?: boolean;
 }
 
 export interface VisitChangeRequest {
   id: string;
-  visit_id: string;
+  visit_id: string | null;
   plan_id: string;
   requested_by: string;
-  request_type: "update" | "delete";
+  request_type: "create" | "update" | "delete";
   proposed_data?: Record<string, unknown> | null;
   status: "pending" | "approved" | "rejected";
   reviewed_by?: string | null;
@@ -258,9 +259,11 @@ export interface VisitChangeRequest {
 }
 
 export async function getVisitsByPlan(
-  planId: string
+  planId: string,
+  options?: { includeDeleted?: boolean },
 ): Promise<{ success: boolean; data: ApiVisit[] }> {
-  return http(`/visits/plan/${planId}`, "GET");
+  const query = options?.includeDeleted ? "?include_deleted=true" : "";
+  return http(`/visits/plan/${planId}${query}`, "GET");
 }
 
 export const createVisit = async (payload: {
@@ -275,6 +278,22 @@ export const createVisit = async (payload: {
 }) => {
   const res = await http<{ success: boolean; data: ApiVisit }>("/visits", "POST", payload);
   return res.data;
+};
+
+export const requestVisitCreate = async (payload: {
+  plan_id: string;
+  child_id: string;
+  parent_id: string;
+  start_time: string;
+  end_time: string;
+  location?: string;
+  notes?: string;
+  status?: string;
+}) => {
+  return http<
+    | { success: true; mode: "applied"; data: ApiVisit }
+    | { success: true; mode: "pending"; request: VisitChangeRequest }
+  >("/visits/request-create", "POST", payload);
 };
 
 export const updateVisit = async (

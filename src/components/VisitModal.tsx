@@ -15,41 +15,35 @@ interface VisitModalProps {
 export const VisitModal = ({ mode, event, onClose, onSave, onDelete, onEdit }: VisitModalProps) => {
   const [form, setForm] = useState<VisitEvent>(() => ({
     ...event,
-    id: event?.id || "", // always default to empty string
+    id: event?.id || "",
   }));
 
-  // Sync form whenever event changes (create/update)
   useEffect(() => {
     if (event) {
       setForm((prev) => ({
         ...event,
-        id: event.id || prev.id || "", // preserve backend ID if present
+        id: event.id || prev.id || "",
       }));
     }
   }, [event]);
 
+  const isDeletedEvent = form.type === "deleted";
   const isView = mode === "view";
-  const isEdit = mode === "edit" || mode === "create";
+  const isEdit = (mode === "edit" || mode === "create") && !isDeletedEvent;
+  const disableFields = isView || isDeletedEvent;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div
-        className="bg-card rounded-3xl w-full max-w-md p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()} // <-- STOP clicks from hitting overlay
-      >
-        {/* Header */}
+      <div className="bg-card rounded-3xl w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-xl font-bold text-primary">
-            {mode === "view"
-              ? "View Visit"
-              : mode === "edit"
-              ? "Edit Visit"
-              : "Create Visit"}
+            {mode === "view" ? "View Visit" : mode === "edit" ? "Edit Visit" : "Create Visit"}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>✕</Button>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            ×
+          </Button>
         </div>
 
-        {/* Form */}
         <div className="space-y-3 text-sm">
           <div>
             <label className="block text-sm font-medium">Title / Notes</label>
@@ -58,7 +52,7 @@ export const VisitModal = ({ mode, event, onClose, onSave, onDelete, onEdit }: V
               type="text"
               className="w-full p-2 border rounded"
               value={form.title}
-              disabled={isView}
+              disabled={disableFields}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
           </div>
@@ -70,7 +64,7 @@ export const VisitModal = ({ mode, event, onClose, onSave, onDelete, onEdit }: V
               type="datetime-local"
               className="w-full p-2 border rounded"
               value={DateTime.fromISO(form.start_time).toISO({ suppressSeconds: true, includeOffset: false })}
-              disabled={isView}
+              disabled={disableFields}
               onChange={(e) => setForm({ ...form, start_time: DateTime.fromISO(e.target.value).toISO() })}
             />
           </div>
@@ -82,7 +76,7 @@ export const VisitModal = ({ mode, event, onClose, onSave, onDelete, onEdit }: V
               type="datetime-local"
               className="w-full p-2 border rounded"
               value={DateTime.fromISO(form.end_time).toISO({ suppressSeconds: true, includeOffset: false })}
-              disabled={isView}
+              disabled={disableFields}
               onChange={(e) => setForm({ ...form, end_time: DateTime.fromISO(e.target.value).toISO() })}
             />
           </div>
@@ -94,78 +88,50 @@ export const VisitModal = ({ mode, event, onClose, onSave, onDelete, onEdit }: V
               type="text"
               className="w-full p-2 border rounded"
               value={form.location}
-              disabled={isView}
+              disabled={disableFields}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium">Type</label>
-            <select
-              aria-label="type"
-              className="w-full p-2 border rounded"
-              value={form.type}
-              disabled={isView}
-              onChange={(e) => setForm({ ...form, type: e.target.value as VisitEvent["type"] })}
-            >
+            <select aria-label="type" className="w-full p-2 border rounded" value={form.type} disabled>
               <option value="mine">My event</option>
               <option value="theirs">Their event</option>
-              <option value="deleted">Deleted</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium">Status</label>
-            <input
-              aria-label="status"
-              type="text"
-              className="w-full p-2 border rounded"
-              value={form.status}
-              disabled
-            />
+            <input aria-label="status" type="text" className="w-full p-2 border rounded" value={form.status} disabled />
           </div>
         </div>
 
-        {/* Actions */}
         <div className="mt-6 space-y-2">
           {isEdit && (
-            <Button
-              className="w-full rounded-full"
-              onClick={() => {
-                onSave(form);
-              }}
-            >
+            <Button className="w-full rounded-full" onClick={() => onSave(form)}>
               Save
             </Button>
           )}
 
-          {isView && (
-            <Button
-              className="w-full rounded-full"
-              onClick={onEdit}
-            >
+          {isView && !isDeletedEvent && (
+            <Button className="w-full rounded-full" onClick={onEdit}>
               Edit
             </Button>
           )}
 
-          {/* DELETE BUTTON */}
-          {mode !== "create" && onDelete && (
+          {mode !== "create" && onDelete && !isDeletedEvent && (
             <Button
               variant="destructive"
               className="w-full rounded-full"
               onClick={(e) => {
-                e.stopPropagation(); // prevent modal overlay from capturing click
-                // Always use the latest form.id
+                e.stopPropagation();
                 const idToDelete = form.id;
                 if (!idToDelete) {
                   console.warn("No ID found for deletion");
                   return;
                 }
-
-                // confirm first
                 if (!window.confirm("Are you sure you want to delete this visit?")) return;
-
-                // call delete
                 onDelete(idToDelete);
               }}
             >

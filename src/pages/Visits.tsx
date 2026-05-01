@@ -251,18 +251,23 @@ const handleProposalSubmit = async () => {
     fetchPlans();
   }, [navigate]);
 
-useEffect(() => {
-  if (!activePlan) {
+const refreshVisits = useCallback(async () => {
+  if (!activePlan?.id) {
+    setEvents([]);
     return;
   }
 
-  const fetchVisits = async () => {
+  try {
     const { data } = await api.getVisitsByPlan(activePlan.id, { includeDeleted: true });
     setEvents(mapVisitsToEvents(data, user?.id));
-  };
+  } catch (err) {
+    console.warn("Failed to fetch visits:", err);
+  }
+}, [activePlan?.id, user?.id]);
 
-  fetchVisits();
-}, [activePlan, user?.id]);
+useEffect(() => {
+  void refreshVisits();
+}, [refreshVisits]);
 
 const fetchPendingRequests = useCallback(async () => {
   const planIds = Array.from(
@@ -297,6 +302,10 @@ const fetchPendingRequests = useCallback(async () => {
     setPendingVisitRequests([]);
   }
 }, [activePlan?.id, plans]);
+
+const refreshAfterDecision = useCallback(async () => {
+  await Promise.all([refreshVisits(), fetchPendingRequests()]);
+}, [refreshVisits, fetchPendingRequests]);
 
 useEffect(() => {
   void fetchPendingRequests();
@@ -519,7 +528,7 @@ useEffect(() => {
                 }
 
                 setPendingVisitRequests((prev) => prev.filter((r) => r.id !== request.id));
-                void fetchPendingRequests();
+                await refreshAfterDecision();
                 toast({
                   title: "Request approved",
                   description:
@@ -548,7 +557,7 @@ useEffect(() => {
               try {
                 await api.reviewVisitRequest(request.id, "rejected");
                 setPendingVisitRequests((prev) => prev.filter((r) => r.id !== request.id));
-                void fetchPendingRequests();
+                await refreshAfterDecision();
                 toast({ title: "Request rejected" });
               } catch (err) {
                 console.error("Failed to reject visit request:", err);

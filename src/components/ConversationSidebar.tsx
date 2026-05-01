@@ -107,13 +107,31 @@ const ConversationSidebar = ({
 
     try {
       let matchedUser: { id: string; full_name: string; email: string } | null = null;
+      const normalizedInputEmail = email.trim().toLowerCase();
 
-      if (email.trim()) {
+      if (normalizedInputEmail) {
         try {
-          matchedUser = await api.getUserByEmail(email.trim());
+          matchedUser = await api.getUserByEmail(normalizedInputEmail);
         } catch {
           matchedUser = null;
         }
+      }
+
+      const candidateEmail = (matchedUser?.email ?? normalizedInputEmail).trim().toLowerCase();
+      const duplicateByEmail =
+        candidateEmail.length > 0 &&
+        contacts.some((contact) => (contact.email ?? "").trim().toLowerCase() === candidateEmail);
+      const duplicateByLinkedUser =
+        !!matchedUser?.id &&
+        contacts.some((contact) => contact.linked_user_id === matchedUser.id);
+
+      if (duplicateByEmail || duplicateByLinkedUser) {
+        toast({
+          title: "Contact already exists",
+          description: "This email is already in your contacts.",
+          variant: "destructive",
+        });
+        return;
       }
 
       let contactName: string = name.trim();

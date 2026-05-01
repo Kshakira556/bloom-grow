@@ -332,25 +332,6 @@ const Children = () => {
                 <CardContent className="p-6 space-y-6">
                   <div id="print-area">
                     <div style={{ marginBottom: "16px" }}>
-                    {!selectedChild || selectedChild.vaultMissing ? (
-                      <Card>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedChild?.vaultMissingNote || "No vault exists for this child yet."}
-                        </p>
-                      </Card>
-                    ) : (
-                      <Card>
-                        <div className="space-y-1">
-                          {selectedChild.documents.map((doc, idx) => (
-                            <div key={doc.id || idx} className="flex items-center gap-2 text-sm">
-                              <FileText className="w-4 h-4 text-primary" />
-                              <span>{doc.category} → {doc.subcategory}: {doc.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    )}
-
                       <h1 style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold" }}>
                         CHILD INFORMATION & LEGAL RECORD
                       </h1>

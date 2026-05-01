@@ -7,5 +7,5 @@ export type VisitEvent = {
   start_time: string;
   end_time: string;
   location: string;
-  status: "scheduled" | "completed" | "cancelled";
+  status: "scheduled" | "completed" | "cancelled" | "missed";
 };

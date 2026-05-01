@@ -39,7 +39,7 @@ const mapToCalendarEvents = (events: VisitEvent[]) => {
     const start = DateTime.fromISO(ev.start_time).toJSDate();
     const end = DateTime.fromISO(ev.end_time).toJSDate();
     return {
-      id: ev.id || crypto.randomUUID(), // fallback just in case
+      id: ev.id,
       title: ev.title,
       start,
       end,
@@ -112,6 +112,7 @@ useEffect(() => {
 }, []);
 
 const navigate = useNavigate();
+const isPlanCreator = Boolean(user?.id && activePlan?.created_by === user.id);
 
 const handleProposalSubmit = async () => {
     setProposalError(null);
@@ -191,19 +192,18 @@ const handleProposalSubmit = async () => {
     fetchPlans();
   }, [navigate]);
 
-  useEffect(() => {
-  if (!activePlan) return;if (!activePlan) {
-    navigate("/plans/create");
+useEffect(() => {
+  if (!activePlan) {
     return;
   }
 
   const fetchVisits = async () => {
     const { data } = await api.getVisitsByPlan(activePlan.id);
-    setEvents(mapVisitsToEvents(data));
+    setEvents(mapVisitsToEvents(data, user?.id));
   };
 
   fetchVisits();
-}, [activePlan]);
+}, [activePlan, user?.id]);
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
@@ -292,7 +292,7 @@ const handleProposalSubmit = async () => {
     </Button>
   </div>
 
-  {activePlan && activePlan.invites.length > 0 && (
+  {isPlanCreator && activePlan && activePlan.invites.length > 0 && (
     <div className="mt-2 p-2 text-sm text-muted-foreground border rounded-lg bg-card-light">
       <strong>Invites:</strong>
       <ul className="list-disc list-inside">

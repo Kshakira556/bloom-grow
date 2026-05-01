@@ -240,7 +240,7 @@ export interface ApiVisit {
   end_time: string;
   location: string;
   notes: string;
-  status: "scheduled" | "completed" | "cancelled";
+  status: "scheduled" | "completed" | "cancelled" | "missed";
 }
 
 export async function getVisitsByPlan(
@@ -252,18 +252,22 @@ export async function getVisitsByPlan(
 export const createVisit = async (payload: {
   plan_id: string;
   child_id: string;
+  parent_id: string;
   start_time: string;
   end_time: string;
   location?: string;
   notes?: string;
   status?: string;
 }) => {
-  return http<ApiVisit>("/visits", "POST", payload);
+  const res = await http<{ success: boolean; data: ApiVisit }>("/visits", "POST", payload);
+  return res.data;
 };
 
 export const updateVisit = async (
   id: string,
   payload: Partial<{
+    plan_id: string;
+    child_id: string;
     start_time: string;
     end_time: string;
     location: string;
@@ -271,11 +275,13 @@ export const updateVisit = async (
     status: string;
   }>
 ) => {
-  return http<ApiVisit>(`/visits/${id}`, "PUT", payload);
+  const res = await http<{ success: boolean; data: ApiVisit }>(`/visits/${id}`, "PUT", payload);
+  return res.data;
 };
 
 export const deleteVisit = async (id: string) => {
-  return http<void>(`/visits/${id}`, "DELETE");
+  const res = await http<{ success: boolean; data: { id: string; is_deleted: boolean } }>(`/visits/${id}`, "DELETE");
+  return res.data;
 };
 
 // --------------------

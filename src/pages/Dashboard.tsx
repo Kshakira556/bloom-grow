@@ -85,7 +85,7 @@ export default function Dashboard() {
 
   setCurrentPage(1);
   fetchUnreadMessages();
-}, [activePlan, toast, currentPage]);
+}, [activePlan, toast, currentPage, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -126,7 +126,7 @@ export default function Dashboard() {
     };
 
     fetchPlans();
-  }, [toast]);
+  }, [toast, user]);
 
   useEffect(() => {
   const fetchVisits = async (retry = 0) => {
@@ -138,7 +138,7 @@ export default function Dashboard() {
     setIsLoadingVisits(true);
     try {
       const { data } = await api.getVisitsByPlan(activePlan.id);
-      setEvents(mapVisitsToEvents(data));
+      setEvents(mapVisitsToEvents(data, user.id));
     } catch (err) {
       if (err instanceof Error && err.message === "Unauthorized") {
         setEvents([]);
@@ -165,7 +165,7 @@ export default function Dashboard() {
   };
 
   fetchVisits();
-}, [activePlan, toast]);
+}, [activePlan, toast, user]);
 
   const remainingVisitsCount = events.length;
   const [children, setChildren] = useState<api.Child[]>([]);
@@ -185,7 +185,7 @@ export default function Dashboard() {
     };
 
     fetchChildren();
-  }, []);
+  }, [user]);
 
   const quickLinks = [
     {

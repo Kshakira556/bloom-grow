@@ -1,11 +1,14 @@
 import type { ApiVisit } from "@/lib/api";
 import type { VisitEvent } from "@/types/visits";
 
-export const mapVisitsToEvents = (visits: ApiVisit[]): VisitEvent[] => {
+export const mapVisitsToEvents = (
+  visits: ApiVisit[],
+  currentUserId?: string
+): VisitEvent[] => {
   return visits.map((v) => ({
     id: v.id,
     title: v.notes || "Visit",
-    type: "mine", // temporary until API provides ownership
+    type: currentUserId && v.parent_id === currentUserId ? "mine" : "theirs",
     planId: v.plan_id,
     start_time: v.start_time,
     end_time: v.end_time,

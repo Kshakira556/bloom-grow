@@ -5,7 +5,7 @@ import { Mail, Lock } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import SignInPng from "@/assets/images/sign-in-page.png";
+import SignInPng from "@/assets/images/sign-in-page.webp";
 import { requiresPaywall } from "@/lib/billing";
 import { acceptPlanInvite } from "@/lib/api";
 

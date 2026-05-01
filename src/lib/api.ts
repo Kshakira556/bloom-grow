@@ -87,6 +87,7 @@ type RegisterPayload = {
   role?: UserRole;
   phone?: string;
   account_type?: "trial" | "paid";
+  invite_id?: string;
 };
 
 type RegisterResponse = {
@@ -138,6 +139,7 @@ export interface PlanInvitePayload {
 export interface PlanInvite {
   id: string;
   plan_id: string;
+  family_id?: string | null;
   email: string;
   status: "pending" | "accepted" | "declined";
   created_at: string;
@@ -419,6 +421,7 @@ export const createChild = async (payload: {
   last_name?: string;
   birth_date?: string;
   notes?: string;
+  plan_id?: string;
 }) => {
   return http<{ child: Child }>("/children", "POST", payload);
 };

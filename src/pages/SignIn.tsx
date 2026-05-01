@@ -3,14 +3,16 @@ import { AuthPage } from "@/components/auth/AuthPage";
 import { AuthForm, AuthField } from "@/components/auth/AuthForm";
 import { Mail, Lock } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import SignInPng from "@/assets/images/sign-in-page.png";
 import { requiresPaywall } from "@/lib/billing";
+import { acceptPlanInvite } from "@/lib/api";
 
 export default function SignIn() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +27,19 @@ export default function SignIn() {
       if (!loggedInUser) {
         setError("Invalid email or password");
         return;
+      }
+
+      const inviteId = searchParams.get("invite_id")?.trim();
+      if (inviteId && loggedInUser.role === "parent") {
+        try {
+          await acceptPlanInvite(inviteId);
+          navigate("/visits", { replace: true });
+          return;
+        } catch (inviteError) {
+          console.error("Invite acceptance failed after sign-in:", inviteError);
+          setError("Signed in, but invite acceptance failed. Please retry from the invite link.");
+          return;
+        }
       }
 
       if (requiresPaywall(loggedInUser)) {

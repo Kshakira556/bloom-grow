@@ -106,38 +106,45 @@ const ConversationSidebar = ({
     }
 
     try {
-      const allUsers = await api.getUsers();
-      const matchedUser = allUsers.find((u) => u.email === email.trim() || u.phone === phone.trim());
+      let matchedUser: { id: string; full_name: string; email: string } | null = null;
+
+      if (email.trim()) {
+        try {
+          matchedUser = await api.getUserByEmail(email.trim());
+        } catch {
+          matchedUser = null;
+        }
+      }
 
       let contactName: string = name.trim();
 
       if (matchedUser) {
-  contactName = matchedUser.full_name;
+        contactName = matchedUser.full_name;
 
-  await api.inviteUser({
-    name: contactName,
-    email: matchedUser.email,
-    phone: matchedUser.phone,
-    relationship: relationship || "Co-Parent",
-    linked_user_id: matchedUser.id, // ✅ link to existing user
-  });
+        await api.inviteUser({
+          name: contactName,
+          email: matchedUser.email,
+          phone: phone.trim() || undefined,
+          relationship: relationship || "Co-Parent",
+          linked_user_id: matchedUser.id,
+        });
 
-  toast({ title: "User found", description: `${contactName} added to conversations.` });
-    } else {
-      const contactPayload: api.InviteUserPayload = {
-        name: contactName,
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
-        relationship: relationship || "Co-Parent",
-      };
+        toast({ title: "User found", description: `${contactName} added to conversations.` });
+      } else {
+        const contactPayload: api.InviteUserPayload = {
+          name: contactName,
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
+          relationship: relationship || "Co-Parent",
+        };
 
-      await api.inviteUser({
-        ...contactPayload,
-        linked_user_id: null, // ✅ explicitly null
-      });
+        await api.inviteUser({
+          ...contactPayload,
+          linked_user_id: null,
+        });
 
-      toast({ title: "Contact added", description: `${contactName} will receive an invitation.` });
-    }
+        toast({ title: "Contact added", description: `${contactName} will receive an invitation.` });
+      }
 
       const refreshedContacts = await api.getContacts();
       setContacts(refreshedContacts);

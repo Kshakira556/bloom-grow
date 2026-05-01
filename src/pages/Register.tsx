@@ -3,13 +3,14 @@ import { AuthPage } from "@/components/auth/AuthPage";
 import { AuthForm, AuthField } from "@/components/auth/AuthForm";
 import { User, Mail, Lock, Shield, Phone } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import RegisterPng from "@/assets/images/register-page.jpeg"
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [fullName, setFullName] = useState("");
 const [email, setEmail] = useState("");
@@ -23,6 +24,8 @@ const handleRegister = async (e: React.FormEvent) => {
   e.preventDefault();
   setError("");
   try {
+    const inviteId = searchParams.get("invite_id")?.trim() || undefined;
+
     const user = await register({
       full_name: fullName,
       email,
@@ -30,7 +33,13 @@ const handleRegister = async (e: React.FormEvent) => {
       role,
       phone,
       account_type: accountType,
+      invite_id: inviteId,
     });
+
+    if (inviteId) {
+      navigate("/visits", { replace: true });
+      return;
+    }
 
     if (user.role === "admin") navigate("/admin/system", { replace: true });
     else if (user.role === "mediator") navigate("/admin/moderator", { replace: true });

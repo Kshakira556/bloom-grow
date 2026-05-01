@@ -5,9 +5,10 @@ import * as api from "@/lib/api";
 interface AddChildModalProps {
   onClose: () => void;
   onCreated: () => void;
+  planId?: string | null;
 }
 
-export const AddChildModal = ({ onClose, onCreated }: AddChildModalProps) => {
+export const AddChildModal = ({ onClose, onCreated, planId }: AddChildModalProps) => {
   const [first_name, setFirstName] = useState("");
   const [last_name, setLastName] = useState("");
   const [birth_date, setBirthDate] = useState("");
@@ -25,6 +26,7 @@ export const AddChildModal = ({ onClose, onCreated }: AddChildModalProps) => {
         last_name: last_name || undefined,
         birth_date: birth_date || undefined,
         notes: notes || undefined,
+        plan_id: planId || undefined,
       });
 
       onCreated();

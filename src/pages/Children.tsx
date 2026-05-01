@@ -20,6 +20,7 @@ const Children = () => {
   // New state
   const [selectedChild, setSelectedChild] = useState<VaultAggregateWithMissing | null>(null);
   const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
+  const [defaultPlanId, setDefaultPlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const restrictedNames = selectedChild?.legal?.contactType || "";
   const [showAddChild, setShowAddChild] = useState(false);
@@ -98,6 +99,20 @@ const Children = () => {
 
   useEffect(() => {
     fetchChildren();
+  }, []);
+
+  useEffect(() => {
+    const fetchDefaultPlanId = async () => {
+      try {
+        const { plans } = await api.getPlans();
+        setDefaultPlanId(plans?.[0]?.id ?? null);
+      } catch (err) {
+        console.warn("Unable to resolve default plan for add-child flow:", err);
+        setDefaultPlanId(null);
+      }
+    };
+
+    fetchDefaultPlanId();
   }, []);
 
   const categories = {
@@ -861,8 +876,12 @@ const Children = () => {
                               work: g.work?.trim() || undefined,
                             })),
                           emergencyContacts: selectedChild.emergencyContacts
-                            .filter(e => e.name && e.phone)
-                            .map(e => ({ ...e, name: e.name.trim(), phone: e.phone.trim() })),
+                            .map((e, index) => ({
+                              ...e,
+                              name: e.name?.trim() || `Emergency Contact ${index + 1}`,
+                              phone: e.phone?.trim() || "",
+                            }))
+                            .filter(e => e.phone.length > 0),
                           documents: selectedChild.documents.filter(d => d.name && (d.file || d.fileUrl))
                         };
 
@@ -894,6 +913,7 @@ const Children = () => {
       </main>
       {showAddChild && (
         <AddChildModal
+          planId={defaultPlanId}
           onClose={() => setShowAddChild(false)}
           onCreated={async () => {
             await fetchChildren();     // refresh dropdown

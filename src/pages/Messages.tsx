@@ -107,22 +107,29 @@ const Messages = () => {
   useEffect(() => {
     if (!activePlan || !activePlan.invites || invitesResolved) return;
 
-    const fetchAllUsers = async () => {
+    const resolveInvites = async () => {
       try {
-        const allUsers = await api.getUsers();
-        const updatedInvites = (activePlan.invites as PlanInviteWithResolved[]).map((inv) => {
-          const matchedUser = allUsers.find((u) => u.email === inv.email);
-          return matchedUser ? { ...inv, resolved_user_id: matchedUser.id } : inv;
-        });
+        const updatedInvites = await Promise.all(
+          (activePlan.invites as PlanInviteWithResolved[]).map(async (inv) => {
+            try {
+              const matchedUser = await api.getUserByEmail(inv.email);
+              return { ...inv, resolved_user_id: matchedUser.id };
+            } catch {
+              return inv;
+            }
+          }),
+        );
 
-        setActivePlan({ ...activePlan, invites: updatedInvites });
+        setActivePlan((prev) =>
+          prev && prev.id === activePlan.id ? { ...prev, invites: updatedInvites } : prev,
+        );
         setInvitesResolved(true);
       } catch (err) {
         console.error("Failed to fetch users to resolve invites:", err);
       }
     };
 
-    fetchAllUsers();
+    resolveInvites();
   }, [activePlan, invitesResolved]);
 
   useEffect(() => {

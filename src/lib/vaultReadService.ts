@@ -3,7 +3,16 @@ import { http } from "@/lib/http"
 import { VaultAggregate } from "@/types/vaultAggregate"
 
 /* -------------------- Backend response shapes -------------------- */
-type VaultResponse = { id: string; full_name?: string; nickname?: string; birth_date?: string; id_passport_no?: string; address?: string }
+type VaultResponse = {
+  id: string
+  full_name?: string
+  nickname?: string
+  dob?: string
+  birth_date?: string
+  id_passport_no?: string
+  home_address?: string
+  address?: string
+}
 type GuardianResponse = { id: string; name: string; cell_no?: string; work_no?: string }
 type LegalResponse = { id: string; custody_type?: string; case_no?: string; valid_until?: string; contact_type?: string }
 type MedicalResponse = { id: string; blood_type?: string; allergies?: string; medication?: string; doctor?: string }
@@ -83,13 +92,13 @@ export const vaultReadService = {
         ? http<{ safety: SafetyResponse }>(`/vaults/safety/${discovery.safety.id}`,"GET").then(r => r.safety)
         : null,
 
-      discovery.emergency_contacts?.exists && discovery.emergency_contacts.id
-        ? http<{ contact: EmergencyResponse }>(`/vaults/emergency-contacts/${discovery.emergency_contacts.id}`,"GET").then(r => [r.contact])
-        : [],
+      http<{ contacts: EmergencyResponse[] }>(`/vaults/${vaultRes.id}/emergency-contacts`, "GET")
+        .then(r => r.contacts)
+        .catch(() => []),
 
-      discovery.documents?.exists && discovery.documents.id
-        ? http<{ document: DocumentResponse }>(`/vaults/documents/${discovery.documents.id}`, "GET").then(r => [r.document])
-        : []
+      http<{ documents: DocumentResponse[] }>(`/vaults/${vaultRes.id}/documents`, "GET")
+        .then(r => r.documents)
+        .catch(() => [])
     ])
 
     return {
@@ -98,9 +107,9 @@ export const vaultReadService = {
       vault: {
         fullName: vaultRes.full_name || childName || "Unnamed Child",
         nickname: vaultRes.nickname,
-        dob: vaultRes.birth_date,
+        dob: vaultRes.dob || vaultRes.birth_date,
         idPassportNo: vaultRes.id_passport_no,
-        homeAddress: vaultRes.address
+        homeAddress: vaultRes.home_address || vaultRes.address
       },
       guardians: (guardiansRes || []).map(g => ({ id: g.id, name: g.name, cell: g.cell_no, work: g.work_no })),
       legal: legalRes

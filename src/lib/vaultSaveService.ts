@@ -1,5 +1,6 @@
 import { http } from "@/lib/http"
 import { VaultAggregate } from "@/types/vaultAggregate"
+import { uploadVaultDocument } from "@/lib/supabaseStorage"
 
 /* -------------------- Backend request shapes -------------------- */
 type GuardianRequest = {
@@ -34,9 +35,22 @@ type EmergencyRequest = {
 
 type DocumentRequest = {
   name: string
-  file_url?: string
+  file_url: string
   category?: string
   subcategory?: string
+}
+
+type DocumentResponse = {
+  id: string
+  name: string
+  file_url: string
+  category?: string
+  subcategory?: string
+}
+
+type CreateVaultResponse = {
+  id?: string
+  vault?: { id: string }
 }
 
 /* -------------------- Vault Save Service -------------------- */
@@ -64,9 +78,10 @@ export const vaultSaveService = {
       }
 
       try {
-        const createdVault = await http<{ id: string }>("/vaults", "POST", payload)
-        if (!createdVault?.id) throw new Error("Vault creation failed: no ID returned")
-        vaultId = createdVault.id
+        const createdVault = await http<CreateVaultResponse>("/vaults", "POST", payload)
+        const createdVaultId = createdVault?.id || createdVault?.vault?.id
+        if (!createdVaultId) throw new Error("Vault creation failed: no ID returned")
+        vaultId = createdVaultId
         aggregate.vaultId = vaultId
       } catch (err) {
         console.error("[Vault Save] Failed to create vault:", err)
@@ -74,7 +89,20 @@ export const vaultSaveService = {
       }
     }
 
+    if (!vaultId) {
+      throw new Error("Vault ID is missing");
+    }
+
     try {
+      await http<{ vault: { id: string } }>(`/vaults/${vaultId}`, "PUT", {
+        child_id: aggregate.childId,
+        full_name: aggregate.vault.fullName,
+        nickname: aggregate.vault.nickname?.trim() || undefined,
+        dob: aggregate.vault.dob?.trim() || undefined,
+        id_passport_no: aggregate.vault.idPassportNo?.trim() || undefined,
+        home_address: aggregate.vault.homeAddress?.trim() || undefined,
+      })
+
       // --------------------
       // Parallel upserts: Guardians, Legal, Medical, Safety, Emergency
       // --------------------
@@ -299,14 +327,32 @@ export const vaultSaveService = {
       for (const d of aggregate.documents || []) {
         if (!d.id) {
           try {
+            const uploadedFileUrl =
+              d.fileUrl ||
+              (d.file
+                ? await uploadVaultDocument({
+                    file: d.file,
+                    childId: aggregate.childId,
+                    vaultId,
+                  })
+                : "");
+
+            if (!uploadedFileUrl) {
+              throw new Error(`Missing file URL for document "${d.name || d.file?.name || "Unnamed"}"`);
+            }
+
             await retry(async () => {
               console.log(`[Vault Save] childId=${aggregate.childId} vaultId=${vaultId} -> saving document "${d.name}"`);
-              await http<DocumentRequest>(`/vaults/${vaultId}/documents`, "POST", {
+              const response = await http<{ document: DocumentResponse }>(`/vaults/${vaultId}/documents`, "POST", {
                 name: d.name,
-                file_url: d.fileUrl,
+                file_url: uploadedFileUrl,
                 category: d.category,
                 subcategory: d.subcategory
               });
+
+              d.id = response.document.id;
+              d.fileUrl = response.document.file_url;
+              d.file = undefined;
             }, 2, 300); // 2 retries, 300ms delay
           } catch (err) {
             console.error(`[Vault Save] Failed to save document "${d.name}", continuing`, err);

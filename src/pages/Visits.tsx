@@ -491,6 +491,7 @@ const handleProposalSubmit = async () => {
       </main>
       {showAddChild && (
         <AddChildModal
+          planId={activePlan?.id ?? null}
           onClose={() => setShowAddChild(false)}
           onCreated={async () => {
             // refresh children after creation

@@ -13,6 +13,7 @@ type AuthContextValue = {
     role?: "parent" | "mediator" | "admin";
     phone?: string;
     account_type?: "trial" | "paid";
+    invite_id?: string;
   }) => Promise<SafeUser>;
   logout: () => void;
 };

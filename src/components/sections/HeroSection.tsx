@@ -1,4 +1,4 @@
-import img from "@/assets/images/index-page.webp"
+import img from "@/assets/images/index-page.png"
 import { delayClass } from "@/utils/animation";
 import { Button } from "../ui/button";
 

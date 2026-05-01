@@ -17,44 +17,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react()],
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return undefined;
-
-          if (
-            id.includes("react") ||
-            id.includes("react-dom") ||
-            id.includes("react-router")
-          ) {
-            return "vendor-react";
-          }
-
-          if (
-            id.includes("@radix-ui") ||
-            id.includes("lucide-react") ||
-            id.includes("class-variance-authority") ||
-            id.includes("clsx") ||
-            id.includes("tailwind-merge")
-          ) {
-            return "vendor-ui";
-          }
-
-          if (
-            id.includes("date-fns") ||
-            id.includes("luxon") ||
-            id.includes("jspdf") ||
-            id.includes("html2canvas")
-          ) {
-            return "vendor-pdf-dates";
-          }
-
-          return "vendor";
-        },
-      },
-    },
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

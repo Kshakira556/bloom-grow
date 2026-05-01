@@ -191,11 +191,24 @@ export async function getPlans(): Promise<{ plans: Plan[] }> {
   }
 }
 
+type CreatePlanResponse = Plan | { plan: Plan };
+
 export const createPlan = async (payload: {
   title: string;
   created_by: string;
 }) => {
-  return http<Plan>("/plans", "POST", payload);
+  const response = await http<CreatePlanResponse>("/plans", "POST", payload);
+
+  if (
+    response &&
+    typeof response === "object" &&
+    "plan" in response &&
+    response.plan
+  ) {
+    return response.plan;
+  }
+
+  return response;
 };
 
 export const getPlanById = async (id: string): Promise<{ plan: FullPlan }> => {

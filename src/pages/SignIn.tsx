@@ -13,6 +13,7 @@ export default function SignIn() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const inviteId = searchParams.get("invite_id")?.trim() ?? "";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +30,6 @@ export default function SignIn() {
         return;
       }
 
-      const inviteId = searchParams.get("invite_id")?.trim();
       if (inviteId && loggedInUser.role === "parent") {
         try {
           await acceptPlanInvite(inviteId);
@@ -74,6 +74,17 @@ export default function SignIn() {
         showForgotPassword
         error={error}
       />
+      {inviteId && (
+        <div className="mt-4 text-sm text-center">
+          <button
+            type="button"
+            className="text-primary hover:underline"
+            onClick={() => navigate(`/register?invite_id=${encodeURIComponent(inviteId)}`)}
+          >
+            Don't have a password yet? Register with this invite
+          </button>
+        </div>
+      )}
     </AuthPage>
   );
 }

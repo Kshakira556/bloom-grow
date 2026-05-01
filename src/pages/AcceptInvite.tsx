@@ -12,6 +12,7 @@ export default function AcceptInvite() {
   const { isAuthenticated } = useAuth();
   const [status, setStatus] = useState<InviteStatus>("idle");
   const [error, setError] = useState("");
+  const inviteQuery = inviteId ? `?invite_id=${encodeURIComponent(inviteId)}` : "";
 
   useEffect(() => {
     if (!inviteId) {
@@ -21,7 +22,6 @@ export default function AcceptInvite() {
     }
 
     if (!isAuthenticated) {
-      navigate(`/signin?invite_id=${encodeURIComponent(inviteId)}`, { replace: true });
       return;
     }
 
@@ -61,6 +61,35 @@ export default function AcceptInvite() {
           >
             Go to Visits
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
+        <div className="bg-card rounded-2xl p-6 w-full max-w-md text-center">
+          <h1 className="text-xl font-semibold mb-2">You were invited</h1>
+          <p className="text-sm text-muted-foreground mb-5">
+            If you already have an account, sign in. If you're new, register first to create a password.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-full bg-primary text-primary-foreground"
+              onClick={() => navigate(`/signin${inviteQuery}`, { replace: true })}
+            >
+              I already have an account
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-full border border-border"
+              onClick={() => navigate(`/register${inviteQuery}`, { replace: true })}
+            >
+              I need to register
+            </button>
+          </div>
         </div>
       </div>
     );

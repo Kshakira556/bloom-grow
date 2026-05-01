@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, Plus, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import type { VisitEvent } from "@/types/visits";
 import type { PlanInvite } from "@/lib/api";
@@ -18,6 +18,7 @@ import { VisitModal } from "@/components/VisitModal";
 import { useAuthContext } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { AddChildModal } from "@/components/AddChildModal";
+import { useToast } from "@/hooks/use-toast";
 
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
 const locales = { 'en-US': enUS };
@@ -48,6 +49,44 @@ const mapToCalendarEvents = (events: VisitEvent[]) => {
   });
 };
 
+const formatRequestDateTime = (value: unknown): string | null => {
+  if (typeof value !== "string" || !value) return null;
+  const dt = DateTime.fromISO(value);
+  return dt.isValid ? dt.toFormat("dd LLL yyyy, hh:mm a") : value;
+};
+
+const getVisitRequestSummary = (request: api.VisitChangeRequest): string => {
+  if (request.request_type === "delete") {
+    return "Requested deletion of this visit.";
+  }
+
+  const proposed =
+    request.proposed_data && typeof request.proposed_data === "object"
+      ? (request.proposed_data as Record<string, unknown>)
+      : {};
+
+  const parts: string[] = [];
+  const start = formatRequestDateTime(proposed.start_time);
+  const end = formatRequestDateTime(proposed.end_time);
+  if (start) parts.push(`Start: ${start}`);
+  if (end) parts.push(`End: ${end}`);
+  if (typeof proposed.location === "string" && proposed.location.trim()) {
+    parts.push(`Location: ${proposed.location.trim()}`);
+  }
+  if (typeof proposed.status === "string" && proposed.status.trim()) {
+    parts.push(`Status: ${proposed.status.trim()}`);
+  }
+  if (typeof proposed.notes === "string" && proposed.notes.trim()) {
+    const notes =
+      proposed.notes.length > 100
+        ? `${proposed.notes.slice(0, 97)}...`
+        : proposed.notes;
+    parts.push(`Notes: ${notes}`);
+  }
+
+  return parts.length > 0 ? parts.join(" • ") : "Requested changes to visit details.";
+};
+
 const Visits = () => {
   const [plansOpen, setPlansOpen] = useState(false);
   const { user } = useAuthContext();
@@ -63,12 +102,14 @@ const Visits = () => {
   const [plans, setPlans] = useState<api.Plan[]>([]);
   const [invites, setInvites] = useState<PlanInvite[]>([]);
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
+  const [pendingVisitRequests, setPendingVisitRequests] = useState<api.VisitChangeRequest[]>([]);
 
   const [events, setEvents] = useState<VisitEvent[]>([]);
   const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
   const [showAddChild, setShowAddChild] = useState(false);
   const [selectedChild, setSelectedChild] = useState<{ id: string; name: string } | null>(null);
   const [loadingChildren, setLoadingChildren] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
   const fetchChildren = async () => {
@@ -205,6 +246,55 @@ useEffect(() => {
   fetchVisits();
 }, [activePlan, user?.id]);
 
+const fetchPendingRequests = useCallback(async () => {
+  if (!activePlan?.id) {
+    setPendingVisitRequests([]);
+    return;
+  }
+
+  try {
+    const requests = await api.getPendingVisitRequests(activePlan.id);
+    setPendingVisitRequests(requests);
+  } catch (err) {
+    console.warn("Failed to fetch pending visit requests:", err);
+    setPendingVisitRequests([]);
+  }
+}, [activePlan?.id]);
+
+useEffect(() => {
+  void fetchPendingRequests();
+}, [fetchPendingRequests]);
+
+useEffect(() => {
+  if (!activePlan?.id) return;
+
+  const pollIntervalMs = 20000;
+  const intervalId = window.setInterval(() => {
+    if (document.visibilityState === "visible") {
+      void fetchPendingRequests();
+    }
+  }, pollIntervalMs);
+
+  const handleFocus = () => {
+    void fetchPendingRequests();
+  };
+
+  const handleVisibility = () => {
+    if (document.visibilityState === "visible") {
+      void fetchPendingRequests();
+    }
+  };
+
+  window.addEventListener("focus", handleFocus);
+  document.addEventListener("visibilitychange", handleVisibility);
+
+  return () => {
+    window.clearInterval(intervalId);
+    window.removeEventListener("focus", handleFocus);
+    document.removeEventListener("visibilitychange", handleVisibility);
+  };
+}, [activePlan?.id, fetchPendingRequests]);
+
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
@@ -246,7 +336,11 @@ useEffect(() => {
               setActivePlan(fullPlan);
             } catch (err) {
               console.error("Failed to fetch full plan:", err);
-              alert("Unable to fetch full plan details.");
+              toast({
+                title: "Failed to load plan",
+                description: "Unable to fetch full plan details.",
+                variant: "destructive",
+              });
               setActivePlan(null);
             }
           }}
@@ -298,7 +392,7 @@ useEffect(() => {
       <ul className="list-disc list-inside">
         {activePlan.invites.map((invite) => (
           <li key={invite.id}>
-            {invite.email} � {invite.status}
+            {invite.email} - {invite.status}
           </li>
         ))}
       </ul>
@@ -330,12 +424,95 @@ useEffect(() => {
               const { plans } = await api.getPlans();
               setPlans(plans);
             } catch (err) {
-              alert("Failed to accept invite");
+              toast({
+                title: "Invite acceptance failed",
+                description: "Please try again.",
+                variant: "destructive",
+              });
             }
           }}
         >
           Accept
         </Button>
+      </div>
+    ))}
+  </div>
+)}
+              {pendingVisitRequests.length > 0 && (
+  <div className="mb-4 p-4 border rounded-2xl bg-blue-50">
+    <p className="font-semibold text-sm mb-2">Visit changes awaiting your decision</p>
+
+    {pendingVisitRequests.map((request) => (
+      <div key={request.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3 last:mb-0">
+        <div className="text-sm">
+          <p className="font-medium">
+            {request.request_type === "update" ? "Visit update request" : "Visit delete request"}
+          </p>
+          <p className="text-muted-foreground">{getVisitRequestSummary(request)}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={async () => {
+              try {
+                const result = await api.reviewVisitRequest(request.id, "approved");
+
+                if (request.request_type === "delete" && result.data && "id" in result.data) {
+                  const deleted = result.data as { id: string; is_deleted: boolean };
+                  setEvents((prev) => prev.filter((ev) => ev.id !== deleted.id));
+                }
+
+                if (request.request_type === "update" && result.data && "plan_id" in result.data) {
+                  const updated = result.data as api.ApiVisit;
+                  const mapped = mapVisitsToEvents([updated], user?.id)[0];
+                  if (mapped) {
+                    setEvents((prev) => prev.map((ev) => (ev.id === mapped.id ? mapped : ev)));
+                  }
+                }
+
+                setPendingVisitRequests((prev) => prev.filter((r) => r.id !== request.id));
+                void fetchPendingRequests();
+                toast({
+                  title: "Request approved",
+                  description:
+                    request.request_type === "delete"
+                      ? "The visit was deleted."
+                      : "The visit was updated.",
+                });
+              } catch (err) {
+                console.error("Failed to approve visit request:", err);
+                toast({
+                  title: "Approval failed",
+                  description: "Failed to approve request.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            Approve
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              try {
+                await api.reviewVisitRequest(request.id, "rejected");
+                setPendingVisitRequests((prev) => prev.filter((r) => r.id !== request.id));
+                void fetchPendingRequests();
+                toast({ title: "Request rejected" });
+              } catch (err) {
+                console.error("Failed to reject visit request:", err);
+                toast({
+                  title: "Rejection failed",
+                  description: "Failed to reject request.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            Reject
+          </Button>
+        </div>
       </div>
     ))}
   </div>
@@ -384,17 +561,28 @@ useEffect(() => {
                   onEdit={() => setModalMode("edit")}
                   onSave={async (updatedEvent) => {
   if (!activePlan || !selectedChild || !user?.id) {
-  alert("Missing required context (plan, child, or user).");
+  toast({
+    title: "Missing required data",
+    description: "Plan, child, or user is missing.",
+    variant: "destructive",
+  });
   return;
 }
 
   // Explicitly handle create vs update
   const isCreate = !updatedEvent.id || updatedEvent.id === "";
 
-  const payload = {
+  const createPayload = {
     plan_id: activePlan.id,
     child_id: selectedChild.id,
     parent_id: user.id,
+    start_time: updatedEvent.start_time,
+    end_time: updatedEvent.end_time,
+    location: updatedEvent.location || "",
+    notes: updatedEvent.title || "",
+    status: updatedEvent.status || "scheduled",
+  };
+  const updatePayload = {
     start_time: updatedEvent.start_time,
     end_time: updatedEvent.end_time,
     location: updatedEvent.location || "",
@@ -407,11 +595,11 @@ useEffect(() => {
 
     if (isCreate) {
       // CREATE
-      const created = await api.createVisit(payload);
-
-      finalEvent = {
+      const created = await api.createVisit(createPayload);
+      const mappedCreated = mapVisitsToEvents([created], user.id)[0];
+      finalEvent = mappedCreated ?? {
         ...updatedEvent,
-        id: created.id, // guaranteed backend ID
+        id: created.id,
         title: created.notes || updatedEvent.title || "Visit",
         status: created.status || "scheduled",
       };
@@ -420,37 +608,63 @@ useEffect(() => {
       setModalEvent(finalEvent);
       setModalMode("view");
     } else {
-      // UPDATE
-      const updated = await api.updateVisit(updatedEvent.id, payload);
+      const updateResult = await api.requestVisitEdit(updatedEvent.id, updatePayload);
 
-      finalEvent = {
+      if (updateResult.mode === "pending") {
+        setModalMode(null);
+        setModalEvent(null);
+        toast({
+          title: "Edit request sent",
+          description: "Waiting for the other parent to approve.",
+        });
+        return;
+      }
+
+      const mappedUpdated = mapVisitsToEvents([updateResult.data], user.id)[0];
+      finalEvent = mappedUpdated ?? {
         ...updatedEvent,
-        id: updated.id, // ensure using backend ID
-        title: updated.notes || updatedEvent.title || "Visit",
-        status: updated.status || "scheduled",
+        id: updateResult.data.id,
+        title: updateResult.data.notes || updatedEvent.title || "Visit",
+        status: updateResult.data.status || "scheduled",
         day: (DateTime.fromISO(updatedEvent.start_time).weekday + 6) % 7,
       };
 
-      setEvents((prev) =>
-        prev.map((ev) => (ev.id === updatedEvent.id ? finalEvent : ev))
-      );
+      setEvents((prev) => prev.map((ev) => (ev.id === updatedEvent.id ? finalEvent : ev)));
       setModalEvent(finalEvent);
     }
   } catch (err) {
     console.error("Failed to save visit:", err);
-    alert("Failed to save visit. Check all fields.");
+    toast({
+      title: "Failed to save visit",
+      description: "Check all fields and try again.",
+      variant: "destructive",
+    });
   }
 }}
 
                   onDelete={async (id) => {
                     try {
-                      await api.deleteVisit(id);
-                      setEvents((prev) => prev.filter((ev) => ev.id !== id));
+                      const result = await api.requestVisitDelete(id);
+                      if (result.mode === "pending") {
+                        setModalMode(null);
+                        setModalEvent(null);
+                        toast({
+                          title: "Delete request sent",
+                          description: "Waiting for the other parent to approve.",
+                        });
+                        return;
+                      }
+
+                      setEvents((prev) => prev.filter((ev) => ev.id !== result.data.id));
                       setModalMode(null);
                       setModalEvent(null);
                     } catch (err) {
                       console.error("Failed to delete visit:", err);
-                      alert("Failed to delete visit. Please try again.");
+                      toast({
+                        title: "Failed to delete visit",
+                        description: "Please try again.",
+                        variant: "destructive",
+                      });
                     }
                   }}
                 />

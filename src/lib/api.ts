@@ -243,6 +243,20 @@ export interface ApiVisit {
   status: "scheduled" | "completed" | "cancelled" | "missed";
 }
 
+export interface VisitChangeRequest {
+  id: string;
+  visit_id: string;
+  plan_id: string;
+  requested_by: string;
+  request_type: "update" | "delete";
+  proposed_data?: Record<string, unknown> | null;
+  status: "pending" | "approved" | "rejected";
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+  applied_at?: string | null;
+}
+
 export async function getVisitsByPlan(
   planId: string
 ): Promise<{ success: boolean; data: ApiVisit[] }> {
@@ -282,6 +296,49 @@ export const updateVisit = async (
 export const deleteVisit = async (id: string) => {
   const res = await http<{ success: boolean; data: { id: string; is_deleted: boolean } }>(`/visits/${id}`, "DELETE");
   return res.data;
+};
+
+export const requestVisitEdit = async (
+  id: string,
+  payload: Partial<{
+    start_time: string;
+    end_time: string;
+    location: string;
+    notes: string;
+    status: string;
+  }>,
+) => {
+  return http<
+    | { success: true; mode: "applied"; data: ApiVisit }
+    | { success: true; mode: "pending"; request: VisitChangeRequest }
+  >(`/visits/${id}/request-edit`, "POST", payload);
+};
+
+export const requestVisitDelete = async (id: string) => {
+  return http<
+    | { success: true; mode: "applied"; data: { id: string; is_deleted: boolean } }
+    | { success: true; mode: "pending"; request: VisitChangeRequest }
+  >(`/visits/${id}/request-delete`, "POST");
+};
+
+export const getPendingVisitRequests = async (planId: string) => {
+  const res = await http<{ success: boolean; requests: VisitChangeRequest[] }>(
+    `/visits/plan/${planId}/requests`,
+    "GET",
+  );
+  return res.requests ?? [];
+};
+
+export const reviewVisitRequest = async (
+  requestId: string,
+  decision: "approved" | "rejected",
+) => {
+  return http<{
+    success: boolean;
+    mode: "approved_applied" | "rejected";
+    request: VisitChangeRequest;
+    data: ApiVisit | { id: string; is_deleted: boolean } | null;
+  }>(`/visits/requests/${requestId}/review`, "POST", { decision });
 };
 
 // --------------------

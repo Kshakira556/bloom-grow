@@ -8,7 +8,15 @@ export const mapVisitsToEvents = (
   return visits.map((v) => ({
     id: v.id,
     title: v.notes || "Visit",
-    type: v.is_deleted ? "deleted" : (currentUserId && v.parent_id === currentUserId ? "mine" : "theirs"),
+    type:
+      v.is_deleted === true ||
+      v.is_deleted === "true" ||
+      v.is_deleted === "t" ||
+      v.is_deleted === 1
+        ? "deleted"
+        : currentUserId && v.parent_id === currentUserId
+        ? "mine"
+        : "theirs",
     planId: v.plan_id,
     start_time: v.start_time,
     end_time: v.end_time,

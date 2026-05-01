@@ -265,19 +265,38 @@ useEffect(() => {
 }, [activePlan, user?.id]);
 
 const fetchPendingRequests = useCallback(async () => {
-  if (!activePlan?.id) {
+  const planIds = Array.from(
+    new Set([
+      ...plans.map((plan) => plan.id),
+      ...(activePlan?.id ? [activePlan.id] : []),
+    ]),
+  );
+
+  if (planIds.length === 0) {
     setPendingVisitRequests([]);
     return;
   }
 
   try {
-    const requests = await api.getPendingVisitRequests(activePlan.id);
-    setPendingVisitRequests(requests);
+    const requestLists = await Promise.all(
+      planIds.map(async (planId) => {
+        try {
+          return await api.getPendingVisitRequests(planId);
+        } catch (err) {
+          console.warn(`Failed to fetch pending visit requests for plan ${planId}:`, err);
+          return [];
+        }
+      }),
+    );
+
+    const merged = requestLists.flat();
+    const deduped = Array.from(new Map(merged.map((request) => [request.id, request])).values());
+    setPendingVisitRequests(deduped);
   } catch (err) {
     console.warn("Failed to fetch pending visit requests:", err);
     setPendingVisitRequests([]);
   }
-}, [activePlan?.id]);
+}, [activePlan?.id, plans]);
 
 useEffect(() => {
   void fetchPendingRequests();
@@ -644,6 +663,11 @@ useEffect(() => {
         status: createResult.data.status || "scheduled",
       };
 
+      finalEvent = {
+        ...finalEvent,
+        type: updatedEvent.type === "theirs" ? "theirs" : "mine",
+      };
+
       setEvents((prev) => [...prev, finalEvent]);
       setModalEvent(finalEvent);
       setModalMode("view");
@@ -667,6 +691,11 @@ useEffect(() => {
         title: updateResult.data.notes || updatedEvent.title || "Visit",
         status: updateResult.data.status || "scheduled",
         day: (DateTime.fromISO(updatedEvent.start_time).weekday + 6) % 7,
+      };
+
+      finalEvent = {
+        ...finalEvent,
+        type: updatedEvent.type === "theirs" ? "theirs" : "mine",
       };
 
       setEvents((prev) => prev.map((ev) => (ev.id === updatedEvent.id ? finalEvent : ev)));

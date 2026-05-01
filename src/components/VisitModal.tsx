@@ -31,6 +31,7 @@ export const VisitModal = ({ mode, event, onClose, onSave, onDelete, onEdit }: V
   const isView = mode === "view";
   const isEdit = (mode === "edit" || mode === "create") && !isDeletedEvent;
   const disableFields = isView || isDeletedEvent;
+  const disableTypeField = isView || isDeletedEvent;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -95,7 +96,13 @@ export const VisitModal = ({ mode, event, onClose, onSave, onDelete, onEdit }: V
 
           <div>
             <label className="block text-sm font-medium">Type</label>
-            <select aria-label="type" className="w-full p-2 border rounded" value={form.type} disabled>
+            <select
+              aria-label="type"
+              className="w-full p-2 border rounded"
+              value={form.type}
+              disabled={disableTypeField}
+              onChange={(e) => setForm({ ...form, type: e.target.value as VisitEvent["type"] })}
+            >
               <option value="mine">My event</option>
               <option value="theirs">Their event</option>
             </select>

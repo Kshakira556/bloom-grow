@@ -241,7 +241,7 @@ export interface ApiVisit {
   location: string;
   notes: string;
   status: "scheduled" | "completed" | "cancelled" | "missed";
-  is_deleted?: boolean;
+  is_deleted?: boolean | "true" | "false" | "t" | "f" | 0 | 1;
 }
 
 export interface VisitChangeRequest {

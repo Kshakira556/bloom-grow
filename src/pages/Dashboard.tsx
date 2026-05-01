@@ -28,8 +28,6 @@ export default function Dashboard() {
   const [isLoadingPlans, setIsLoadingPlans] = useState(false); 
   const [isLoadingVisits, setIsLoadingVisits] = useState(false);
   const { user } = useAuthContext();
-  console.log("DASHBOARD USER:", user);
-  console.log("DASHBOARD TRIAL:", user?.trial_ends_at);
 
   useEffect(() => {
   const fetchUnreadMessages = async (retry = 0) => {

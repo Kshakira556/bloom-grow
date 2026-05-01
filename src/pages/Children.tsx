@@ -51,8 +51,7 @@ const Children = () => {
 
   const handleChildChange = async (
     childId: string,
-    childName?: string,
-    vaultId?: string // ✅ optional vaultId to fetch newly created vault immediately
+    childName?: string
   ) => {
     setLoading(true);
     try {
@@ -60,7 +59,7 @@ const Children = () => {
       let vaultMissingNote: string | undefined;
 
       const result = await vaultReadService
-        .getVaultAggregate(vaultId || childId, childName) // ✅ use vaultId if available
+        .getVaultAggregate(childId, childName)
         .catch((err) => {
           if (err?.response?.status === 404) {
             vaultMissingNote = "No vault exists for this child yet.";

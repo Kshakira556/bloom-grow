@@ -10,6 +10,7 @@ import { vaultReadService } from "@/lib/vaultReadService";
 import { VaultAggregate } from "@/types/vaultAggregate";
 import { vaultSaveService } from "@/lib/vaultSaveService";
 import { AddChildModal } from "@/components/AddChildModal";
+import { isSupabaseConfigured } from "@/lib/supabaseStorage";
 
 type VaultAggregateWithMissing = VaultAggregate & {
   vaultMissing?: boolean;
@@ -150,8 +151,13 @@ const Children = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [editMode, setEditMode] = useState(false);
+  const supabaseReady = isSupabaseConfigured();
 
   const handleFileUpload = (files: FileList | null) => {
+    if (!supabaseReady) {
+      alert("Document uploads are not configured yet. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your frontend environment to enable persistent document storage.");
+      return;
+    }
     if (!files || !selectedCategory || !selectedSubcategory) return;
 
     const newDocs = Array.from(files).map(file => ({
@@ -801,17 +807,32 @@ const Children = () => {
                           </select>
 
                           {/* Upload */}
-                          <label className="flex items-center gap-2 px-4 py-2 bg-cub-mint-light rounded-lg cursor-pointer text-sm">
+                          <label
+                            className={`flex items-center gap-2 px-4 py-2 bg-cub-mint-light rounded-lg text-sm ${
+                              supabaseReady ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                            }`}
+                            title={
+                              supabaseReady
+                                ? "Upload documents"
+                                : "Uploads disabled: Supabase is not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)."
+                            }
+                          >
                             <Upload className="w-4 h-4 text-primary" />
                             <span>Upload files</span>
                             <input
                               type="file"
                               className="hidden"
                               multiple
+                              disabled={!supabaseReady}
                               onChange={(e) => handleFileUpload(e.target.files)}
                             />
                           </label>
                         </div>
+                      )}
+                      {editMode && !supabaseReady && (
+                        <p className="text-xs text-muted-foreground -mt-2">
+                          Uploads won&apos;t persist until document storage is configured.
+                        </p>
                       )}
 
                       {/* Display uploaded files */}

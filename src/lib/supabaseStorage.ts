@@ -2,6 +2,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let supabaseClient: SupabaseClient | null = null;
 
+export const isSupabaseConfigured = (): boolean => {
+  return Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+};
+
 const getSupabaseClient = (): SupabaseClient => {
   if (supabaseClient) return supabaseClient;
 

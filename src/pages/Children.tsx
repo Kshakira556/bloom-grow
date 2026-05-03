@@ -348,7 +348,8 @@ const Children = () => {
                     <div>
                       <div className="flex justify-between items-start mb-4">
                         <h2 className="font-display font-bold text-xl">
-                          {selectedChild?.vault?.fullName || "Unnamed"} ({selectedChild?.vault?.nickname || ""})
+                          {selectedChild?.vault?.fullName || "Unnamed"}
+                          {selectedChild?.vault?.nickname ? ` (${selectedChild.vault.nickname})` : ""}
                         </h2>
                         <button
                           className="p-2 rounded-full hover:bg-card/50"

@@ -199,6 +199,7 @@ export default function Dashboard() {
     },
     {
       icon: Car,
+      label: "Visits",
       number: remainingVisitsCount,
       href: "/visits",
       description: "takes you to the visits page",
@@ -207,6 +208,7 @@ export default function Dashboard() {
     },
     {
       icon: ClipboardList,
+      label: "Plans",
       number: plans.length,
       href: "/visits",
       description: "takes you to your list of plans",
@@ -215,6 +217,7 @@ export default function Dashboard() {
     },
     {
       icon: Star,
+      label: "Journal",
       number: journalEntriesCount,
       href: "/journal",
       description: "takes you to the journal page",
@@ -293,9 +296,9 @@ export default function Dashboard() {
 
                   <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center opacity-0 translate-y-2 transition-all group-hover:opacity-100 group-hover:translate-y-0">
                     {link.label && (
-                      <p className="font-display font-bold text-base text-primary-foreground">{link.label}</p>
+                      <p className={`font-display font-bold text-base ${link.iconColor}`}>{link.label}</p>
                     )}
-                    <p className="text-xs text-primary-foreground/80 mt-1 px-2">{link.description}</p>
+                    <p className={`text-xs mt-1 px-2 ${link.iconColor} opacity-80`}>{link.description}</p>
                   </div>
 
                   {(isLoadingPlans || isLoadingVisits) && (

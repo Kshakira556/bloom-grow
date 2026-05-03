@@ -401,12 +401,12 @@ const Children = () => {
                       </p>
 
                       <p style={{ textAlign: "center", fontSize: "11px", marginTop: "4px" }}>
-                        Generated on: {new Date().toLocaleDateString()}
+                        Generated on: {toDateOnly(new Date().toISOString())}
                       </p>
                     </div>
 
                     <div className="mb-6 text-sm print-only">
-                      <p>Exported: {new Date().toLocaleString()}</p>
+                      <p>Exported: {toDateOnly(new Date().toISOString())}</p>
                       {getExportTimeZoneLabel() && <p>{getExportTimeZoneLabel()}</p>}
                       <p>Filter applied: Vault record</p>
 
@@ -652,7 +652,7 @@ const Children = () => {
                                   </tr>
                                   <tr>
                                     <td className="legal-label">Valid Until</td>
-                                    <td>{selectedChild?.legal?.validUntil}</td>
+                                    <td>{toDateOnly(selectedChild?.legal?.validUntil)}</td>
                                   </tr>
                                   <tr>
                                     <td className="legal-label">Legally Restricted Persons</td>
@@ -662,7 +662,7 @@ const Children = () => {
                               </table>
                               <p>
                                 <span className="text-muted-foreground">Valid until:</span>{" "}
-                                {selectedChild?.legal?.validUntil}
+                                {toDateOnly(selectedChild?.legal?.validUntil)}
                               </p>
                               <p>
                                 <span className="text-muted-foreground">Names legally restricted:</span>{" "}

@@ -201,6 +201,10 @@ export const exportConversation = async (
   );
   y += bodyLineMm * 0.75;
 
+  // Start transcript on a new page (keeps clauses separate and court-friendly)
+  doc.addPage();
+  y = margin;
+
   // Transcript
   writeHeading("3. Conversation transcript", 1);
   writeClause(

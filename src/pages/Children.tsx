@@ -152,6 +152,7 @@ const Children = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [editMode, setEditMode] = useState(false);
   const supabaseReady = isSupabaseConfigured();
+  const [selectedDocKeys, setSelectedDocKeys] = useState<string[]>([]);
 
   const handleFileUpload = (files: FileList | null) => {
     if (!supabaseReady) {
@@ -191,6 +192,22 @@ const Children = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     });
+  };
+
+  const downloadUrls = (items: { url: string; filename: string }[]) => {
+    items.forEach(({ url, filename }) => {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "document";
+      a.rel = "noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+  };
+
+  const toggleDocKey = (key: string) => {
+    setSelectedDocKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   };
 
   const filteredFiles = (selectedChild?.documents || []).filter(
@@ -854,9 +871,42 @@ const Children = () => {
                           </>
                         ) : (
                           <>
+                            {selectedDocKeys.length > 0 && (
+                              <div className="flex justify-end mb-2 no-print">
+                                <Button
+                                  variant="outline"
+                                  className="rounded-full"
+                                  onClick={() => {
+                                    const picked = (selectedChild?.documents || [])
+                                      .map((f, idx) => {
+                                        const fileName = f.file?.name || f.name || "document";
+                                        const key = f.id || `${idx}-${fileName}`;
+                                        const url = f.file
+                                          ? URL.createObjectURL(f.file)
+                                          : (f.fileUrl || (f as any).file_url || "");
+                                        return { key, url, fileName, isObjectUrl: Boolean(f.file) };
+                                      })
+                                      .filter((x) => selectedDocKeys.includes(x.key) && Boolean(x.url));
+
+                                    downloadUrls(picked.map((p) => ({ url: p.url, filename: p.fileName })));
+
+                                    picked.forEach((p) => {
+                                      if (p.isObjectUrl) URL.revokeObjectURL(p.url);
+                                    });
+
+                                    setSelectedDocKeys([]);
+                                  }}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Download selected
+                                </Button>
+                              </div>
+                            )}
+
                             {(selectedChild?.documents || []).map((file, idx) => {
                               const fileName = file.file?.name || file.name || "Unnamed file"; // ✅ safe
                               const fileURL = file.file ? URL.createObjectURL(file.file) : file.fileUrl;
+                              const key = file.id || `${idx}-${fileName}`;
 
                               return (
                                 <div
@@ -870,6 +920,14 @@ const Children = () => {
                                     {" → "}
                                     {file.subcategory}: {fileName}
                                   </span>
+
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 accent-primary no-print"
+                                    aria-label={`Select ${fileName} for download`}
+                                    checked={selectedDocKeys.includes(key)}
+                                    onChange={() => toggleDocKey(key)}
+                                  />
 
                                   {fileURL && (
                                     <button

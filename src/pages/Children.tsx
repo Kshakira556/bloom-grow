@@ -361,6 +361,12 @@ const Children = () => {
 
                       </div>
 
+                      {editMode && (
+                        <div className="text-sm font-display font-semibold text-primary mb-2">
+                          Child details
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground">DOB:</span>{" "}
@@ -373,9 +379,15 @@ const Children = () => {
                                   vault: {...selectedChild?.vault, dob: e.target.value} 
                                 })
                               }
+                              placeholder="YYYY-MM-DD"
                             />
                           ) : (
                             selectedChild.vault.dob
+                          )}
+                          {editMode && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Use the child&apos;s date of birth (format: YYYY-MM-DD).
+                            </p>
                           )}
                         </div>
                         <div>
@@ -389,25 +401,38 @@ const Children = () => {
                                   vault: {...selectedChild?.vault, idPassportNo: e.target.value} 
                                 })
                               }
+                              placeholder="SA ID or Passport number"
                             />
                           ) : (
                             selectedChild.vault.idPassportNo
                           )}
+                          {editMode && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Enter the child&apos;s SA ID number or passport number (if applicable).
+                            </p>
+                          )}
                         </div>
                       </div>
 
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {editMode ? (
+                      {editMode ? (
+                        <div className="mt-2">
+                          <div className="text-sm text-muted-foreground mb-1">Home address</div>
                           <Input
                             value={selectedChild?.vault.homeAddress || ""}
                             onChange={(e) =>
                               setSelectedChild(prev => prev ? { ...prev, vault: {...prev.vault, homeAddress: e.target.value} } : prev)
                             }
+                            placeholder="Street address, suburb, city"
                           />
-                        ) : (
-                          selectedChild.vault.homeAddress
-                        )}
-                      </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Provide the primary home address where the child resides.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {selectedChild.vault.homeAddress}
+                        </p>
+                      )}
                     </div>
 
                     {/* Guardian Info */}
@@ -430,7 +455,7 @@ const Children = () => {
                                   newGuardians[idx].name = e.target.value;
                                   setSelectedChild({ ...selectedChild, guardians: newGuardians });
                                 }}
-                                placeholder="Name"
+                                placeholder="Guardian full name"
                                 className="mb-1"
                               />
                               <Input
@@ -440,7 +465,7 @@ const Children = () => {
                                   newGuardians[idx].cell = e.target.value;
                                   setSelectedChild({ ...selectedChild, guardians: newGuardians });
                                 }}
-                                placeholder="Cell"
+                                placeholder="Cell number (e.g., +27 82 123 4567)"
                                 className="mb-1"
                               />
                               <Input
@@ -450,7 +475,7 @@ const Children = () => {
                                   newGuardians[idx].work = e.target.value;
                                   setSelectedChild({ ...selectedChild, guardians: newGuardians });
                                 }}
-                                placeholder="Work"
+                                placeholder="Work number (optional)"
                               />
                             </>
                           ) : (
@@ -479,7 +504,7 @@ const Children = () => {
                                     legal: { ...selectedChild.legal, custodyType: e.target.value },
                                   })
                                 }
-                                placeholder="Custody"
+                                placeholder="Custody arrangement (e.g., Joint custody)"
                                 className="mb-1"
                               />
                               <Input
@@ -490,7 +515,7 @@ const Children = () => {
                                     legal: { ...selectedChild.legal, caseNo: e.target.value },
                                   })
                                 }
-                                placeholder="Court order ref"
+                                placeholder="Court reference / case number"
                                 className="mb-1"
                               />
                               <Input
@@ -501,7 +526,7 @@ const Children = () => {
                                     legal: { ...selectedChild.legal, validUntil: e.target.value },
                                   })
                                 }
-                                placeholder="Valid until"
+                                placeholder="Valid until (YYYY-MM-DD)"
                                 className="mb-1"
                               />
                               <Input
@@ -512,6 +537,7 @@ const Children = () => {
                                     legal: { ...selectedChild!.legal, contactType: e.target.value }
                                   })
                                 }
+                                placeholder="Legally restricted persons (comma-separated)"
                               />
                             </>
                           ) : (
@@ -679,6 +705,7 @@ const Children = () => {
                                     newContacts[0] = { ...newContacts[0], phone: e.target.value, name: newContacts[0]?.name || "" };
                                     setSelectedChild({ ...selectedChild!, emergencyContacts: newContacts });
                                   }}
+                                  placeholder="Emergency contact 1 phone (e.g., +27 82 123 4567)"
                                 />
 
                                 <Input
@@ -688,6 +715,7 @@ const Children = () => {
                                     newContacts[1] = { ...newContacts[1], phone: e.target.value, name: newContacts[1]?.name || "" };
                                     setSelectedChild({ ...selectedChild!, emergencyContacts: newContacts });
                                   }}
+                                  placeholder="Emergency contact 2 phone (optional)"
                                 />
                             </>
                           ) : (

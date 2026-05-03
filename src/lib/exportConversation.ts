@@ -15,6 +15,15 @@ export type Conversation = {
 const formatDateTime = (value: string) =>
   format(new Date(value), "yyyy-MM-dd HH:mm");
 
+const getExportTimeZoneLabel = () => {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return tz ? `Time zone: ${tz}` : "Time zone: Local";
+  } catch {
+    return "Time zone: Local";
+  }
+};
+
 const formatHistoryLabel = (entry: ApiMessageHistory) => {
   const when = formatDateTime(entry.action_at);
 
@@ -59,6 +68,28 @@ export const exportConversation = async (
   const footLineMm = footFontPt * 0.3528; // ~single spacing
 
   let y = margin;
+
+  const addHeaderFooterToAllPages = () => {
+    const total = doc.getNumberOfPages();
+    const headerLeft = `Case: ${conversation.caseRef || "-"}`;
+    const headerRight = `Exported: ${new Date().toLocaleString()}`;
+
+    for (let page = 1; page <= total; page += 1) {
+      doc.setPage(page);
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(footFontPt);
+      doc.setTextColor(60);
+
+      doc.text(headerLeft, margin, 12);
+      doc.text(headerRight, pageWidth - margin, 12, { align: "right" });
+      doc.text(`Page ${page} of ${total}`, pageWidth - margin, pageHeight - 10, {
+        align: "right",
+      });
+
+      doc.setTextColor(0);
+    }
+  };
 
   const addPageIfNeeded = (neededMm: number) => {
     if (y + neededMm <= pageHeight - margin) return;
@@ -132,6 +163,7 @@ export const exportConversation = async (
 
   y += bodyLineMm * 0.5;
   writeFootnote(`Exported: ${new Date().toLocaleString()}`);
+  writeFootnote(getExportTimeZoneLabel());
   writeFootnote(`Filter applied: ${purposeFilter}`);
   y += bodyLineMm * 0.5;
 
@@ -177,6 +209,83 @@ export const exportConversation = async (
   );
   y += bodyLineMm * 0.25;
 
+  // Transcript table (each message is a standalone record; history is directly under that message)
+  const tableCol = {
+    no: 10,
+    when: 28,
+    from: 30,
+    to: 30,
+    purpose: 18,
+    message: maxWidth - (10 + 28 + 30 + 30 + 18),
+  };
+
+  const tableX = {
+    no: margin,
+    when: margin + tableCol.no,
+    from: margin + tableCol.no + tableCol.when,
+    to: margin + tableCol.no + tableCol.when + tableCol.from,
+    purpose: margin + tableCol.no + tableCol.when + tableCol.from + tableCol.to,
+    message:
+      margin + tableCol.no + tableCol.when + tableCol.from + tableCol.to + tableCol.purpose,
+  };
+
+  const tableLineMm = 10 * 0.3528 * 1.3;
+
+  const renderTableHeader = () => {
+    doc.setFont("times", "bold");
+    doc.setFontSize(10);
+    addPageIfNeeded(tableLineMm * 2);
+
+    const headerY = y;
+    doc.text("#", tableX.no, headerY);
+    doc.text("Date/Time", tableX.when, headerY);
+    doc.text("From", tableX.from, headerY);
+    doc.text("To", tableX.to, headerY);
+    doc.text("Purpose", tableX.purpose, headerY);
+    doc.text("Message / History", tableX.message, headerY);
+
+    doc.setDrawColor(180);
+    doc.line(margin, headerY + 2.5, pageWidth - margin, headerY + 2.5);
+    doc.setDrawColor(0);
+
+    y = headerY + tableLineMm + 1;
+  };
+
+  const writeRow = (cells: {
+    no: string;
+    when: string;
+    from: string;
+    to: string;
+    purpose: string;
+    messageLines: string[];
+  }) => {
+    const rowLines = Math.max(1, cells.messageLines.length);
+    const rowHeight = rowLines * tableLineMm + 2;
+
+    addPageIfNeeded(rowHeight + 2);
+
+    if (y === margin) {
+      renderTableHeader();
+    }
+
+    const rowTop = y;
+    doc.setFont("times", "normal");
+    doc.setFontSize(10);
+
+    doc.text(cells.no, tableX.no, rowTop);
+    doc.text(cells.when, tableX.when, rowTop);
+    doc.text(cells.from, tableX.from, rowTop);
+    doc.text(cells.to, tableX.to, rowTop);
+    doc.text(cells.purpose, tableX.purpose, rowTop);
+    doc.text(cells.messageLines, tableX.message, rowTop);
+
+    y = rowTop + rowLines * tableLineMm + 2;
+  };
+
+  const splitMessageCell = (text: string) => doc.splitTextToSize(text, tableCol.message);
+
+  renderTableHeader();
+
   let messageNo = 0;
   exportedMessages.forEach((msg) => {
     messageNo += 1;
@@ -193,51 +302,52 @@ export const exportConversation = async (
     const editedAt =
       msg.updated_at && msg.updated_at !== msg.createdAt ? formatDateTime(msg.updated_at) : null;
 
-    // Message header line
-    doc.setFont("times", "bold");
-    doc.setFontSize(bodyFontPt);
-    // Avoid unicode glyphs (e.g. arrows/dots) to keep output compatible with jsPDF core fonts.
-    const header = `3.${messageNo}  ${formatDateTime(msg.createdAt)}  ${senderName} -> ${recipientName}  (${msg.purpose})`;
-    const headerLines = doc.splitTextToSize(header, maxWidth);
-    addPageIfNeeded(headerLines.length * bodyLineMm);
-    doc.text(headerLines, margin, y);
-    y += headerLines.length * bodyLineMm;
-
-    doc.setFont("times", "normal");
     const metaParts = [
       `Status: ${status}`,
       editedAt ? `Edited: Yes (${editedAt})` : "Edited: No",
       isDeleted ? "Deleted: Yes" : "Deleted: No",
     ];
-    writeIndentedParagraph(metaParts.join(" | "));
 
-    // Current message content (indented)
-    const contentLabel = isDeleted ? "Message (deleted):" : "Message:";
-    writeIndentedParagraph(contentLabel);
-    writeIndentedParagraph(msg.content);
-
-    // Attachments (indented)
-    msg.attachments?.forEach((att) => {
-      writeIndentedParagraph(`Attachment: ${att.name} (${att.type}).`);
+    writeRow({
+      no: String(messageNo),
+      when: formatDateTime(msg.createdAt),
+      from: senderName,
+      to: recipientName,
+      purpose: msg.purpose,
+      messageLines: splitMessageCell(`${metaParts.join(" | ")}\n${msg.content}`),
     });
 
-    // Per-message history (immediately under the message, full content when present)
-    if (sortedHistory.length > 0) {
-      y += bodyLineMm * 0.25;
-      writeIndentedParagraph("History:");
-
-      sortedHistory.forEach((entry, historyIndex) => {
-        writeIndentedParagraph(`History ${historyIndex + 1}: ${formatHistoryLabel(entry)}`);
-        if (entry.content) {
-          writeIndentedParagraph("Content:");
-          writeIndentedParagraph(entry.content);
-        }
+    msg.attachments?.forEach((att) => {
+      writeRow({
+        no: "",
+        when: "",
+        from: "",
+        to: "",
+        purpose: "",
+        messageLines: splitMessageCell(`Attachment: ${att.name} (${att.type})`),
       });
-    }
+    });
 
-    y += bodyLineMm * 0.5;
+    sortedHistory.forEach((entry, historyIndex) => {
+      const prefix = `History ${historyIndex + 1}: ${formatHistoryLabel(entry)}`;
+      const content = entry.content ? `\n${entry.content}` : "";
+      writeRow({
+        no: "",
+        when: "",
+        from: "",
+        to: "",
+        purpose: "",
+        messageLines: splitMessageCell(`${prefix}${content}`),
+      });
+    });
+
+    doc.setDrawColor(230);
+    doc.line(margin, y, pageWidth - margin, y);
+    doc.setDrawColor(0);
+    y += 3;
   });
 
+  addHeaderFooterToAllPages();
   doc.save(`conversation-${conversation.user_id}.pdf`);
 };
 

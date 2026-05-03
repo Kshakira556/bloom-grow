@@ -16,6 +16,12 @@ type VaultAggregateWithMissing = VaultAggregate & {
   vaultMissingNote?: string; 
 };
 
+const toDateOnly = (value?: string) => {
+  const v = (value || "").trim();
+  if (!v) return "";
+  return v.split("T")[0].split(" ")[0];
+};
+
 const Children = () => {  
   // New state
   const [selectedChild, setSelectedChild] = useState<VaultAggregateWithMissing | null>(null);
@@ -72,7 +78,7 @@ const Children = () => {
 
       vaultAggregate = result;
 
-      const defaultDob = childBirthDate?.trim() || "";
+      const defaultDob = toDateOnly(childBirthDate);
 
       const aggregate: VaultAggregateWithMissing = vaultAggregate
         ? {
@@ -80,7 +86,7 @@ const Children = () => {
             vault: {
               ...vaultAggregate.vault,
               fullName: vaultAggregate.vault.fullName || childName || "Unnamed Child",
-              dob: (vaultAggregate.vault.dob || "").trim() || defaultDob,
+              dob: toDateOnly(vaultAggregate.vault.dob) || defaultDob,
             },
           }
         : {
@@ -401,7 +407,7 @@ const Children = () => {
                               placeholder="YYYY-MM-DD"
                             />
                           ) : (
-                            selectedChild.vault.dob
+                            toDateOnly(selectedChild.vault.dob)
                           )}
                           {editMode && (
                             <p className="text-xs text-muted-foreground mt-1">

@@ -235,7 +235,7 @@ const Messages = () => {
                   selectedConversation={selectedConversation}
                   purposeFilter={purposeFilter}
                   setPurposeFilter={setPurposeFilter}
-                  exportConversation={async (format: "pdf" | "docx") => {
+                  exportConversation={async () => {
                     if (!selectedConversation) return;
 
                     try {
@@ -277,7 +277,6 @@ const Messages = () => {
                           childName: selectedConversation.childName,
                         },
                         purposeFilter,
-                        format,
                         historyById
                       );
                     } catch (err: unknown) {

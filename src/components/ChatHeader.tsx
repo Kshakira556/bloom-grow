@@ -6,7 +6,7 @@ type ChatHeaderProps = {
   selectedConversation: Conversation | null;
   purposeFilter: MessagePurpose | "All";
   setPurposeFilter: (p: MessagePurpose | "All") => void;
-  exportConversation: (format: "pdf" | "docx") => void | Promise<void>;
+  exportConversation: () => void | Promise<void>;
 };
 
 const ChatHeader = ({
@@ -30,8 +30,14 @@ const ChatHeader = ({
             )}
           </div>
 
-          <button onClick={() => exportConversation("pdf")}>Export PDF</button>
-          <button onClick={() => exportConversation("docx")}>Export DOCX</button>
+          <button
+            onClick={exportConversation}
+            className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition"
+            disabled={!selectedConversation}
+            title={selectedConversation ? "Export this conversation as PDF" : "Select a conversation to export"}
+          >
+            Export PDF
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-2 mt-1">

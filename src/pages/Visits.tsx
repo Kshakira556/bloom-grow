@@ -23,9 +23,9 @@ import { useToast } from "@/hooks/use-toast";
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
 const locales = { 'en-US': enUS };
 const eventColorMap: Record<VisitEvent["type"], string> = {
-                  mine: "bg-cub-blue",
-                  theirs: "bg-cub-green",
-                  deleted: "bg-gray-400",
+                  mine: "bg-[#85B3E0]",
+                  theirs: "bg-[#59C084]",
+                  deleted: "bg-[#9CA3AF]",
                 };
 const localizer = dateFnsLocalizer({
   format,
@@ -600,15 +600,15 @@ useEffect(() => {
               {/* Legend */}
               <div className="flex items-center gap-6 mt-4 pt-4">
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded bg-cub-blue" />
+                  <span className="w-4 h-4 rounded bg-[#85B3E0]" />
                   <span className="text-sm">My Events</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded bg-cub-green" />
+                  <span className="w-4 h-4 rounded bg-[#59C084]" />
                   <span className="text-sm">Their Events</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded bg-gray-400" />
+                  <span className="w-4 h-4 rounded bg-[#9CA3AF]" />
                   <span className="text-sm">Deleted</span>
                 </div>
               </div>

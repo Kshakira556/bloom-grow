@@ -8,11 +8,23 @@ type InviteStatus = "idle" | "accepting" | "error";
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
   const inviteId = useMemo(() => searchParams.get("invite_id")?.trim() ?? "", [searchParams]);
+  const invitedEmail = useMemo(() => searchParams.get("email")?.trim() ?? "", [searchParams]);
+  const invitedAccountType = useMemo(
+    () => (searchParams.get("account_type")?.trim() as "trial" | "paid" | "") || "",
+    [searchParams]
+  );
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [status, setStatus] = useState<InviteStatus>("idle");
   const [error, setError] = useState("");
-  const inviteQuery = inviteId ? `?invite_id=${encodeURIComponent(inviteId)}` : "";
+  const inviteQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (inviteId) params.set("invite_id", inviteId);
+    if (invitedEmail) params.set("email", invitedEmail);
+    if (invitedAccountType) params.set("account_type", invitedAccountType);
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  }, [inviteId, invitedEmail, invitedAccountType]);
 
   useEffect(() => {
     if (!inviteId) {

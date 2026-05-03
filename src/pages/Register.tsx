@@ -2,7 +2,7 @@
 import { AuthPage } from "@/components/auth/AuthPage";
 import { AuthForm, AuthField } from "@/components/auth/AuthForm";
 import { User, Mail, Lock, Shield, Phone } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import RegisterPng from "@/assets/images/register-page.jpeg"
@@ -11,14 +11,31 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const invitedEmail = useMemo(() => searchParams.get("email")?.trim() ?? "", [searchParams]);
+  const invitedAccountType = useMemo(
+    () => (searchParams.get("account_type")?.trim() as "trial" | "paid" | "") || "",
+    [searchParams]
+  );
 
   const [fullName, setFullName] = useState("");
-const [email, setEmail] = useState("");
+const [email, setEmail] = useState(invitedEmail);
 const [password, setPassword] = useState("");
 const [role, setRole] = useState<"parent" | "mediator" | "admin">("parent");
 const [phone, setPhone] = useState("");
 const [error, setError] = useState("");
-const [accountType, setAccountType] = useState<"trial" | "paid">("trial");
+const [accountType, setAccountType] = useState<"trial" | "paid">(
+  invitedAccountType === "paid" ? "paid" : "trial"
+);
+const accountTypeLocked = Boolean(invitedAccountType);
+
+useEffect(() => {
+  if (invitedEmail) setEmail(invitedEmail);
+}, [invitedEmail]);
+
+useEffect(() => {
+  if (invitedAccountType === "paid") setAccountType("paid");
+  else if (invitedAccountType === "trial") setAccountType("trial");
+}, [invitedAccountType]);
 
 const handleRegister = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -65,6 +82,7 @@ const fields: AuthField[] = [
     icon: <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />,
     value: email,
     onChange: (e) => setEmail(e.target.value),
+    disabled: Boolean(invitedEmail),
   },
   {
     name: "password",
@@ -98,6 +116,7 @@ const fields: AuthField[] = [
     icon: <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />,
     value: accountType,
     onChange: (e) => setAccountType(e.target.value as "trial" | "paid"),
+    disabled: accountTypeLocked,
   },
 ];
 
@@ -107,7 +126,7 @@ const fields: AuthField[] = [
       <div className="space-y-3 mb-4">
         <label className="text-sm font-medium">Choose Plan</label>
 
-        <div className="flex gap-4">
+        <div className={`flex gap-4 ${accountTypeLocked ? "opacity-60 pointer-events-none" : ""}`}>
           <button
             type="button"
             onClick={() => setAccountType("trial")}
@@ -128,6 +147,12 @@ const fields: AuthField[] = [
             Paid
           </button>
         </div>
+
+        {accountTypeLocked && (
+          <p className="text-xs text-muted-foreground">
+            Your plan type is pre-selected for this invite.
+          </p>
+        )}
       </div>
     </AuthPage>
   );

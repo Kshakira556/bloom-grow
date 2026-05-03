@@ -12,6 +12,7 @@ export type AuthField = {
   icon: React.ReactNode;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 };
 
 type AuthFormProps = {
@@ -43,6 +44,7 @@ export const AuthForm = ({
             placeholder={field.placeholder}
             value={field.value}
             onChange={field.onChange}
+            disabled={field.disabled}
             className="pl-12 bg-cub-mint-light border-0 rounded-full h-12"
             required
           />

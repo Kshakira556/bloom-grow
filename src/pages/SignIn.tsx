@@ -2,7 +2,7 @@
 import { AuthPage } from "@/components/auth/AuthPage";
 import { AuthForm, AuthField } from "@/components/auth/AuthForm";
 import { Mail, Lock } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import SignInPng from "@/assets/images/sign-in-page.png";
@@ -14,10 +14,24 @@ export default function SignIn() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteId = searchParams.get("invite_id")?.trim() ?? "";
+  const invitedEmail = searchParams.get("email")?.trim() ?? "";
+  const invitedAccountType = (searchParams.get("account_type")?.trim() as "trial" | "paid" | "") || "";
+  const inviteQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (inviteId) params.set("invite_id", inviteId);
+    if (invitedEmail) params.set("email", invitedEmail);
+    if (invitedAccountType) params.set("account_type", invitedAccountType);
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  }, [inviteId, invitedEmail, invitedAccountType]);
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (invitedEmail) setEmail(invitedEmail);
+  }, [invitedEmail]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +74,7 @@ export default function SignIn() {
   };
 
   const fields: AuthField[] = [
-    { name: "email", type: "email", placeholder: "Email ID", icon: <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />, value: email, onChange: (e) => setEmail(e.target.value) },
+    { name: "email", type: "email", placeholder: "Email ID", icon: <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />, value: email, onChange: (e) => setEmail(e.target.value), disabled: Boolean(invitedEmail) },
     { name: "password", type: "password", placeholder: "Password", icon: <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />, value: password, onChange: (e) => setPassword(e.target.value) },
   ];
 
@@ -79,7 +93,7 @@ export default function SignIn() {
           <button
             type="button"
             className="text-primary hover:underline"
-            onClick={() => navigate(`/register?invite_id=${encodeURIComponent(inviteId)}`)}
+            onClick={() => navigate(`/register${inviteQuery}`)}
           >
             Don't have a password yet? Register with this invite
           </button>

@@ -25,6 +25,8 @@ const formatHistoryLabel = (entry: ApiMessageHistory) => {
       return `Edited (${when})`;
     case "delete":
       return `Deleted (${when})`;
+    case "seen":
+      return `Seen (${when})`;
     default:
       return `Event (${when})`;
   }
@@ -187,15 +189,15 @@ export const exportConversation = async (
       .sort((a, b) => new Date(a.action_at).getTime() - new Date(b.action_at).getTime());
     const isDeleted = sortedHistory.some((entry) => entry.action_type === "delete");
 
-    const status =
-      msg.status === "Read" ? "Seen" : msg.status ? "Unseen" : "Unspecified";
-    const edited =
-      Boolean(msg.updated_at) && msg.updated_at !== msg.createdAt ? "Edited" : null;
+    const status = msg.status === "Read" ? "Seen" : msg.status ? "Unseen" : "Unspecified";
+    const editedAt =
+      msg.updated_at && msg.updated_at !== msg.createdAt ? formatDateTime(msg.updated_at) : null;
 
     // Message header line
     doc.setFont("times", "bold");
     doc.setFontSize(bodyFontPt);
-    const header = `3.${messageNo}  ${formatDateTime(msg.createdAt)}  ${senderName} → ${recipientName}  (${msg.purpose})`;
+    // Avoid unicode glyphs (e.g. arrows/dots) to keep output compatible with jsPDF core fonts.
+    const header = `3.${messageNo}  ${formatDateTime(msg.createdAt)}  ${senderName} -> ${recipientName}  (${msg.purpose})`;
     const headerLines = doc.splitTextToSize(header, maxWidth);
     addPageIfNeeded(headerLines.length * bodyLineMm);
     doc.text(headerLines, margin, y);
@@ -204,33 +206,31 @@ export const exportConversation = async (
     doc.setFont("times", "normal");
     const metaParts = [
       `Status: ${status}`,
-      edited ? `State: ${edited}` : null,
+      editedAt ? `Edited: Yes (${editedAt})` : "Edited: No",
       isDeleted ? "Deleted: Yes" : "Deleted: No",
-    ].filter(Boolean);
-    writeIndentedParagraph(metaParts.join(" · "));
+    ];
+    writeIndentedParagraph(metaParts.join(" | "));
 
-    // Content paragraph (indented)
-    const contentLabel = isDeleted ? "Current content (deleted):" : "Current content:";
-    writeIndentedParagraph(`${contentLabel} ${msg.content}`);
+    // Current message content (indented)
+    const contentLabel = isDeleted ? "Message (deleted):" : "Message:";
+    writeIndentedParagraph(contentLabel);
+    writeIndentedParagraph(msg.content);
 
     // Attachments (indented)
     msg.attachments?.forEach((att) => {
       writeIndentedParagraph(`Attachment: ${att.name} (${att.type}).`);
     });
 
-    // History (indented, single-spaced-ish via foot font)
+    // Per-message history (immediately under the message, full content when present)
     if (sortedHistory.length > 0) {
       y += bodyLineMm * 0.25;
-      doc.setFont("times", "bold");
-      doc.setFontSize(bodyFontPt);
-      addPageIfNeeded(bodyLineMm);
-      doc.text("History:", margin + indent, y);
-      y += bodyLineMm;
+      writeIndentedParagraph("History:");
 
-      sortedHistory.forEach((entry) => {
-        writeFootnote(`- ${formatHistoryLabel(entry)}`);
+      sortedHistory.forEach((entry, historyIndex) => {
+        writeIndentedParagraph(`History ${historyIndex + 1}: ${formatHistoryLabel(entry)}`);
         if (entry.content) {
-          writeFootnote(`  Content: ${entry.content}`);
+          writeIndentedParagraph("Content:");
+          writeIndentedParagraph(entry.content);
         }
       });
     }

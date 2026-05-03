@@ -8,15 +8,25 @@ type Props = {
   purposeFilter: MessagePurpose | "All";
   onEdit: (id: string, content: string) => void;
   onDelete: (id: string) => void;
+  onFlag: (id: string, reason?: string) => void;
   scrollContainerRef?: React.RefObject<HTMLDivElement>; 
 };
 
-const MessageItem = ({ message, onEdit, onDelete }) => {
+type MessageItemProps = {
+  message: Message;
+  onEdit: (id: string, content: string) => void;
+  onDelete: (id: string) => void;
+  onFlag: (id: string, reason?: string) => void;
+};
+
+const MessageItem = ({ message, onEdit, onDelete, onFlag }: MessageItemProps) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
+  const [flagReason, setFlagReason] = useState(message.flagged_reason || "");
 
   const handleLongPressStart = () => {
     timerRef.current = setTimeout(() => {
@@ -62,6 +72,18 @@ const MessageItem = ({ message, onEdit, onDelete }) => {
             onClick={() => setIsEditModalOpen(true)}
           >
             Edit
+          </button>
+
+          {/* Flag Button */}
+          <button
+            className="px-2 py-1 bg-amber-100 text-amber-800 rounded hover:bg-amber-200 transition"
+            onClick={() => {
+              setFlagReason(message.flagged_reason || "");
+              setIsFlagModalOpen(true);
+            }}
+            title={message.is_flagged ? "Message flagged" : "Flag message"}
+          >
+            {message.is_flagged ? "Flagged" : "Flag"}
           </button>
 
           <Modal
@@ -126,6 +148,38 @@ const MessageItem = ({ message, onEdit, onDelete }) => {
               </button>
             </div>
           </Modal>
+
+          <Modal
+            isOpen={isFlagModalOpen}
+            title={message.is_flagged ? "Update Flag" : "Flag Message"}
+            description="Add a reason (optional). This will mark the message for moderation review."
+            onClose={() => setIsFlagModalOpen(false)}
+          >
+            <textarea
+              aria-label="Flag reason"
+              className="w-full p-2 border rounded mb-4"
+              value={flagReason}
+              onChange={(e) => setFlagReason(e.target.value)}
+              placeholder="Reason for flagging (optional)"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+                onClick={() => setIsFlagModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-amber-100 text-amber-900 hover:bg-amber-200"
+                onClick={() => {
+                  onFlag(message.id, flagReason.trim() || undefined);
+                  setIsFlagModalOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </Modal>
         </div>
       )}
     </div>
@@ -149,7 +203,7 @@ const groupMessagesByDate = (messages: Message[]) => {
   return groups;
 };
 
-const MessageList = ({ messages, purposeFilter, onEdit, onDelete, scrollContainerRef }: Props) => {
+const MessageList = ({ messages, purposeFilter, onEdit, onDelete, onFlag, scrollContainerRef }: Props) => {
   const filtered =
     purposeFilter === "All"
       ? messages
@@ -182,6 +236,7 @@ const MessageList = ({ messages, purposeFilter, onEdit, onDelete, scrollContaine
               message={msg}
               onEdit={onEdit}
               onDelete={onDelete}
+              onFlag={onFlag}
             />
           ))}
         </div>

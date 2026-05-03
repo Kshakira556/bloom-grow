@@ -86,6 +86,28 @@ const Messages = () => {
     }
   };
 
+  const handleFlagMessage = async (id: string, reason?: string) => {
+    try {
+      await api.flagMessage(id, reason);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === id ? { ...m, is_flagged: true, flagged_reason: reason } : m
+        )
+      );
+      toast({
+        title: "Message flagged",
+        description: "Thanks — this message has been marked for review.",
+      });
+    } catch (err) {
+      console.error("Failed to flag message:", err);
+      toast({
+        title: "Flag failed",
+        description: err instanceof Error ? err.message : "Failed to flag message",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     const fetchPlans = async () => {
       try {
@@ -269,6 +291,7 @@ const Messages = () => {
                     purposeFilter={purposeFilter}
                     onEdit={handleEditMessage}
                     onDelete={handleDeleteMessage}
+                    onFlag={handleFlagMessage}
                     scrollContainerRef={scrollContainerRef} 
                   />
                 </div>

@@ -37,6 +37,8 @@ export const mapApiMessageToMessage = (msg: ApiMessage, userId: string): Message
     purpose: msg.purpose || "General",
     status: msg.is_seen ? "Read" : "Delivered",
     attachments: msg.attachments || [],
+    is_flagged: msg.is_flagged,
+    flagged_reason: msg.flagged_reason,
   };
 };
 

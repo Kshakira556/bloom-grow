@@ -31,9 +31,13 @@ const AdminAudit = () => {
         ]);
 
         const planList = plansRes?.plans ?? [];
-        const allMessages = await fetchAllPlanMessages(planList, {
-          includeDeleted: true,
-        });
+        let allMessages: api.ApiMessage[] = [];
+        try {
+          allMessages = await api.getAdminMessages({ includeDeleted: true });
+        } catch {
+          // Safe fallback: preserve prior behavior if admin endpoint isn't available/authorized
+          allMessages = await fetchAllPlanMessages(planList, { includeDeleted: true });
+        }
 
         setUsers(usersRes);
         setMessages(allMessages);

@@ -29,6 +29,8 @@ export type Message = {
   purpose: MessagePurpose;
   status?: MessageStatus;
   attachments?: Attachment[];
+  is_flagged?: boolean;
+  flagged_reason?: string;
 };
 
 export type DraftMessage = {

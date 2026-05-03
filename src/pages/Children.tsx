@@ -192,6 +192,11 @@ const Children = () => {
             margin: 10mm 12mm;
           }
 
+          /* Print only the Vault form (#print-area). */
+          body * {
+            visibility: hidden !important;
+          }
+
           body {
             font-family: "Times New Roman", Georgia, serif;
             color: #000;
@@ -215,6 +220,7 @@ const Children = () => {
             margin: 0 !important;
             padding: 0 !important;
             top: 0 !important;
+            left: 0 !important;
           }
 
           main {

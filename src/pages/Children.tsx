@@ -215,11 +215,6 @@ const Children = () => {
             margin: 10mm 12mm;
           }
 
-          /* Print only the Vault form (#print-area). */
-          body * {
-            visibility: hidden !important;
-          }
-
           body {
             font-family: "Times New Roman", Georgia, serif;
             color: #000;
@@ -322,12 +317,12 @@ const Children = () => {
       <Navbar />
       <main className="flex-1 py-8 px-4">
         <div className="container max-w-5xl mx-auto">
-          <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">
+          <h1 className="font-display text-3xl font-bold text-primary text-center mb-6 no-print">
             Vault
           </h1>
 
           <div className="grid lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-3 space-y-3">
+            <div className="lg:col-span-3 space-y-3 no-print">
               <select
                 aria-label="Child-Name"
                 value={selectedChild?.childId || ""}

@@ -19,7 +19,7 @@ type VaultAggregateWithMissing = VaultAggregate & {
 const Children = () => {  
   // New state
   const [selectedChild, setSelectedChild] = useState<VaultAggregateWithMissing | null>(null);
-  const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
+  const [children, setChildren] = useState<{ id: string; name: string; birth_date?: string }[]>([]);
   const [defaultPlanId, setDefaultPlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const restrictedNames = selectedChild?.legal?.contactType || "";
@@ -32,13 +32,14 @@ const Children = () => {
       const mapped = allChildren.map(child => ({
         id: child.id,
         name: `${child.first_name}${child.last_name ? ` ${child.last_name}` : ""}`,
+        birth_date: child.birth_date,
       }));
 
       setChildren(mapped);
 
       // ✅ AUTO-SELECT FIRST CHILD (critical fix)
       if (mapped.length > 0) {
-        await handleChildChange(mapped[0].id, mapped[0].name);
+        await handleChildChange(mapped[0].id, mapped[0].name, mapped[0].birth_date);
       } else {
         setLoading(false); // no children case
       }
@@ -51,7 +52,8 @@ const Children = () => {
 
   const handleChildChange = async (
     childId: string,
-    childName?: string
+    childName?: string,
+    childBirthDate?: string
   ) => {
     setLoading(true);
     try {
@@ -70,11 +72,20 @@ const Children = () => {
 
       vaultAggregate = result;
 
+      const defaultDob = childBirthDate?.trim() || "";
+
       const aggregate: VaultAggregateWithMissing = vaultAggregate
-        ? { ...vaultAggregate, vault: { ...vaultAggregate.vault, fullName: vaultAggregate.vault.fullName || childName || "Unnamed Child" } }
+        ? {
+            ...vaultAggregate,
+            vault: {
+              ...vaultAggregate.vault,
+              fullName: vaultAggregate.vault.fullName || childName || "Unnamed Child",
+              dob: (vaultAggregate.vault.dob || "").trim() || defaultDob,
+            },
+          }
         : {
             childId,
-            vault: { fullName: childName || "Unnamed Child", nickname: "", dob: "", idPassportNo: "", homeAddress: "" },
+            vault: { fullName: childName || "Unnamed Child", nickname: "", dob: defaultDob, idPassportNo: "", homeAddress: "" },
             guardians: [],
             legal: { custodyType: "", caseNo: "", validUntil: "", contactType: "" },
             medical: { bloodType: "", allergies: "", medication: "", doctor: "" },
@@ -310,9 +321,11 @@ const Children = () => {
                 value={selectedChild?.childId || ""}
                 onChange={async (e) => {
                   const id = e.target.value;
-                  const name = children.find(c => c.id === id)?.name; // grab name directly
+                  const matched = children.find(c => c.id === id);
+                  const name = matched?.name; // grab name directly
+                  const birthDate = matched?.birth_date;
                   setSelectedChild(null); 
-                  await handleChildChange(id, name);
+                  await handleChildChange(id, name, birthDate);
                 }}
                 className="w-full p-3 rounded-2xl bg-card/50 border text-sm font-display"
               >

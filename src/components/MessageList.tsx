@@ -63,125 +63,126 @@ const MessageItem = ({ message, onEdit, onDelete, onFlag }: MessageItemProps) =>
         <p className="break-words">{message.content}</p>
       </div>
 
-      {/* Optional: edit/delete buttons for 'me' */}
-      {message.sender === "me" && (
-        <div className="flex gap-2 text-xs mt-1 justify-end">
-          {/* Edit Button */}
-          <button
-            className="px-2 py-1 bg-cub-mint-light text-primary rounded hover:bg-cub-mint/70 transition"
-            onClick={() => setIsEditModalOpen(true)}
-          >
-            Edit
-          </button>
+      {/* Actions */}
+      <div className={`flex gap-2 text-xs mt-1 ${message.sender === "me" ? "justify-end" : "justify-start"}`}>
+        {/* Edit/Delete only for 'me' */}
+        {message.sender === "me" && (
+          <>
+            <button
+              className="px-2 py-1 bg-cub-mint-light text-primary rounded hover:bg-cub-mint/70 transition"
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              Edit
+            </button>
 
-          {/* Flag Button */}
-          <button
-            className="px-2 py-1 bg-amber-100 text-amber-800 rounded hover:bg-amber-200 transition"
-            onClick={() => {
-              setFlagReason(message.flagged_reason || "");
-              setIsFlagModalOpen(true);
-            }}
-            title={message.is_flagged ? "Message flagged" : "Flag message"}
-          >
-            {message.is_flagged ? "Flagged" : "Flag"}
-          </button>
+            <button
+              className="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
+              onClick={() => setIsDeleteModalOpen(true)}
+            >
+              Delete
+            </button>
+          </>
+        )}
 
-          <Modal
-            isOpen={isEditModalOpen}
-            title="Edit Message"
-            onClose={() => setIsEditModalOpen(false)}
-          >
-            <textarea
-              aria-label="Edit message"
-              className="w-full p-2 border rounded mb-4"
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
-                onClick={() => setIsEditModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-cub-mint-light text-primary hover:bg-cub-mint/70"
-                onClick={() => {
-                  if (editContent.trim()) onEdit(message.id, editContent.trim());
-                  setIsEditModalOpen(false);
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </Modal>
+        {/* Flag available for receiver + moderators/admins */}
+        <button
+          className="px-2 py-1 bg-amber-100 text-amber-800 rounded hover:bg-amber-200 transition"
+          onClick={() => {
+            setFlagReason(message.flagged_reason || "");
+            setIsFlagModalOpen(true);
+          }}
+          title={message.is_flagged ? "Message flagged" : "Flag message"}
+        >
+          {message.is_flagged ? "Flagged" : "Flag"}
+        </button>
 
-          {/* Delete Button */}
-          <button
-            className="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
-            onClick={() => setIsDeleteModalOpen(true)}
-          >
-            Delete
-          </button>
+        <Modal
+          isOpen={isEditModalOpen}
+          title="Edit Message"
+          onClose={() => setIsEditModalOpen(false)}
+        >
+          <textarea
+            aria-label="Edit message"
+            className="w-full p-2 border rounded mb-4"
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+              onClick={() => setIsEditModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 rounded bg-cub-mint-light text-primary hover:bg-cub-mint/70"
+              onClick={() => {
+                if (editContent.trim()) onEdit(message.id, editContent.trim());
+                setIsEditModalOpen(false);
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </Modal>
 
-          <Modal
-            isOpen={isDeleteModalOpen}
-            title="Delete Message?"
-            description="This action cannot be undone."
-            onClose={() => setIsDeleteModalOpen(false)}
-          >
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
-                onClick={() => setIsDeleteModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-red-100 text-red-700 hover:bg-red-200"
-                onClick={() => {
-                  onDelete(message.id);
-                  setIsDeleteModalOpen(false);
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </Modal>
+        <Modal
+          isOpen={isDeleteModalOpen}
+          title="Delete Message?"
+          description="This action cannot be undone."
+          onClose={() => setIsDeleteModalOpen(false)}
+        >
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 rounded bg-red-100 text-red-700 hover:bg-red-200"
+              onClick={() => {
+                onDelete(message.id);
+                setIsDeleteModalOpen(false);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </Modal>
 
-          <Modal
-            isOpen={isFlagModalOpen}
-            title={message.is_flagged ? "Update Flag" : "Flag Message"}
-            description="Add a reason (optional). This will mark the message for moderation review."
-            onClose={() => setIsFlagModalOpen(false)}
-          >
-            <textarea
-              aria-label="Flag reason"
-              className="w-full p-2 border rounded mb-4"
-              value={flagReason}
-              onChange={(e) => setFlagReason(e.target.value)}
-              placeholder="Reason for flagging (optional)"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
-                onClick={() => setIsFlagModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-amber-100 text-amber-900 hover:bg-amber-200"
-                onClick={() => {
-                  onFlag(message.id, flagReason.trim() || undefined);
-                  setIsFlagModalOpen(false);
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </Modal>
-        </div>
-      )}
+        <Modal
+          isOpen={isFlagModalOpen}
+          title={message.is_flagged ? "Update Flag" : "Flag Message"}
+          description="Add a reason (optional). This will mark the message for moderation review."
+          onClose={() => setIsFlagModalOpen(false)}
+        >
+          <textarea
+            aria-label="Flag reason"
+            className="w-full p-2 border rounded mb-4"
+            value={flagReason}
+            onChange={(e) => setFlagReason(e.target.value)}
+            placeholder="Reason for flagging (optional)"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+              onClick={() => setIsFlagModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 rounded bg-amber-100 text-amber-900 hover:bg-amber-200"
+              onClick={() => {
+                onFlag(message.id, flagReason.trim() || undefined);
+                setIsFlagModalOpen(false);
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </Modal>
+      </div>
     </div>
   );
 };

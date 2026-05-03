@@ -471,10 +471,11 @@ export const getMessageHistory = async (id: string) => {
 };
 
 export const flagMessage = async (id: string, reason?: string) => {
-  return http(`/messages/${id}`, "PUT", {
+  const res = await http<{ message: ApiMessage }>(`/messages/${id}`, "PUT", {
     is_flagged: true,
     flagged_reason: reason,
   });
+  return res.message;
 };
 
 export const createJournalEntry = async (

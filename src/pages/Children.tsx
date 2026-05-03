@@ -226,10 +226,18 @@ const Children = () => {
     <div className="min-h-screen gradient-bg flex flex-col">
       <style>
         {`
+        .print-only {
+          display: none;
+        }
+
         @media print {
           @page {
             size: A4;
             margin: 10mm 12mm;
+          }
+
+          .print-only {
+            display: block !important;
           }
 
           body {
@@ -388,7 +396,7 @@ const Children = () => {
                       </p>
                     </div>
 
-                    <div className="mb-6 text-sm">
+                    <div className="mb-6 text-sm print-only">
                       <h3 className="font-display font-bold mb-2">Reliability and audit trail</h3>
                       <ol className="list-decimal pl-5 space-y-1">
                         <li>

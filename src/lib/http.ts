@@ -37,7 +37,8 @@ export const http = async <T>(
   }
 
   if (res.status === 404) {
-    throw new Error(`Endpoint not found: ${url}`);
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.error || `Endpoint not found: ${url}`);
   }
 
   if (!res.ok) {

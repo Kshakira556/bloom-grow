@@ -179,6 +179,30 @@ const Messages = () => {
         )
       : [];
 
+  // When a conversation is open, mark any incoming unseen messages as seen.
+  useEffect(() => {
+    if (!selectedConversation?.user_id || !userId) return;
+
+    const unseenIncoming = visibleMessages.filter(
+      (m) => m.receiver_id === userId && m.status !== "Read"
+    );
+
+    if (!unseenIncoming.length) return;
+
+    (async () => {
+      for (const msg of unseenIncoming) {
+        try {
+          await markSeen(msg.id);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === msg.id ? { ...m, status: "Read" } : m))
+          );
+        } catch {
+          // ignore (already seen, network, etc.)
+        }
+      }
+    })();
+  }, [selectedConversation?.user_id, userId, visibleMessages, markSeen]);
+
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />

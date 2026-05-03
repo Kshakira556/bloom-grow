@@ -63,6 +63,21 @@ const MessageItem = ({ message, onEdit, onDelete, onFlag }: MessageItemProps) =>
         <p className="break-words">{message.content}</p>
       </div>
 
+      {/* Seen / Unseen */}
+      <div
+        className={`mt-1 text-[10px] ${
+          message.sender === "me" ? "text-white/80 text-right" : "text-gray-500 text-left"
+        }`}
+      >
+        {message.sender === "me"
+          ? message.status === "Read"
+            ? "Seen"
+            : "Unseen"
+          : message.status === "Read"
+          ? ""
+          : "Unread"}
+      </div>
+
       {/* Actions */}
       <div className={`flex gap-2 text-xs mt-1 ${message.sender === "me" ? "justify-end" : "justify-start"}`}>
         {/* Edit/Delete only for 'me' */}

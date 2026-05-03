@@ -554,7 +554,7 @@ export interface InviteUserPayload {
 export const inviteUser = async (
   payload: InviteUserPayload & { linked_user_id?: string | null }
 ) => {
-  return http("/contacts", "POST", {
+  return http<{ contact?: ApiContact; invite?: ContactInvite }>("/contacts", "POST", {
     ...payload,
     linked_user_id: payload.linked_user_id ?? null, // ✅ enforce null instead of ""
   });
@@ -571,10 +571,37 @@ export interface ApiContact {
   updated_at?: string | null;
   purpose?: MessagePurpose;
 }
+export interface ContactInvite {
+  id: string;
+  requester_user_id: string;
+  target_user_id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  relationship?: string | null;
+  status: "pending" | "accepted" | "rejected";
+  responded_at?: string | null;
+  created_at: string;
+}
 
 export const getContacts = async (): Promise<ApiContact[]> => {
   const res = await http<{ contacts: ApiContact[] }>("/contacts", "GET");
   return res?.contacts ?? [];
+};
+export const getContactInvites = async (): Promise<ContactInvite[]> => {
+  const res = await http<{ invites: ContactInvite[] }>("/contacts/invites", "GET");
+  return res?.invites ?? [];
+};
+
+export const respondToContactInvite = async (
+  inviteId: string,
+  decision: "accepted" | "rejected"
+) => {
+  return http<{ invite: ContactInvite }>(
+    "/contacts/invites/" + inviteId + "/respond",
+    "POST",
+    { decision }
+  );
 };
 
 export const getProposals = async (status?: "pending" | "approved" | "rejected") => {

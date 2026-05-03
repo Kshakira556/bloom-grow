@@ -88,6 +88,7 @@ const ConversationSidebar = ({
   const [relationship, setRelationship] = useState("Co-Parent");
   const [showAddContact, setShowAddContact] = useState(false);
   const [contacts, setContacts] = useState<api.ApiContact[]>([]);
+  const [pendingContactInvites, setPendingContactInvites] = useState<api.ContactInvite[]>([]);
 
   const handleAddContact = async () => {
     if (!name || !name.trim()) {
@@ -106,26 +107,12 @@ const ConversationSidebar = ({
     }
 
     try {
-      let matchedUser: { id: string; full_name: string; email: string } | null = null;
       const normalizedInputEmail = email.trim().toLowerCase();
-
-      if (normalizedInputEmail) {
-        try {
-          matchedUser = await api.getUserByEmail(normalizedInputEmail);
-        } catch {
-          matchedUser = null;
-        }
-      }
-
-      const candidateEmail = (matchedUser?.email ?? normalizedInputEmail).trim().toLowerCase();
       const duplicateByEmail =
-        candidateEmail.length > 0 &&
-        contacts.some((contact) => (contact.email ?? "").trim().toLowerCase() === candidateEmail);
-      const duplicateByLinkedUser =
-        !!matchedUser?.id &&
-        contacts.some((contact) => contact.linked_user_id === matchedUser.id);
+        normalizedInputEmail.length > 0 &&
+        contacts.some((contact) => (contact.email ?? "").trim().toLowerCase() === normalizedInputEmail);
 
-      if (duplicateByEmail || duplicateByLinkedUser) {
+      if (duplicateByEmail) {
         toast({
           title: "Contact already exists",
           description: "This email is already in your contacts.",
@@ -136,44 +123,40 @@ const ConversationSidebar = ({
 
       let contactName: string = name.trim();
 
-      if (matchedUser) {
-        contactName = matchedUser.full_name;
+      const contactPayload: api.InviteUserPayload = {
+        name: contactName,
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        relationship: relationship || "Co-Parent",
+      };
 
-        await api.inviteUser({
-          name: contactName,
-          email: matchedUser.email,
-          phone: phone.trim() || undefined,
-          relationship: relationship || "Co-Parent",
-          linked_user_id: matchedUser.id,
+      const result = await api.inviteUser({
+        ...contactPayload,
+        linked_user_id: null,
+      });
+
+      if (result?.invite) {
+        toast({
+          title: "Request sent",
+          description: "They will need to accept or reject your contact request.",
         });
 
-        toast({ title: "User found", description: `${contactName} added to conversations.` });
+        const invites = await api.getContactInvites();
+        setPendingContactInvites(invites);
       } else {
-        const contactPayload: api.InviteUserPayload = {
-          name: contactName,
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
-          relationship: relationship || "Co-Parent",
-        };
-
-        await api.inviteUser({
-          ...contactPayload,
-          linked_user_id: null,
-        });
-
         toast({ title: "Contact added", description: `${contactName} will receive an invitation.` });
+
+        const refreshedContacts = await api.getContacts();
+        setContacts(refreshedContacts);
+
+        const convs = activePlan
+          ? mapContactsToConversations(refreshedContacts, messages, activePlan, userId)
+          : [];
+        setConversations(convs);
+
+        const newConv = convs.find((c) => c.name === contactName) || convs[0];
+        setSelectedConversation(newConv || null);
       }
-
-      const refreshedContacts = await api.getContacts();
-      setContacts(refreshedContacts);
-
-      const convs = activePlan
-        ? mapContactsToConversations(refreshedContacts, messages, activePlan, userId)
-        : [];
-      setConversations(convs);
-
-      const newConv = convs.find((c) => c.name === contactName) || convs[0];
-      setSelectedConversation(newConv || null);
 
       setName("");
       setEmail("");
@@ -196,6 +179,8 @@ const ConversationSidebar = ({
       try {
         const contacts = await api.getContacts();
         setContacts(contacts);
+        const invites = await api.getContactInvites();
+        setPendingContactInvites(invites);
       } catch (err) {
         console.error("Failed to fetch contacts:", err);
       }
@@ -244,6 +229,72 @@ const ConversationSidebar = ({
           </div>
         )}
       </div>
+
+      {/* Pending contact requests */}
+      {pendingContactInvites.length > 0 && (
+        <div className="px-4 pb-4">
+          <div className="p-4 border rounded-2xl bg-blue-50">
+            <p className="font-semibold text-sm mb-2">Contact requests awaiting your decision</p>
+            <div className="space-y-2">
+              {pendingContactInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="flex flex-col gap-2 border rounded-xl p-3 bg-white"
+                >
+                  <div className="text-sm">
+                    <p className="font-medium">{invite.name}</p>
+                    <p className="text-xs text-muted-foreground">{invite.email}</p>
+                    {invite.relationship && (
+                      <p className="text-xs text-muted-foreground">Relationship: {invite.relationship}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await api.respondToContactInvite(invite.id, "accepted");
+                          setPendingContactInvites((prev) => prev.filter((i) => i.id !== invite.id));
+                          const refreshedContacts = await api.getContacts();
+                          setContacts(refreshedContacts);
+                          toast({ title: "Request accepted" });
+                        } catch (err) {
+                          toast({
+                            title: "Failed to accept",
+                            description: err instanceof Error ? err.message : "Failed to accept request",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await api.respondToContactInvite(invite.id, "rejected");
+                          setPendingContactInvites((prev) => prev.filter((i) => i.id !== invite.id));
+                          toast({ title: "Request rejected" });
+                        } catch (err) {
+                          toast({
+                            title: "Failed to reject",
+                            description: err instanceof Error ? err.message : "Failed to reject request",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Plan Selector */}
       <div className="relative p-2">

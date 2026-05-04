@@ -1,6 +1,8 @@
 import { http } from "./http";
 import type { MessagePurpose } from "@/types/messages";
 
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
+
 // --------------------
 // User/Auth
 // --------------------
@@ -39,8 +41,6 @@ export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
     return { invites: [] };
   }
 
-  const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
-
   const res = await fetch(`${API_URL}/plans/invites`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -58,8 +58,6 @@ export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
 };
 
 export const acceptInvite = async (invite_id: string) => {
-  const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
-
   const res = await fetch(`${API_URL}/plans/accept`, {
     method: "POST",
     headers: {
@@ -145,7 +143,6 @@ export const downloadMyDataExport = async () => {
   const token = sessionStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
 
-  const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
   const res = await fetch(`${API_URL}/privacy/my-data`, {
     headers: {
       Authorization: `Bearer ${token}`,

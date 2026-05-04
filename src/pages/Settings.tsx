@@ -15,6 +15,7 @@ export default function Settings() {
   const [deletionReason, setDeletionReason] = useState("");
   const [isSubmittingDeletion, setIsSubmittingDeletion] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingBundle, setIsExportingBundle] = useState(false);
   const [marketingOptIn, setMarketingOptInState] = useState<boolean>(Boolean(user?.marketing_opt_in));
   const [isSavingMarketing, setIsSavingMarketing] = useState(false);
 
@@ -142,7 +143,37 @@ export default function Settings() {
                 }
               }}
             >
-              {isExporting ? "Preparing…" : "Download my data (JSON)"}
+              {isExporting ? "Preparing..." : "Download my data (JSON)"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={isExportingBundle}
+              onClick={async () => {
+                setIsExportingBundle(true);
+                try {
+                  const blob = await api.downloadMyDataExportBundle();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `cub-my-data-${new Date().toISOString().slice(0, 10)}.zip`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  const message =
+                    err instanceof Error ? err.message : "Failed to export data bundle";
+                  toast({
+                    title: "Export failed",
+                    description: message,
+                    variant: "destructive",
+                  });
+                } finally {
+                  setIsExportingBundle(false);
+                }
+              }}
+            >
+              {isExportingBundle ? "Preparing..." : "Download my data (ZIP)"}
             </Button>
           </div>
 
@@ -183,7 +214,7 @@ export default function Settings() {
                   }
                 }}
               >
-                {isSavingMarketing ? "Saving…" : "Save preferences"}
+                {isSavingMarketing ? "Saving..." : "Save preferences"}
               </Button>
             </div>
           </div>

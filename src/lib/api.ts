@@ -161,6 +161,24 @@ export const downloadMyDataExport = async () => {
   return res.json();
 };
 
+export const downloadMyDataExportBundle = async (): Promise<Blob> => {
+  const token = sessionStorage.getItem("token");
+  if (!token) throw new Error("Not authenticated");
+
+  const res = await fetch(`${API_URL}/privacy/my-data/bundle`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(txt || `Export failed (${res.status})`);
+  }
+
+  return res.blob();
+};
+
 // --------------------
 // Account deletion
 // --------------------

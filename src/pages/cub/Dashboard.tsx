@@ -138,7 +138,7 @@ export default function CubDashboard() {
         )}
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -252,7 +252,7 @@ export default function CubDashboard() {
                   <Input
                     value={logSearch}
                     onChange={(e) => setLogSearch(e.target.value)}
-                    placeholder="Search action, notes, ids…"
+                    placeholder="Search action, notes, ids..."
                   />
                   {filteredLogs.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No logs.</p>

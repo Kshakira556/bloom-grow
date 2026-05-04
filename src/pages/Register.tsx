@@ -72,6 +72,7 @@ const handleRegister = async (e: React.FormEvent) => {
 
     if (user.role === "admin") navigate("/admin/system", { replace: true });
     else if (user.role === "mediator") navigate("/admin/moderator", { replace: true });
+    else if (user.role === "cub_internal") navigate("/cub", { replace: true });
     else navigate("/dashboard", { replace: true });
   } catch (err) {
     setError((err as Error).message || "Registration failed");

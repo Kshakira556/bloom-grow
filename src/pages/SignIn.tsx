@@ -65,6 +65,8 @@ export default function SignIn() {
         navigate("/admin/system", { replace: true });
       } else if (loggedInUser.role === "mediator") {
         navigate("/admin/moderator", { replace: true });
+      } else if (loggedInUser.role === "cub_internal") {
+        navigate("/cub", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
       }

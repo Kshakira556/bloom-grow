@@ -138,6 +138,11 @@ export const createPrivacyRequest = async (payload: {
   return http<{ request: { id: string } }>("/privacy/requests", "POST", payload);
 };
 
+export const getVaultDocumentSignedUrl = async (documentId: string) => {
+  const res = await http<{ url: string }>(`/vaults/documents/${documentId}/signed-url`, "GET");
+  return res.url;
+};
+
 // --------------------
 // Plans
 // --------------------

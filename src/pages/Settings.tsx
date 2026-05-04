@@ -14,6 +14,7 @@ export default function Settings() {
   const { user, logout } = useAuth();
   const [deletionReason, setDeletionReason] = useState("");
   const [isSubmittingDeletion, setIsSubmittingDeletion] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const deletionReasonTrimmed = useMemo(() => deletionReason.trim(), [deletionReason]);
 
@@ -97,6 +98,37 @@ export default function Settings() {
             </Button>
             <Button variant="outline" asChild>
               <Link to="/privacy-requests">Privacy Requests</Link>
+            </Button>
+            <Button
+              variant="outline"
+              disabled={isExporting}
+              onClick={async () => {
+                setIsExporting(true);
+                try {
+                  const data = await api.downloadMyDataExport();
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `cub-my-data-${new Date().toISOString().slice(0, 10)}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  const message =
+                    err instanceof Error ? err.message : "Failed to export data";
+                  toast({
+                    title: "Export failed",
+                    description: message,
+                    variant: "destructive",
+                  });
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+            >
+              {isExporting ? "Preparing…" : "Download my data (JSON)"}
             </Button>
           </div>
 

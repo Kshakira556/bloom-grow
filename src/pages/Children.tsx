@@ -598,6 +598,15 @@ const Children = () => {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <h3 className="font-display font-bold mb-3">Legal</h3>
+                        {editMode && (
+                          <div className="mb-3 text-xs text-muted-foreground bg-secondary/30 border border-border rounded-xl p-3">
+                            <p className="font-medium text-foreground">Sensitive information</p>
+                            <p>
+                              Only enter legal details that are necessary for co-parenting coordination and accountability. This information may be used to support dispute
+                              resolution and auditable record keeping.
+                            </p>
+                          </div>
+                        )}
                         <div className="space-y-2 text-sm">
                           {editMode ? (
                             <>
@@ -682,6 +691,14 @@ const Children = () => {
 
                       <div>
                         <h3 className="font-display font-bold mb-3">Medical</h3>
+                        {editMode && (
+                          <div className="mb-3 text-xs text-muted-foreground bg-secondary/30 border border-border rounded-xl p-3">
+                            <p className="font-medium text-foreground">Sensitive information</p>
+                            <p>
+                              Medical information is highly sensitive. Only add what is needed for care, safety, and coordination. Avoid unnecessary details.
+                            </p>
+                          </div>
+                        )}
                         <div className="space-y-2 text-sm">
                           {editMode ? (
                             <>
@@ -848,6 +865,13 @@ const Children = () => {
                       {/* Dropdowns + Export */}
                       {editMode && (
                         <div className="flex flex-col md:flex-row gap-4 mb-4 items-center">
+                          <div className="w-full md:flex-1 text-xs text-muted-foreground bg-secondary/30 border border-border rounded-xl p-3">
+                            <p className="font-medium text-foreground">Privacy notice (Vault uploads)</p>
+                            <p>
+                              Documents are stored in private storage and accessed via time-limited signed links. Only authorised guardians and
+                              approved roles can access Vault records. Avoid uploading unnecessary personal information.
+                            </p>
+                          </div>
                           {/* Main Category */}
                           <select
                             aria-label="Document Category"

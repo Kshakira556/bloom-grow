@@ -138,6 +138,26 @@ export const createPrivacyRequest = async (payload: {
   return http<{ request: { id: string } }>("/privacy/requests", "POST", payload);
 };
 
+export const downloadMyDataExport = async () => {
+  const token = sessionStorage.getItem("token");
+  if (!token) throw new Error("Not authenticated");
+
+  const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
+  const res = await fetch(`${API_URL}/privacy/my-data`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || "Failed to export data");
+  }
+
+  return res.json();
+};
+
 // --------------------
 // Account deletion
 // --------------------
@@ -793,6 +813,14 @@ export const getCubDeletionRequests = async (): Promise<AccountDeletionRequest[]
 export const processCubDeletions = async (options?: { limit?: number }) => {
   const q = typeof options?.limit === "number" ? `?limit=${encodeURIComponent(String(options.limit))}` : "";
   return http<{ processed: number }>(`/cub/deletions/process${q}`, "POST");
+};
+
+export const setCubUserLegalHold = async (userId: string, payload: { legal_hold: boolean; reason?: string }) => {
+  return http<{ user: { id: string; legal_hold: boolean } }>(`/cub/legal-hold/users/${userId}`, "PUT", payload);
+};
+
+export const setCubPlanLegalHold = async (planId: string, payload: { legal_hold: boolean; reason?: string }) => {
+  return http<{ plan: { id: string; legal_hold: boolean } }>(`/cub/legal-hold/plans/${planId}`, "PUT", payload);
 };
 
 export const getAdminMessages = async (options?: { includeDeleted?: boolean }) => {

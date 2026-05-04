@@ -27,6 +27,10 @@ export default function CubDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [logSearch, setLogSearch] = useState("");
+  const [legalHoldTarget, setLegalHoldTarget] = useState<"plan" | "user">("plan");
+  const [legalHoldId, setLegalHoldId] = useState("");
+  const [legalHoldEnabled, setLegalHoldEnabled] = useState(true);
+  const [legalHoldReason, setLegalHoldReason] = useState("");
 
   const load = async () => {
     try {
@@ -82,6 +86,27 @@ export default function CubDashboard() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process deletions");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSetLegalHold = async () => {
+    const id = legalHoldId.trim();
+    if (!id) return;
+
+    setProcessing(true);
+    try {
+      if (legalHoldTarget === "plan") {
+        await api.setCubPlanLegalHold(id, { legal_hold: legalHoldEnabled, reason: legalHoldReason.trim() || undefined });
+      } else {
+        await api.setCubUserLegalHold(id, { legal_hold: legalHoldEnabled, reason: legalHoldReason.trim() || undefined });
+      }
+      setLegalHoldId("");
+      setLegalHoldReason("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update legal hold");
     } finally {
       setProcessing(false);
     }
@@ -155,6 +180,50 @@ export default function CubDashboard() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
+                  <CardTitle>Legal Hold</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Legal hold pauses automated anonymisation/redaction for a specific user or plan.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={legalHoldTarget}
+                      onChange={(e) => setLegalHoldTarget(e.target.value as "plan" | "user")}
+                      className="px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
+                    >
+                      <option value="plan">Plan</option>
+                      <option value="user">User</option>
+                    </select>
+                    <Input
+                      value={legalHoldId}
+                      onChange={(e) => setLegalHoldId(e.target.value)}
+                      placeholder={legalHoldTarget === "plan" ? "Plan ID" : "User ID"}
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={legalHoldEnabled ? "on" : "off"}
+                      onChange={(e) => setLegalHoldEnabled(e.target.value === "on")}
+                      className="px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
+                    >
+                      <option value="on">Enable hold</option>
+                      <option value="off">Disable hold</option>
+                    </select>
+                    <Input
+                      value={legalHoldReason}
+                      onChange={(e) => setLegalHoldReason(e.target.value)}
+                      placeholder="Reason (optional)"
+                    />
+                    <Button onClick={handleSetLegalHold} disabled={processing || !legalHoldId.trim()}>
+                      Apply
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
                   <CardTitle>Deletion Requests</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -210,4 +279,3 @@ export default function CubDashboard() {
     </div>
   );
 }
-

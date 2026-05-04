@@ -50,12 +50,27 @@ export const uploadVaultDocument = async ({
     throw new Error(`Supabase upload failed: ${uploadError.message}`);
   }
 
-  const { data } = client.storage.from(bucket).getPublicUrl(path);
-  const publicUrl = data?.publicUrl;
+  // For a private bucket we store the storage path, not a public URL.
+  return path;
+};
 
-  if (!publicUrl) {
-    throw new Error("Supabase upload succeeded, but no public URL was returned.");
+export const getSignedVaultDocumentUrl = async (
+  fileUrlOrPath: string,
+  expiresInSeconds = 60 * 10,
+): Promise<string> => {
+  const value = (fileUrlOrPath || "").trim();
+  if (!value) throw new Error("Missing file reference");
+
+  // Backwards compatible: previously stored full public URLs.
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const client = getSupabaseClient();
+  const bucket = import.meta.env.VITE_SUPABASE_BUCKET || "vault-documents";
+
+  const { data, error } = await client.storage.from(bucket).createSignedUrl(value, expiresInSeconds);
+  if (error || !data?.signedUrl) {
+    throw new Error(`Supabase signed URL failed: ${error?.message || "Unknown error"}`);
   }
 
-  return publicUrl;
+  return data.signedUrl;
 };

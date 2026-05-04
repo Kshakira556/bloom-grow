@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { TrialStatusPill } from "./TrialStatusPill";
 import TrialBanner from "./TrialBanner";
+import { Footer } from "@/components/layout/Footer";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -141,6 +142,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {/* Page Content */}
         <TrialBanner trialEndsAt={user?.trial_ends_at || null} />
         <div className="p-6">{children}</div>
+        <Footer />
       </main>
     </div>
   );

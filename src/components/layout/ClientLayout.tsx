@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { Footer } from "@/components/layout/Footer";
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -132,6 +133,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
         </header>
 
         <div className="p-6">{children}</div>
+        <Footer />
       </main>
     </div>
   );

@@ -88,6 +88,17 @@ export default function SignIn() {
         showForgotPassword
         error={error}
       />
+      <p className="mt-4 text-xs text-center text-muted-foreground">
+        By signing in you agree to our{" "}
+        <a className="text-primary hover:underline" href="/terms" target="_blank" rel="noreferrer">
+          Terms
+        </a>{" "}
+        and{" "}
+        <a className="text-primary hover:underline" href="/privacy" target="_blank" rel="noreferrer">
+          Privacy Notice
+        </a>
+        .
+      </p>
       {inviteId && (
         <div className="mt-4 text-sm text-center">
           <button

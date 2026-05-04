@@ -8,6 +8,7 @@ import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { Footer } from "@/components/layout/Footer";
 import { TrialStatusPill } from "./TrialStatusPill";
 import TrialBanner from "./TrialBanner";
 
@@ -145,6 +146,7 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
         {/* Page Content */}
         <TrialBanner trialEndsAt={user?.trial_ends_at || null} />
         <div className="p-6">{children}</div>
+        <Footer />
       </main>
     </div>
   );

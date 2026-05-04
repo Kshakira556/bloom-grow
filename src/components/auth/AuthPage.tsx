@@ -1,5 +1,6 @@
 // components/auth/AuthPage.tsx
 import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 type AuthPageProps = {
   title: string;
@@ -24,6 +25,7 @@ export const AuthPage = ({ title, illustration, children }: AuthPageProps) => {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

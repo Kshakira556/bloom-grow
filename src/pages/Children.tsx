@@ -10,7 +10,7 @@ import { vaultReadService } from "@/lib/vaultReadService";
 import { VaultAggregate } from "@/types/vaultAggregate";
 import { vaultSaveService } from "@/lib/vaultSaveService";
 import { AddChildModal } from "@/components/AddChildModal";
-import { isSupabaseConfigured } from "@/lib/supabaseStorage";
+import { getSignedVaultDocumentUrl, isSupabaseConfigured } from "@/lib/supabaseStorage";
 
 type VaultAggregateWithMissing = VaultAggregate & {
   vaultMissing?: boolean;
@@ -217,6 +217,17 @@ const Children = () => {
 
   const toggleDocKey = (key: string) => {
     setSelectedDocKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
+
+  const openVaultDoc = async (fileRef?: string) => {
+    if (!fileRef) return;
+    try {
+      const url = await getSignedVaultDocumentUrl(fileRef);
+      window.open(url, "_blank");
+    } catch (err) {
+      console.error("Failed to open document:", err);
+      alert(err instanceof Error ? err.message : "Failed to open document");
+    }
   };
 
   const filteredFiles = (selectedChild?.documents || []).filter(
@@ -936,14 +947,28 @@ const Children = () => {
                                       .map((f, idx) => {
                                         const fileName = f.file?.name || f.name || "document";
                                         const key = f.id || `${idx}-${fileName}`;
-                                        const url = f.file
-                                          ? URL.createObjectURL(f.file)
-                                          : (f.fileUrl || (f as any).file_url || "");
-                                        return { key, url, fileName, isObjectUrl: Boolean(f.file) };
+                                        const url = f.file ? URL.createObjectURL(f.file) : "";
+                                        const fileRef = f.fileUrl || (f as any).file_url || "";
+                                        return { key, url, fileRef, fileName, isObjectUrl: Boolean(f.file) };
                                       })
-                                      .filter((x) => selectedDocKeys.includes(x.key) && Boolean(x.url));
+                                      .filter((x) => selectedDocKeys.includes(x.key));
 
-                                    downloadUrls(picked.map((p) => ({ url: p.url, filename: p.fileName })));
+                                    const localDownloads = picked.filter((p) => p.isObjectUrl && p.url);
+                                    downloadUrls(localDownloads.map((p) => ({ url: p.url, filename: p.fileName })));
+
+                                    const remoteDownloads = picked.filter((p) => !p.isObjectUrl && p.fileRef);
+                                    (async () => {
+                                      const resolved = await Promise.all(
+                                        remoteDownloads.map(async (p) => ({
+                                          url: await getSignedVaultDocumentUrl(p.fileRef),
+                                          filename: p.fileName,
+                                        }))
+                                      );
+                                      downloadUrls(resolved);
+                                    })().catch((err) => {
+                                      console.error("Failed to download selected documents:", err);
+                                      alert(err instanceof Error ? err.message : "Failed to download documents");
+                                    });
 
                                     picked.forEach((p) => {
                                       if (p.isObjectUrl) URL.revokeObjectURL(p.url);
@@ -960,7 +985,7 @@ const Children = () => {
 
                             {(selectedChild?.documents || []).map((file, idx) => {
                               const fileName = file.file?.name || file.name || "Unnamed file"; // ✅ safe
-                              const fileURL = file.file ? URL.createObjectURL(file.file) : file.fileUrl;
+                              const fileURL = file.file ? URL.createObjectURL(file.file) : "";
                               const key = file.id || `${idx}-${fileName}`;
 
                               return (
@@ -984,10 +1009,19 @@ const Children = () => {
                                     onChange={() => toggleDocKey(key)}
                                   />
 
-                                  {fileURL && (
+                                  {(file.file || file.fileUrl || (file as any).file_url) && (
                                     <button
                                       className="p-1 rounded hover:bg-card/50 no-print"
-                                      onClick={() => window.open(fileURL, "_blank")}
+                                      onClick={() => {
+                                        if (file.file) {
+                                          const url = URL.createObjectURL(file.file);
+                                          window.open(url, "_blank");
+                                          URL.revokeObjectURL(url);
+                                          return;
+                                        }
+
+                                        openVaultDoc(file.fileUrl || (file as any).file_url);
+                                      }}
                                       title="Preview document"
                                     >
                                       <Eye className="w-4 h-4 text-primary" />

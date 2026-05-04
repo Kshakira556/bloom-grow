@@ -126,6 +126,19 @@ export const getModerators = async (): Promise<Moderator[]> => {
 };
 
 // --------------------
+// Privacy Requests
+// --------------------
+export type PrivacyRequestType = "access" | "correction" | "deletion" | "objection";
+
+export const createPrivacyRequest = async (payload: {
+  request_type: PrivacyRequestType;
+  details?: string;
+  contact_email?: string;
+}) => {
+  return http<{ request: { id: string } }>("/privacy/requests", "POST", payload);
+};
+
+// --------------------
 // Plans
 // --------------------
 export interface Plan {

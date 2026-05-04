@@ -17,9 +17,10 @@ export const http = async <T>(
     "Content-Type": "application/json",
   };
 
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
+  // Prefer in-memory token, but fall back to sessionStorage to avoid edge cases
+  // where the app state says "authenticated" but the in-memory token wasn't set yet.
+  const token = authToken || sessionStorage.getItem("token");
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   if (!API_URL) {
     throw new Error("API is not configured. Set VITE_API_URL.");

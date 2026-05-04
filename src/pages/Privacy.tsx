@@ -68,20 +68,23 @@ export default function Privacy() {
               <span className="font-medium">Account/profile data</span>: retained while your account is active or deactivated; deleted or anonymised after a deletion request is processed.
             </li>
             <li>
-              <span className="font-medium">Messages and interaction history</span>: retained as shared co-parenting records while the other guardian continues to use the service and where lawful; a deleted user may be de-identified where feasible.
+              <span className="font-medium">Messages and interaction history</span>: retained as shared co-parenting records where lawful (including for accountability, dispute resolution, and legal defence). A deleted user may be de-identified where feasible.
             </li>
             <li>
-              <span className="font-medium">Child vault records and documents</span>: retained as shared guardian records while at least one lawful guardian continues to use the service and where lawful.
+              <span className="font-medium">Child vault records, schedules, and documents</span>: retained as shared guardian records where lawful (including for safety, accountability, and dispute resolution), and are not automatically deleted when one parent deletes their profile.
             </li>
             <li>
               <span className="font-medium">Audit and security logs</span>: retained as needed for accountability, security, fraud prevention, and dispute resolution, even where profile data is anonymised.
+            </li>
+            <li>
+              <span className="font-medium">Low-value data</span>: expired invites, temporary tokens, and other short-lived operational data may be deleted automatically when no longer needed.
             </li>
           </ul>
           <p>
             <span className="font-medium">Deactivation vs deletion:</span> deactivation may preserve your profile for later return.
             Deletion is different: when you request deletion, we begin a deletion process. We apply a grace period (currently{" "}
             <span className="font-medium">30 days</span>) to allow dispute resolution, fraud prevention, and operational stability.
-            After the grace period, we permanently remove or anonymise your personal profile information where feasible.
+            After the grace period, we permanently remove or anonymise your personal profile information (name, email, phone) where feasible.
           </p>
           <p>
             <span className="font-medium">Individual rights:</span> each person’s data rights are individual. If Parent A requests deletion,
@@ -93,6 +96,16 @@ export default function Privacy() {
             plan history, and audit logs) are not automatically deleted when one parent requests deletion. These records may remain lawfully
             necessary for the other guardian’s ongoing use of the service, for legal compliance, and for accountability. Where feasible, we
             de-identify a deleted user in shared records.
+          </p>
+          <p>
+            <span className="font-medium">Both-guardian destruction window:</span> where all guardians request full destruction of shared records,
+            we may first mark the plan as pending destruction and lock new activity. Records may then be retained for a limited period (typically{" "}
+            <span className="font-medium">18 months</span>) for legal, safety, and dispute-resolution purposes before permanent deletion or full anonymisation,
+            unless a legal hold or other lawful basis requires longer retention.
+          </p>
+          <p>
+            <span className="font-medium">Legal hold:</span> we may pause or prevent destruction where records are required for disputes, legal proceedings,
+            or accountability. This protects the rights of all parties and the integrity of the record.
           </p>
 
           <h2 className="font-semibold pt-2">6. Security</h2>

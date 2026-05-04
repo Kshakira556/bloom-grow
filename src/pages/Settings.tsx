@@ -21,7 +21,7 @@ export default function Settings() {
     if (!user) return;
 
     const confirmed = window.confirm(
-      "Request account deletion?\n\nThis will disable your account soon after your request is submitted. After a 30-day grace period, we will permanently remove or anonymise your personal profile information where feasible.\n\nShared co-parenting records (including messages and child-related vault records) may be retained where lawful, but your identity will be de-identified where possible.\n\nContinue?"
+      "Request account deletion?\n\nThis will disable your account soon after your request is submitted. After a 30-day grace period, we will permanently remove or anonymise your personal profile information (name, email, phone) where feasible.\n\nShared co-parenting records (including messages and child-related vault records) may be retained where lawful for accountability, dispute resolution, and the other guardian’s rights, but your identity will be de-identified where feasible.\n\nContinue?"
     );
     if (!confirmed) return;
 

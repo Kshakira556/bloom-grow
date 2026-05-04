@@ -54,6 +54,11 @@ export default function Terms() {
             vault records) may be retained where lawful for the other guardian’s use, legal compliance, and accountability, and your identity
             may be de-identified where feasible.
           </p>
+          <p>
+            Where all guardians request full destruction of shared records, CUB may mark the plan as pending destruction and lock new activity.
+            Records may then be retained for a limited period (typically <span className="font-medium">18 months</span>) for legal, safety, and dispute-resolution
+            purposes before permanent deletion or full anonymisation, unless a legal hold or other lawful basis requires longer retention.
+          </p>
         </div>
       </div>
       </main>

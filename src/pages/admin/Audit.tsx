@@ -17,6 +17,9 @@ const AdminAudit = () => {
   const [messages, setMessages] = useState<api.ApiMessage[]>([]);
   const [users, setUsers] = useState<api.SafeUser[]>([]);
   const [historyById, setHistoryById] = useState<Record<string, api.ApiMessageHistory[]>>({});
+  const [auditLogs, setAuditLogs] = useState<api.AuditLog[]>([]);
+  const [auditAction, setAuditAction] = useState<string>("All");
+  const [auditSearch, setAuditSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +33,8 @@ const AdminAudit = () => {
           api.getPlans(),
         ]);
 
+        const logsResPromise = api.getAuditLogs().catch(() => [] as api.AuditLog[]);
+
         const planList = plansRes?.plans ?? [];
         let allMessages: api.ApiMessage[] = [];
         try {
@@ -41,6 +46,7 @@ const AdminAudit = () => {
 
         setUsers(usersRes);
         setMessages(allMessages);
+        setAuditLogs(await logsResPromise);
 
         const historyEntries = await Promise.all(
           allMessages.slice(0, 200).map(async (msg) =>
@@ -75,6 +81,35 @@ const AdminAudit = () => {
       })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [messages, purposeFilter, search, userMap]);
+
+  const filteredAuditLogs = useMemo(() => {
+    const q = auditSearch.trim().toLowerCase();
+    return auditLogs
+      .filter((log) => (auditAction === "All" ? true : log.action === auditAction))
+      .filter((log) => {
+        if (!q) return true;
+        const actor = (userMap[log.actor_id] || log.actor_id).toLowerCase();
+        const action = (log.action || "").toLowerCase();
+        const target = (log.target_type || "").toLowerCase();
+        const notes = (log.notes || "").toLowerCase();
+        return (
+          actor.includes(q) ||
+          action.includes(q) ||
+          target.includes(q) ||
+          notes.includes(q) ||
+          (log.target_id || "").toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [auditLogs, auditAction, auditSearch, userMap]);
+
+  const auditActions = useMemo(() => {
+    const uniq = new Set<string>();
+    for (const l of auditLogs) {
+      if (l.action) uniq.add(l.action);
+    }
+    return ["All", ...Array.from(uniq).sort()];
+  }, [auditLogs]);
 
   const exportAudit = () => {
     const doc = new jsPDF();
@@ -147,8 +182,84 @@ const AdminAudit = () => {
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold flex items-center gap-2">
         <FileText className="w-6 h-6 text-primary" />
-        Audit / Message History
+        Audit / Oversight
       </h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Audit Actions (Sensitive Access & Exports)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Input
+              placeholder="Search by actor, action, target, notes..."
+              value={auditSearch}
+              onChange={(e) => setAuditSearch(e.target.value)}
+            />
+            <div className="flex gap-2 flex-wrap md:justify-end md:col-span-2">
+              {auditActions.slice(0, 8).map((a) => (
+                <button
+                  key={a}
+                  onClick={() => setAuditAction(a)}
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    auditAction === a
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                  title={a}
+                >
+                  {a === "All" ? "All" : a.replaceAll("_", " ")}
+                </button>
+              ))}
+              {auditActions.length > 8 && (
+                <select
+                  value={auditAction}
+                  onChange={(e) => setAuditAction(e.target.value)}
+                  className="px-3 py-1 rounded-full text-sm bg-muted text-muted-foreground"
+                >
+                  {auditActions.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading audit actions...</p>
+          ) : filteredAuditLogs.length > 0 ? (
+            <div className="space-y-2">
+              {filteredAuditLogs.slice(0, 200).map((log) => (
+                <div key={log.id} className="p-3 border rounded-xl flex flex-col gap-1">
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+                    <span>{formatDateTime(log.created_at)}</span>
+                    <span className="font-medium">{userMap[log.actor_id] || log.actor_id}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-secondary">
+                      {log.action}
+                    </span>
+                    {log.target_type && (
+                      <span className="px-2 py-0.5 rounded-full bg-muted">
+                        {log.target_type}
+                      </span>
+                    )}
+                    {log.target_id && <span className="font-mono text-[10px]">{log.target_id}</span>}
+                  </div>
+                  {log.notes && <p className="text-xs text-muted-foreground">{log.notes}</p>}
+                </div>
+              ))}
+              {filteredAuditLogs.length > 200 && (
+                <p className="text-xs text-muted-foreground">
+                  Showing first 200 matching audit actions.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No audit actions to display.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Input
         placeholder="Search by sender, recipient, or content..."
@@ -175,7 +286,7 @@ const AdminAudit = () => {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Audit Logs</CardTitle>
+          <CardTitle>Message History</CardTitle>
           <Button size="sm" onClick={exportAudit} className="gap-2">
             Export
           </Button>

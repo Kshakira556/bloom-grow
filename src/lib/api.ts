@@ -138,9 +138,44 @@ export const createPrivacyRequest = async (payload: {
   return http<{ request: { id: string } }>("/privacy/requests", "POST", payload);
 };
 
+// --------------------
+// Account deletion
+// --------------------
+export const requestAccountDeletion = async (payload?: { reason?: string }) => {
+  return http<{ request: { id: string; scheduled_for?: string | null } }>(
+    "/users/deletion-request",
+    "POST",
+    payload ?? {}
+  );
+};
+
 export const getVaultDocumentSignedUrl = async (documentId: string) => {
   const res = await http<{ url: string }>(`/vaults/documents/${documentId}/signed-url`, "GET");
   return res.url;
+};
+
+// --------------------
+// Audit (client-side events)
+// --------------------
+export const createAuditEvent = async (payload: {
+  action: string;
+  target_type?: string;
+  target_id?: string;
+  notes?: Record<string, unknown> | string;
+}) => {
+  const body = {
+    action: payload.action,
+    target_type: payload.target_type ?? null,
+    target_id: payload.target_id ?? null,
+    notes:
+      typeof payload.notes === "string"
+        ? payload.notes
+        : payload.notes
+        ? JSON.stringify(payload.notes)
+        : null,
+  };
+
+  return http<{ log: { id: string } }>("/audit/events", "POST", body);
 };
 
 // --------------------
@@ -244,8 +279,19 @@ export const inviteToPlan = async (payload: PlanInvitePayload) => {
   });
 };
 
-export const acceptPlanInvite = async (invite_id: string) => {
-  return http("/plans/accept", "POST", { invite_id });
+export const acceptPlanInvite = async (invite: { invite_id?: string; invite_token?: string } | string) => {
+  if (typeof invite === "string") {
+    return http("/plans/accept", "POST", { invite_id: invite });
+  }
+  return http("/plans/accept", "POST", invite);
+};
+
+export const resolvePlanInviteToken = async (token: string): Promise<{ invite_id: string; email: string; account_type: "trial" | "paid" }> => {
+  const res = await http<{ invite: { invite_id: string; email: string; account_type: "trial" | "paid" } }>(
+    `/plans/invites/token/${encodeURIComponent(token)}`,
+    "GET"
+  );
+  return res.invite;
 };
 
 // --------------------
@@ -678,6 +724,27 @@ export interface AuditLog {
 export const getAuditLogs = async () => {
   const res = await http<{ logs: AuditLog[] }>("/admin/audit-logs", "GET");
   return res?.logs ?? [];
+};
+
+export type AccountDeletionRequest = {
+  id: string;
+  user_id: string;
+  requested_at: string;
+  scheduled_for: string;
+  processed_at: string | null;
+  status: "pending" | "processed" | "canceled" | string;
+  reason: string | null;
+};
+
+export const getAccountDeletionRequests = async (options?: { status?: string }) => {
+  const q = options?.status ? `?status=${encodeURIComponent(options.status)}` : "";
+  const res = await http<{ requests: AccountDeletionRequest[] }>(`/admin/deletions/requests${q}`, "GET");
+  return res?.requests ?? [];
+};
+
+export const processAccountDeletions = async (options?: { limit?: number }) => {
+  const q = typeof options?.limit === "number" ? `?limit=${encodeURIComponent(String(options.limit))}` : "";
+  return http<{ processed: number }>(`/admin/deletions/process${q}`, "POST");
 };
 
 export const getAdminMessages = async (options?: { includeDeleted?: boolean }) => {

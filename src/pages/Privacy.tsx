@@ -21,13 +21,17 @@ export default function Privacy() {
             Responsible Party: CUB (the operator of this website and application).
           </p>
           <p>
-            Information Officer contact: <span className="font-medium">[INSERT CONTACT EMAIL]</span>
+            POPIA Director / Information Officer: <span className="font-medium">Shakira Knight</span>
+          </p>
+          <p>
+            Email: <span className="font-medium">kni.shakira@gmail.com</span> � Phone:{" "}
+            <span className="font-medium">+27818535226</span>
           </p>
 
           <h2 className="font-semibold pt-2">2. What we collect</h2>
           <ul className="list-disc pl-5 space-y-1">
             <li>Account information: name, email address, phone number (optional), role, subscription status.</li>
-            <li>Plan and co‑parenting data: parenting plans, invites, visits, and related metadata.</li>
+            <li>Plan and co-parenting data: parenting plans, invites, visits, and related metadata.</li>
             <li>Messages and message history: message content, timestamps, edits, flags, seen status.</li>
             <li>Vault data: child details, guardians, legal/medical/safety information, emergency contacts.</li>
             <li>Documents: filenames and secure file references for uploaded documents linked to vault records.</li>
@@ -44,9 +48,10 @@ export default function Privacy() {
 
           <h2 className="font-semibold pt-2">4. Operators / processors we use</h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Hosting and infrastructure providers for the web application and backend APIs.</li>
-            <li>Email delivery provider (for transactional emails such as invites).</li>
-            <li>Supabase Storage (private bucket) for vault document storage.</li>
+            <li>Vercel (web hosting for the frontend).</li>
+            <li>Render (hosting for backend APIs).</li>
+            <li>Supabase (database and private Storage for vault documents).</li>
+            <li>Resend (transactional emails such as invites).</li>
           </ul>
           <p className="text-muted-foreground">
             Note: Some operators may process information outside South Africa. Where this occurs, we take reasonable
@@ -55,9 +60,39 @@ export default function Privacy() {
 
           <h2 className="font-semibold pt-2">5. Retention</h2>
           <p>
-            We retain personal information only for as long as necessary to provide the service and for lawful
-            purposes. Retention periods may differ by record type (messages, vault records, documents, logs). You may
-            submit a request via the Privacy Requests page for access, correction, or deletion where applicable.
+            We retain personal information only for as long as necessary to provide the service and for lawful purposes.
+            In general, we retain records while your account remains active or deactivated.
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              <span className="font-medium">Account/profile data</span>: retained while your account is active or deactivated; deleted or anonymised after a deletion request is processed.
+            </li>
+            <li>
+              <span className="font-medium">Messages and interaction history</span>: retained as shared co-parenting records while the other guardian continues to use the service and where lawful; a deleted user may be de-identified where feasible.
+            </li>
+            <li>
+              <span className="font-medium">Child vault records and documents</span>: retained as shared guardian records while at least one lawful guardian continues to use the service and where lawful.
+            </li>
+            <li>
+              <span className="font-medium">Audit and security logs</span>: retained as needed for accountability, security, fraud prevention, and dispute resolution, even where profile data is anonymised.
+            </li>
+          </ul>
+          <p>
+            <span className="font-medium">Deactivation vs deletion:</span> deactivation may preserve your profile for later return.
+            Deletion is different: when you request deletion, we begin a deletion process. We apply a grace period (currently{" "}
+            <span className="font-medium">30 days</span>) to allow dispute resolution, fraud prevention, and operational stability.
+            After the grace period, we permanently remove or anonymise your personal profile information where feasible.
+          </p>
+          <p>
+            <span className="font-medium">Individual rights:</span> each person’s data rights are individual. If Parent A requests deletion,
+            we delete or de-identify Parent A’s personal profile information (unless there is a lawful reason to retain specific items).
+            Parent B’s personal information is not affected.
+          </p>
+          <p>
+            <span className="font-medium">Children and shared records:</span> child records and shared interaction records (such as messages,
+            plan history, and audit logs) are not automatically deleted when one parent requests deletion. These records may remain lawfully
+            necessary for the other guardian’s ongoing use of the service, for legal compliance, and for accountability. Where feasible, we
+            de-identify a deleted user in shared records.
           </p>
 
           <h2 className="font-semibold pt-2">6. Security</h2>
@@ -72,9 +107,15 @@ export default function Privacy() {
             in certain circumstances. Use the Privacy Requests page in the app, or contact the Information Officer.
           </p>
 
-          <h2 className="font-semibold pt-2">8. Changes</h2>
+          <h2 className="font-semibold pt-2">8. Complaints</h2>
           <p>
-            We may update this notice from time to time. The “Last updated” date above reflects the current version.
+            Complaints about how we process personal information can be made to the POPIA Director / Information Officer
+            using the contact details above. We will respond within a reasonable time and work with you to resolve the concern.
+          </p>
+
+          <h2 className="font-semibold pt-2">9. Changes</h2>
+          <p>
+            We may update this notice from time to time. The "Last updated" date above reflects the current version.
           </p>
         </div>
       </div>

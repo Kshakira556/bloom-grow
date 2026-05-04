@@ -13,7 +13,7 @@ export default function Terms() {
         <div className="space-y-3 text-sm leading-relaxed">
           <p>
             These Terms govern your use of the CUB application and website. They are provided in plain language for
-            readability. This page should be reviewed and finalised with your legal counsel.
+            readability.
           </p>
 
           <h2 className="font-semibold pt-2">1. Accounts</h2>
@@ -42,7 +42,17 @@ export default function Terms() {
 
           <h2 className="font-semibold pt-2">5. Support and notices</h2>
           <p>
-            If you have questions about these Terms, contact: <span className="font-medium">[INSERT SUPPORT EMAIL]</span>.
+            If you have questions about these Terms or your privacy rights, contact the POPIA Director / Information Officer:
+            <span className="font-medium"> kni.shakira@gmail.com</span> / <span className="font-medium">+27818535226</span>.
+          </p>
+
+          <h2 className="font-semibold pt-2">6. Retention and deletion</h2>
+          <p>
+            CUB retains records for as long as needed to provide the service and meet lawful purposes. Deactivation is different
+            from deletion. If you request deletion, we apply a grace period (currently 30 days) and then permanently remove or
+            anonymise your personal profile information where feasible. Shared co-parenting records (including messages and child-related
+            vault records) may be retained where lawful for the other guardian’s use, legal compliance, and accountability, and your identity
+            may be de-identified where feasible.
           </p>
         </div>
       </div>

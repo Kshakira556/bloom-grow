@@ -267,6 +267,20 @@ const Messages = () => {
 
                       const historyById = Object.fromEntries(historyEntries);
 
+                      try {
+                        await api.createAuditEvent({
+                          action: "messages_export_pdf",
+                          target_type: "plan",
+                          target_id: activePlan.id,
+                          notes: {
+                            purpose_filter: purposeFilter,
+                            conversation_with_user_id: selectedConversation.user_id,
+                          },
+                        });
+                      } catch (err) {
+                        console.warn("Audit log failed (messages export):", err);
+                      }
+
                       await exportConversation(
                         conversationMessages,
                         {

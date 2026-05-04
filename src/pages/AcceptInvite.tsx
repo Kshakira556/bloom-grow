@@ -1,33 +1,67 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { acceptPlanInvite } from "@/lib/api";
+import { acceptPlanInvite, resolvePlanInviteToken } from "@/lib/api";
 
 type InviteStatus = "idle" | "accepting" | "error";
 
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
+  const token = useMemo(() => searchParams.get("token")?.trim() ?? "", [searchParams]);
   const inviteId = useMemo(() => searchParams.get("invite_id")?.trim() ?? "", [searchParams]);
-  const invitedEmail = useMemo(() => searchParams.get("email")?.trim() ?? "", [searchParams]);
-  const invitedAccountType = useMemo(
-    () => (searchParams.get("account_type")?.trim() as "trial" | "paid" | "") || "",
-    [searchParams]
-  );
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [status, setStatus] = useState<InviteStatus>("idle");
   const [error, setError] = useState("");
-  const inviteQuery = useMemo(() => {
-    const params = new URLSearchParams();
-    if (inviteId) params.set("invite_id", inviteId);
-    if (invitedEmail) params.set("email", invitedEmail);
-    if (invitedAccountType) params.set("account_type", invitedAccountType);
-    const qs = params.toString();
-    return qs ? `?${qs}` : "";
-  }, [inviteId, invitedEmail, invitedAccountType]);
+  const [resolvedInviteId, setResolvedInviteId] = useState("");
+  const [resolvedEmail, setResolvedEmail] = useState("");
+  const [resolvedAccountType, setResolvedAccountType] = useState<"trial" | "paid" | "">("");
+  const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
-    if (!inviteId) {
+    if (!token) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        setResolving(true);
+        const invite = await resolvePlanInviteToken(token);
+        if (cancelled) return;
+        setResolvedInviteId(invite.invite_id);
+        setResolvedEmail(invite.email);
+        setResolvedAccountType(invite.account_type);
+      } catch (err) {
+        if (cancelled) return;
+        setStatus("error");
+        setError(err instanceof Error ? err.message : "Invalid invite link.");
+      } finally {
+        if (!cancelled) setResolving(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  const inviteQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    // New: prefer token-only flow; but when present we also pass resolved fields (locked) to auth screens.
+    if (token) params.set("token", token);
+
+    const id = resolvedInviteId || inviteId;
+    if (id) params.set("invite_id", id);
+    if (resolvedEmail) params.set("email", resolvedEmail);
+    if (resolvedAccountType) params.set("account_type", resolvedAccountType);
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  }, [token, inviteId, resolvedInviteId, resolvedEmail, resolvedAccountType]);
+
+  useEffect(() => {
+    if (!inviteId && !token) {
       setStatus("error");
       setError("Invalid invite link.");
       return;
@@ -42,7 +76,11 @@ export default function AcceptInvite() {
     const run = async () => {
       try {
         setStatus("accepting");
-        await acceptPlanInvite(inviteId);
+        if (token) {
+          await acceptPlanInvite({ invite_token: token });
+        } else {
+          await acceptPlanInvite(inviteId);
+        }
         if (!cancelled) {
           navigate("/visits", { replace: true });
         }
@@ -86,11 +124,15 @@ export default function AcceptInvite() {
           <p className="text-sm text-muted-foreground mb-5">
             If you already have an account, sign in. If you're new, register first to create a password.
           </p>
+          {token && resolving && (
+            <p className="text-xs text-muted-foreground mb-4">Validating invite…</p>
+          )}
           <div className="flex flex-col gap-3">
             <button
               type="button"
               className="px-4 py-2 rounded-full bg-primary text-primary-foreground"
               onClick={() => navigate(`/signin${inviteQuery}`, { replace: true })}
+              disabled={token ? resolving || status === "error" : false}
             >
               I already have an account
             </button>
@@ -98,6 +140,7 @@ export default function AcceptInvite() {
               type="button"
               className="px-4 py-2 rounded-full border border-border"
               onClick={() => navigate(`/register${inviteQuery}`, { replace: true })}
+              disabled={token ? resolving || status === "error" : false}
             >
               I need to register
             </button>

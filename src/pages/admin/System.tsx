@@ -8,6 +8,7 @@ import Audit from "./tabs/Audit";
 import Reports from "./tabs/Reports";
 import SettingsTab from "./tabs/Settings";
 import Overrides from "./tabs/Overrides";
+import Deletions from "./tabs/Deletions";
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("moderators");
@@ -21,6 +22,7 @@ const Admin = () => {
             <TabsTrigger value="moderators">Moderators</TabsTrigger>
             <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
             <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+            <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="settings">Global Settings</TabsTrigger>
             <TabsTrigger value="overrides">Overrides</TabsTrigger>
@@ -29,6 +31,7 @@ const Admin = () => {
           <TabsContent value="moderators"><Moderators /></TabsContent>
           <TabsContent value="roles"><Roles /></TabsContent>
           <TabsContent value="audit"><Audit /></TabsContent>
+          <TabsContent value="deletions"><Deletions /></TabsContent>
           <TabsContent value="reports"><Reports /></TabsContent>
           <TabsContent value="settings"><SettingsTab /></TabsContent>
           <TabsContent value="overrides"><Overrides /></TabsContent>

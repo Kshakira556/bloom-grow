@@ -10,7 +10,7 @@ import { vaultReadService } from "@/lib/vaultReadService";
 import { VaultAggregate } from "@/types/vaultAggregate";
 import { vaultSaveService } from "@/lib/vaultSaveService";
 import { AddChildModal } from "@/components/AddChildModal";
-import { isSupabaseConfigured } from "@/lib/supabaseStorage";
+
 
 type VaultAggregateWithMissing = VaultAggregate & {
   vaultMissing?: boolean;
@@ -160,14 +160,9 @@ const Children = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [editMode, setEditMode] = useState(false);
-  const supabaseReady = isSupabaseConfigured();
   const [selectedDocKeys, setSelectedDocKeys] = useState<string[]>([]);
 
   const handleFileUpload = (files: FileList | null) => {
-    if (!supabaseReady) {
-      alert("Document uploads are not configured yet. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your frontend environment to enable persistent document storage.");
-      return;
-    }
     if (!files || !selectedCategory || !selectedSubcategory) return;
 
     const newDocs = Array.from(files).map(file => ({
@@ -1096,7 +1091,24 @@ const Children = () => {
                   ) : (
                     <Button
                       className="w-full rounded-full no-print"
-                      onClick={() => window.print()}
+                      onClick={async () => {
+                        try {
+                          if (selectedChild?.id) {
+                            await api.createAuditEvent({
+                              action: "vault_export_pdf",
+                              target_type: "child",
+                              target_id: selectedChild.id,
+                              notes: {
+                                child_name: selectedChild?.name ?? null,
+                              },
+                            });
+                          }
+                        } catch (err) {
+                          console.warn("Audit log failed (vault export):", err);
+                        }
+
+                        window.print();
+                      }}
                     >
                       Export to PDF
                     </Button>

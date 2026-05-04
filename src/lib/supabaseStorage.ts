@@ -1,30 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-
-let supabaseClient: SupabaseClient | null = null;
-
-export const isSupabaseConfigured = (): boolean => {
-  return Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
-};
-
-const getSupabaseClient = (): SupabaseClient => {
-  if (supabaseClient) return supabaseClient;
-
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error(
-      "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
-    );
-  }
-
-  supabaseClient = createClient(url, anonKey);
-  return supabaseClient;
-};
-
-const sanitizeFileName = (name: string): string => {
-  return name.replace(/[^\w.\-]+/g, "_");
-};
+import { http } from "@/lib/http";
 
 export const uploadVaultDocument = async ({
   file,
@@ -35,23 +9,33 @@ export const uploadVaultDocument = async ({
   childId: string;
   vaultId: string;
 }): Promise<string> => {
-  const client = getSupabaseClient();
-  const bucket = import.meta.env.VITE_SUPABASE_BUCKET || "vault-documents";
-  const safeName = sanitizeFileName(file.name || "document");
-  const path = `${childId}/${vaultId}/${crypto.randomUUID()}-${safeName}`;
+  // Private end-to-end: backend issues a short-lived signed upload URL using Supabase service role.
+  // This avoids any public/anon INSERT policies on the bucket.
+  void childId; // kept for compatibility with existing call sites
 
-  const { error: uploadError } = await client.storage.from(bucket).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType: file.type || undefined,
+  const ticket = await http<{ path: string; signed_url: string }>(
+    `/vaults/${vaultId}/documents/signed-upload`,
+    "POST",
+    {
+      filename: file.name || "document",
+      content_type: file.type || "application/octet-stream",
+    },
+  );
+
+  const uploadRes = await fetch(ticket.signed_url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
   });
 
-  if (uploadError) {
-    throw new Error(`Supabase upload failed: ${uploadError.message}`);
+  if (!uploadRes.ok) {
+    const text = await uploadRes.text().catch(() => "");
+    throw new Error(`Upload failed (${uploadRes.status}): ${text || "Unable to upload file"}`);
   }
 
-  // For a private bucket we store the storage path, not a public URL.
-  return path;
+  return ticket.path;
 };
 
 export const getSignedVaultDocumentUrl = async (

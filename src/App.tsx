@@ -12,6 +12,8 @@ const SignIn = lazy(() => import("./pages/SignIn"));
 const Register = lazy(() => import("./pages/Register"));
 const Paywall = lazy(() => import("./pages/Paywall"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 
 // Client pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -49,6 +51,8 @@ const App = () => (
             <Route path="/signin" element={<SignIn />} />
             <Route path="/register" element={<Register />} />
             <Route path="/accept-invite" element={<AcceptInvite />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route
               path="/paywall"
               element={

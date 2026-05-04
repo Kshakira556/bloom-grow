@@ -16,6 +16,8 @@ export default function Register() {
     () => (searchParams.get("account_type")?.trim() as "trial" | "paid" | "") || "",
     [searchParams]
   );
+  const TERMS_VERSION = "2026-05-04";
+  const PRIVACY_VERSION = "2026-05-04";
 
   const [fullName, setFullName] = useState("");
 const [email, setEmail] = useState(invitedEmail);
@@ -27,6 +29,7 @@ const [accountType, setAccountType] = useState<"trial" | "paid">(
   invitedAccountType === "paid" ? "paid" : "trial"
 );
 const accountTypeLocked = Boolean(invitedAccountType);
+const [acceptedTerms, setAcceptedTerms] = useState(false);
 
 useEffect(() => {
   if (invitedEmail) setEmail(invitedEmail);
@@ -41,6 +44,11 @@ const handleRegister = async (e: React.FormEvent) => {
   e.preventDefault();
   setError("");
   try {
+    if (!acceptedTerms) {
+      setError("Please accept the Terms and Privacy Notice to continue.");
+      return;
+    }
+
     const inviteId = searchParams.get("invite_id")?.trim() || undefined;
 
     const user = await register({
@@ -51,6 +59,10 @@ const handleRegister = async (e: React.FormEvent) => {
       phone,
       account_type: accountType,
       invite_id: inviteId,
+      terms_accepted: true,
+      terms_version: TERMS_VERSION,
+      privacy_version: PRIVACY_VERSION,
+      terms_accepted_at: new Date().toISOString(),
     });
 
     if (inviteId) {
@@ -123,6 +135,25 @@ const fields: AuthField[] = [
   return (
     <AuthPage title="Register" illustration={RegisterPng}>
       <AuthForm fields={fields} onSubmit={handleRegister} buttonLabel="Register" error={error} />
+      <div className="flex items-start gap-2 text-sm mb-4">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4 accent-primary"
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+        />
+        <p className="text-muted-foreground">
+          I agree to the{" "}
+          <a className="text-primary hover:underline" href="/terms" target="_blank" rel="noreferrer">
+            Terms
+          </a>{" "}
+          and{" "}
+          <a className="text-primary hover:underline" href="/privacy" target="_blank" rel="noreferrer">
+            Privacy Notice
+          </a>
+          .
+        </p>
+      </div>
       <div className="space-y-3 mb-4">
         <label className="text-sm font-medium">Choose Plan</label>
 

@@ -88,6 +88,10 @@ type RegisterPayload = {
   phone?: string;
   account_type?: "trial" | "paid";
   invite_id?: string;
+  terms_accepted?: boolean;
+  terms_version?: string;
+  privacy_version?: string;
+  terms_accepted_at?: string;
 };
 
 type RegisterResponse = {

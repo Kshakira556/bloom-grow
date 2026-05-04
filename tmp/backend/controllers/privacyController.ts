@@ -307,9 +307,12 @@ export const getMyDataExportBundleController = async (ctx: any) => {
     }
 
     const zip = new JSZip();
-    zip.file("README.txt", `CUB - My Data Export (ZIP)\n\nExported at: ${exportedAt}\n\nThis export contains JSON files with information associated with your account. Some data is intentionally bounded (e.g., most recent messages).\n`);
-    zip.file("export.json", JSON.stringify({ exported_at: exportedAt }, null, 2));
-    zip.file("user.json", JSON.stringify(userRes.rows[0] ?? null, null, 2));
+    zip.file(
+      "README.txt",
+      `CUB - My Data Export (ZIP)\n\nExported at: ${exportedAt}\n\nThis export contains JSON files with information associated with your account. Some data is intentionally bounded (e.g., most recent messages).\n`,
+    );
+    // Keep filenames stable for external review processes.
+    zip.file("profile.json", JSON.stringify(userRes.rows[0] ?? null, null, 2));
     zip.file("plans.json", JSON.stringify(plansRes.rows, null, 2));
     zip.file("children.json", JSON.stringify(childrenRes.rows, null, 2));
     zip.file("messages.json", JSON.stringify(messagesRes.rows, null, 2));

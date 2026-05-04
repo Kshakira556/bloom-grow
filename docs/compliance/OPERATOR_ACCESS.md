@@ -26,6 +26,20 @@ TODO (Owner: Shakira Knight / POPIA Director)
 Rotation checklist:
 <!--
 TODO
+- [ ] Rotation cadence (recommended defaults):
+      - `JWT_SECRET`: every 90 days (forces re-login) and immediately on suspected compromise.
+      - `RESEND_API_KEY`: every 90 days and immediately on suspected compromise.
+      - `SUPABASE_SERVICE_ROLE_KEY`: rotate only when needed (least churn), but immediately on suspected compromise or staff access changes.
+      - Cron account password (`cub-internal@cub.local`): every 90 days and immediately on staff access changes.
+- [ ] Rotation procedure (do this in order):
+      1) Rotate secret in operator dashboard (Render/Supabase/Resend/GitHub).
+      2) Update the target service environment variables/secrets.
+      3) Redeploy service (Render/Vercel) if required.
+      4) Verify critical paths:
+         - Auth login works
+         - Vault document upload/view works
+         - Cron jobs succeed (GitHub Actions)
+      5) Record evidence (date/time, who rotated, what was rotated, verification notes).
 - [ ] Rotate `JWT_SECRET` (forces re-login for users).
 - [ ] Rotate `RESEND_API_KEY`.
 - [ ] Rotate Supabase service role key if compromised (or use a new project key).
@@ -60,6 +74,8 @@ TODO
 
 <!--
 TODO
+- [ ] Move off `onboarding@resend.dev` to a real domain (e.g. `no-reply@cubapp.co.za`) once DNS is configured.
+- [ ] Configure SPF/DKIM per Resend instructions and verify deliverability.
 - [ ] Ensure DNS/SPF/DKIM are set for a real `from` domain (don’t keep `onboarding@resend.dev` long-term).
 - [ ] Confirm invite links use token resolution (no email/account type query params).
 -->
@@ -92,4 +108,3 @@ Keep evidence of:
 - rotation dates
 - who performed the rotation
 - incident-triggered rotations
-

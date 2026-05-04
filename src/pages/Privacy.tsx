@@ -30,7 +30,7 @@ export default function Privacy() {
 
           <h2 className="font-semibold pt-2">2. What we collect</h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Account information: name, email address, phone number (optional), role, subscription status.</li>
+            <li>Account information: name, email address (required), phone number (optional), role, subscription status.</li>
             <li>Plan and co-parenting data: parenting plans, invites, visits, and related metadata.</li>
             <li>Messages and message history: message content, timestamps, edits, flags, seen status.</li>
             <li>Vault data: child details, guardians, legal/medical/safety information, emergency contacts.</li>
@@ -56,6 +56,9 @@ export default function Privacy() {
           <p className="text-muted-foreground">
             Note: Some operators may process information outside South Africa. Where this occurs, we take reasonable
             steps to ensure appropriate safeguards are in place.
+          </p>
+          <p className="text-muted-foreground">
+            We do not sell personal information. Operators act on our instructions to provide the service (hosting, storage, email delivery).
           </p>
 
           <h2 className="font-semibold pt-2">5. Retention</h2>
@@ -124,6 +127,9 @@ export default function Privacy() {
           <p>
             Complaints about how we process personal information can be made to the POPIA Director / Information Officer
             using the contact details above. We will respond within a reasonable time and work with you to resolve the concern.
+          </p>
+          <p className="text-muted-foreground">
+            If you are not satisfied with our response, you may also escalate a complaint to the Information Regulator (South Africa).
           </p>
 
           <h2 className="font-semibold pt-2">9. Changes</h2>

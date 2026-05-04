@@ -99,6 +99,9 @@ export default function Settings() {
             <Button variant="outline" asChild>
               <Link to="/privacy-requests">Privacy Requests</Link>
             </Button>
+            <Button variant="outline" asChild>
+              <Link to="/privacy-requests?type=correction">Request correction</Link>
+            </Button>
             <Button
               variant="outline"
               disabled={isExporting}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,16 +7,25 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import * as api from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { useSearchParams } from "react-router-dom";
 
 type RequestType = "access" | "correction" | "deletion" | "objection";
 
 export default function PrivacyRequests() {
   const { isAuthenticated } = useAuth();
+  const [searchParams] = useSearchParams();
   const [requestType, setRequestType] = useState<RequestType>("access");
   const [details, setDetails] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "done">("idle");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const t = searchParams.get("type")?.trim();
+    if (t === "access" || t === "correction" || t === "deletion" || t === "objection") {
+      setRequestType(t);
+    }
+  }, [searchParams]);
 
   const submit = async () => {
     setError("");

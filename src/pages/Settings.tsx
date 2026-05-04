@@ -198,7 +198,22 @@ export default function Settings() {
                 onClick={async () => {
                   setIsSavingMarketing(true);
                   try {
-                    await api.setMarketingOptIn(marketingOptIn);
+                    const res = await api.setMarketingOptIn(marketingOptIn);
+
+                    // Persist preference update so it survives refresh (AuthProvider hydrates from sessionStorage).
+                    try {
+                      const raw = sessionStorage.getItem("user");
+                      if (raw) {
+                        const current = JSON.parse(raw);
+                        const next = {
+                          ...current,
+                          ...(res as any)?.user,
+                        };
+                        sessionStorage.setItem("user", JSON.stringify(next));
+                      }
+                    } catch {
+                      // ignore
+                    }
                     toast({
                       title: "Preferences saved",
                       description: "Your email preferences have been updated.",

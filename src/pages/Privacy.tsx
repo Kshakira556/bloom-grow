@@ -122,6 +122,13 @@ export default function Privacy() {
             You may request access to, correction of, or deletion of your personal information, or object to processing
             in certain circumstances. Use the Privacy Requests page in the app, or contact the Information Officer.
           </p>
+          <p className="text-muted-foreground">
+            Further processing: if we use personal information for a new purpose, we will only do so where it is compatible with the original
+            purpose and lawful, or where you have consented.
+          </p>
+          <p className="text-muted-foreground">
+            Exports: if you export records (PDF/JSON/ZIP) you are responsible for keeping them secure and only sharing them with trusted recipients.
+          </p>
 
           <h2 className="font-semibold pt-2">8. Complaints</h2>
           <p>

@@ -247,6 +247,36 @@ export interface PlanInvite {
   status: "pending" | "accepted" | "declined";
   created_at: string;
 }
+
+// --------------------
+// CUB internal: Privacy requests workflow
+// --------------------
+
+export type PrivacyRequestStatus = "open" | "in_progress" | "closed";
+
+export type PrivacyRequest = {
+  id: string;
+  user_id: string | null;
+  contact_email: string | null;
+  request_type: "access" | "correction" | "deletion" | "objection";
+  details: string | null;
+  status: PrivacyRequestStatus;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export const getCubPrivacyRequests = async (args?: { status?: PrivacyRequestStatus; limit?: number }) => {
+  const params = new URLSearchParams();
+  if (args?.status) params.set("status", args.status);
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  const qs = params.toString();
+  const res = await http<{ requests: PrivacyRequest[] }>(`/cub/privacy/requests${qs ? `?${qs}` : ""}`, "GET");
+  return res.requests;
+};
+
+export const updateCubPrivacyRequestStatus = async (id: string, status: PrivacyRequestStatus) => {
+  return http<{ request: PrivacyRequest }>(`/cub/privacy/requests/${id}`, "PUT", { status });
+};
 export interface PlanChild {
   id: string;
   name: string;

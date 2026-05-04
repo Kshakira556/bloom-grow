@@ -23,6 +23,7 @@ export default function CubDashboard() {
   const [usage, setUsage] = useState<api.CubStorageUsage | null>(null);
   const [logs, setLogs] = useState<api.AuditLog[]>([]);
   const [deletions, setDeletions] = useState<api.AccountDeletionRequest[]>([]);
+  const [privacyRequests, setPrivacyRequests] = useState<api.PrivacyRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -31,6 +32,7 @@ export default function CubDashboard() {
   const [legalHoldId, setLegalHoldId] = useState("");
   const [legalHoldEnabled, setLegalHoldEnabled] = useState(true);
   const [legalHoldReason, setLegalHoldReason] = useState("");
+  const [privacyStatusFilter, setPrivacyStatusFilter] = useState<api.PrivacyRequestStatus | "all">("all");
 
   const load = async () => {
     try {
@@ -46,6 +48,13 @@ export default function CubDashboard() {
       setUsage(u);
       setLogs(l);
       setDeletions(d);
+
+      try {
+        const reqs = await api.getCubPrivacyRequests({ limit: 200 });
+        setPrivacyRequests(reqs);
+      } catch {
+        setPrivacyRequests([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load CUB internal dashboard data");
     } finally {
@@ -178,6 +187,116 @@ export default function CubDashboard() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Incident Response</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p className="text-muted-foreground">
+                    Use this when there is a suspected privacy/security incident. Keep notes in your incident tracker and preserve evidence.
+                  </p>
+                  <ol className="list-decimal pl-5 space-y-1">
+                    <li>Contain: disable risky access/keys and stop further exposure.</li>
+                    <li>Assess: what data, which users, how long, and how it occurred.</li>
+                    <li>Preserve evidence: logs, timestamps, affected IDs, copies of notices/emails.</li>
+                    <li>Notify: contact the POPIA Director / Information Officer (Shakira Knight).</li>
+                    <li>Remediate: patch, rotate keys, and document corrective action.</li>
+                  </ol>
+                  <p className="text-muted-foreground">
+                    Contact: <span className="font-medium text-foreground">kni.shakira@gmail.com</span> •{" "}
+                    <span className="font-medium text-foreground">+27818535226</span>
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Privacy Requests</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={privacyStatusFilter}
+                      onChange={(e) => setPrivacyStatusFilter(e.target.value as any)}
+                      className="px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="open">Open</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                    <Button variant="outline" onClick={load} disabled={loading}>
+                      Refresh
+                    </Button>
+                  </div>
+
+                  {(privacyStatusFilter === "all"
+                    ? privacyRequests
+                    : privacyRequests.filter((r) => r.status === privacyStatusFilter)
+                  ).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No privacy requests.</p>
+                  ) : (
+                    (privacyStatusFilter === "all"
+                      ? privacyRequests
+                      : privacyRequests.filter((r) => r.status === privacyStatusFilter)
+                    )
+                      .slice(0, 30)
+                      .map((r) => (
+                        <div key={r.id} className="p-3 border rounded-xl space-y-2">
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
+                            <span className="px-2 py-0.5 rounded-full bg-secondary">{r.status}</span>
+                            <span>Type: {r.request_type}</span>
+                            {r.user_id ? <span>User: {r.user_id}</span> : <span>Unlinked</span>}
+                            <span>{new Date(r.created_at).toLocaleString()}</span>
+                          </div>
+                          {r.contact_email && (
+                            <div className="text-xs text-muted-foreground">Contact: {r.contact_email}</div>
+                          )}
+                          {r.details && <div className="text-sm whitespace-pre-wrap">{r.details}</div>}
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={processing}
+                              onClick={async () => {
+                                setProcessing(true);
+                                try {
+                                  await api.updateCubPrivacyRequestStatus(r.id, "in_progress");
+                                  await load();
+                                } catch (e) {
+                                  setError(e instanceof Error ? e.message : "Failed to update request");
+                                } finally {
+                                  setProcessing(false);
+                                }
+                              }}
+                            >
+                              Mark in progress
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={processing}
+                              onClick={async () => {
+                                setProcessing(true);
+                                try {
+                                  await api.updateCubPrivacyRequestStatus(r.id, "closed");
+                                  await load();
+                                } catch (e) {
+                                  setError(e instanceof Error ? e.message : "Failed to update request");
+                                } finally {
+                                  setProcessing(false);
+                                }
+                              }}
+                            >
+                              Close
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Legal Hold</CardTitle>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import * as api from "@/lib/api";
@@ -15,8 +15,14 @@ export default function Settings() {
   const [deletionReason, setDeletionReason] = useState("");
   const [isSubmittingDeletion, setIsSubmittingDeletion] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [marketingOptIn, setMarketingOptInState] = useState<boolean>(Boolean(user?.marketing_opt_in));
+  const [isSavingMarketing, setIsSavingMarketing] = useState(false);
 
   const deletionReasonTrimmed = useMemo(() => deletionReason.trim(), [deletionReason]);
+
+  useEffect(() => {
+    setMarketingOptInState(Boolean(user?.marketing_opt_in));
+  }, [user?.marketing_opt_in]);
 
   const handleRequestDeletion = async () => {
     if (!user) return;
@@ -88,6 +94,11 @@ export default function Settings() {
           <p className="text-sm text-muted-foreground mt-1">
             Review the Privacy Notice and Terms, request a copy of your information, or request deletion.
           </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            POPIA Director / Information Officer: <span className="font-medium text-foreground">Shakira Knight</span>{" "}
+            (<span className="font-medium text-foreground">kni.shakira@gmail.com</span> •{" "}
+            <span className="font-medium text-foreground">+27818535226</span>)
+          </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" asChild>
@@ -133,6 +144,48 @@ export default function Settings() {
             >
               {isExporting ? "Preparing…" : "Download my data (JSON)"}
             </Button>
+          </div>
+
+          <div className="mt-6 border-t border-border pt-6">
+            <h3 className="font-semibold">Email preferences</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Transactional emails (invites, important account notices) may still be sent. Marketing emails are optional.
+            </p>
+
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={marketingOptIn}
+                  onChange={(e) => setMarketingOptInState(e.target.checked)}
+                />
+                Receive marketing emails
+              </label>
+              <Button
+                variant="outline"
+                disabled={isSavingMarketing}
+                onClick={async () => {
+                  setIsSavingMarketing(true);
+                  try {
+                    await api.setMarketingOptIn(marketingOptIn);
+                    toast({
+                      title: "Preferences saved",
+                      description: "Your email preferences have been updated.",
+                    });
+                  } catch (err) {
+                    toast({
+                      title: "Save failed",
+                      description: err instanceof Error ? err.message : "Failed to save preferences",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsSavingMarketing(false);
+                  }
+                }}
+              >
+                {isSavingMarketing ? "Saving…" : "Save preferences"}
+              </Button>
+            </div>
           </div>
 
           <div className="mt-6 border-t border-border pt-6">

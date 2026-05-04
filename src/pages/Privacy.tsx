@@ -24,7 +24,7 @@ export default function Privacy() {
             POPIA Director / Information Officer: <span className="font-medium">Shakira Knight</span>
           </p>
           <p>
-            Email: <span className="font-medium">kni.shakira@gmail.com</span> � Phone:{" "}
+            Email: <span className="font-medium">kni.shakira@gmail.com</span> {"\u2022"} Phone:{" "}
             <span className="font-medium">+27818535226</span>
           </p>
 

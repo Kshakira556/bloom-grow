@@ -17,6 +17,9 @@ export interface SafeUser {
   is_trial_active?: boolean;
   trial_ends_at?: string | Date | null;
   requires_payment?: boolean;
+  marketing_opt_in?: boolean;
+  marketing_opt_in_at?: string | null;
+  marketing_unsubscribed_at?: string | null;
 }
 
 export interface Child {
@@ -166,6 +169,14 @@ export const requestAccountDeletion = async (payload?: { reason?: string }) => {
     "/users/deletion-request",
     "POST",
     payload ?? {}
+  );
+};
+
+export const setMarketingOptIn = async (opt_in: boolean) => {
+  return http<{ user: Pick<SafeUser, "id" | "marketing_opt_in" | "marketing_opt_in_at" | "marketing_unsubscribed_at"> }>(
+    "/users/marketing/opt-in",
+    "POST",
+    { opt_in }
   );
 };
 

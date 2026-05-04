@@ -161,6 +161,7 @@ const Children = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [selectedDocKeys, setSelectedDocKeys] = useState<string[]>([]);
+  const uploadsEnabled = true;
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files || !selectedCategory || !selectedSubcategory) return;
@@ -882,12 +883,10 @@ const Children = () => {
                           {/* Upload */}
                           <label
                             className={`flex items-center gap-2 px-4 py-2 bg-cub-mint-light rounded-lg text-sm ${
-                              supabaseReady ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                              uploadsEnabled ? "cursor-pointer" : "cursor-not-allowed opacity-60"
                             }`}
                             title={
-                              supabaseReady
-                                ? "Upload documents"
-                                : "Uploads disabled: Supabase is not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)."
+                              uploadsEnabled ? "Upload documents" : "Uploads disabled."
                             }
                           >
                             <Upload className="w-4 h-4 text-primary" />
@@ -896,16 +895,11 @@ const Children = () => {
                               type="file"
                               className="hidden"
                               multiple
-                              disabled={!supabaseReady}
+                              disabled={!uploadsEnabled}
                               onChange={(e) => handleFileUpload(e.target.files)}
                             />
                           </label>
                         </div>
-                      )}
-                      {editMode && !supabaseReady && (
-                        <p className="text-xs text-muted-foreground -mt-2">
-                          Uploads won&apos;t persist until document storage is configured.
-                        </p>
                       )}
 
                       {/* Display uploaded files */}

@@ -33,6 +33,11 @@ export default function CubDashboard() {
   const [legalHoldEnabled, setLegalHoldEnabled] = useState(true);
   const [legalHoldReason, setLegalHoldReason] = useState("");
   const [privacyStatusFilter, setPrivacyStatusFilter] = useState<api.PrivacyRequestStatus | "all">("all");
+  const [incidents, setIncidents] = useState<api.CubIncident[]>([]);
+  const [incidentTitle, setIncidentTitle] = useState("");
+  const [incidentSeverity, setIncidentSeverity] = useState<api.CubIncidentSeverity>("medium");
+  const [incidentOwner, setIncidentOwner] = useState("");
+  const [incidentNotes, setIncidentNotes] = useState("");
 
   const load = async () => {
     try {
@@ -54,6 +59,13 @@ export default function CubDashboard() {
         setPrivacyRequests(reqs);
       } catch {
         setPrivacyRequests([]);
+      }
+
+      try {
+        const list = await api.getCubIncidents({ limit: 100 });
+        setIncidents(list);
+      } catch {
+        setIncidents([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load CUB internal dashboard data");
@@ -189,23 +201,82 @@ export default function CubDashboard() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Incident Response</CardTitle>
+                  <CardTitle>Incidents</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
+                <CardContent className="space-y-3 text-sm">
                   <p className="text-muted-foreground">
-                    Use this when there is a suspected privacy/security incident. Keep notes in your incident tracker and preserve evidence.
+                    Capture suspected privacy/security incidents here. Placeholders: incident inbox and backups can be finalised later.
                   </p>
-                  <ol className="list-decimal pl-5 space-y-1">
-                    <li>Contain: disable risky access/keys and stop further exposure.</li>
-                    <li>Assess: what data, which users, how long, and how it occurred.</li>
-                    <li>Preserve evidence: logs, timestamps, affected IDs, copies of notices/emails.</li>
-                    <li>Notify: contact the POPIA Director / Information Officer (Shakira Knight).</li>
-                    <li>Remediate: patch, rotate keys, and document corrective action.</li>
-                  </ol>
-                  <p className="text-muted-foreground">
-                    Contact: <span className="font-medium text-foreground">kni.shakira@gmail.com</span> •{" "}
-                    <span className="font-medium text-foreground">+27818535226</span>
-                  </p>
+                  <div className="grid gap-2">
+                    <Input
+                      value={incidentTitle}
+                      onChange={(e) => setIncidentTitle(e.target.value)}
+                      placeholder="Incident title (e.g., Suspicious access)"
+                    />
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <select
+                        value={incidentSeverity}
+                        onChange={(e) => setIncidentSeverity(e.target.value as api.CubIncidentSeverity)}
+                        className="px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                      </select>
+                      <Input
+                        value={incidentOwner}
+                        onChange={(e) => setIncidentOwner(e.target.value)}
+                        placeholder="Owner (placeholder)"
+                      />
+                    </div>
+                    <Input
+                      value={incidentNotes}
+                      onChange={(e) => setIncidentNotes(e.target.value)}
+                      placeholder="Notes (placeholder)"
+                    />
+                    <Button
+                      disabled={processing || !incidentTitle.trim()}
+                      onClick={async () => {
+                        setProcessing(true);
+                        try {
+                          await api.createCubIncident({
+                            title: incidentTitle.trim(),
+                            severity: incidentSeverity,
+                            owner: incidentOwner.trim() || undefined,
+                            notes: incidentNotes.trim() || undefined,
+                          });
+                          setIncidentTitle("");
+                          setIncidentOwner("");
+                          setIncidentNotes("");
+                          await load();
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Failed to create incident");
+                        } finally {
+                          setProcessing(false);
+                        }
+                      }}
+                    >
+                      Create incident
+                    </Button>
+                  </div>
+
+                  {incidents.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No incidents logged.</p>
+                  ) : (
+                    incidents.slice(0, 10).map((inc) => (
+                      <div key={inc.id} className="p-3 border rounded-xl space-y-1">
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
+                          <span className="px-2 py-0.5 rounded-full bg-secondary">{inc.status}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-secondary">{inc.severity}</span>
+                          <span>{new Date(inc.opened_at).toLocaleString()}</span>
+                        </div>
+                        <div className="font-medium">{inc.title}</div>
+                        {inc.owner && <div className="text-xs text-muted-foreground">Owner: {inc.owner}</div>}
+                        {inc.notes && <div className="text-xs text-muted-foreground">{inc.notes}</div>}
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
 
@@ -221,9 +292,10 @@ export default function CubDashboard() {
                       className="px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
                     >
                       <option value="all">All statuses</option>
-                      <option value="open">Open</option>
-                      <option value="in_progress">In progress</option>
-                      <option value="closed">Closed</option>
+                      <option value="pending">Pending</option>
+                      <option value="acknowledged">Acknowledged</option>
+                      <option value="fulfilled">Fulfilled</option>
+                      <option value="rejected">Rejected</option>
                     </select>
                     <Button variant="outline" onClick={load} disabled={loading}>
                       Refresh
@@ -261,7 +333,7 @@ export default function CubDashboard() {
                               onClick={async () => {
                                 setProcessing(true);
                                 try {
-                                  await api.updateCubPrivacyRequestStatus(r.id, "in_progress");
+                                  await api.updateCubPrivacyRequestStatus(r.id, "acknowledged");
                                   await load();
                                 } catch (e) {
                                   setError(e instanceof Error ? e.message : "Failed to update request");
@@ -270,7 +342,7 @@ export default function CubDashboard() {
                                 }
                               }}
                             >
-                              Mark in progress
+                              Acknowledge
                             </Button>
                             <Button
                               size="sm"
@@ -279,7 +351,7 @@ export default function CubDashboard() {
                               onClick={async () => {
                                 setProcessing(true);
                                 try {
-                                  await api.updateCubPrivacyRequestStatus(r.id, "closed");
+                                  await api.updateCubPrivacyRequestStatus(r.id, "fulfilled");
                                   await load();
                                 } catch (e) {
                                   setError(e instanceof Error ? e.message : "Failed to update request");
@@ -288,7 +360,7 @@ export default function CubDashboard() {
                                 }
                               }}
                             >
-                              Close
+                              Fulfill
                             </Button>
                           </div>
                         </div>

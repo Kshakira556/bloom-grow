@@ -252,7 +252,7 @@ export interface PlanInvite {
 // CUB internal: Privacy requests workflow
 // --------------------
 
-export type PrivacyRequestStatus = "open" | "in_progress" | "closed";
+export type PrivacyRequestStatus = "pending" | "acknowledged" | "fulfilled" | "rejected";
 
 export type PrivacyRequest = {
   id: string;
@@ -276,6 +276,42 @@ export const getCubPrivacyRequests = async (args?: { status?: PrivacyRequestStat
 
 export const updateCubPrivacyRequestStatus = async (id: string, status: PrivacyRequestStatus) => {
   return http<{ request: PrivacyRequest }>(`/cub/privacy/requests/${id}`, "PUT", { status });
+};
+
+// --------------------
+// CUB internal: Incidents (placeholders)
+// --------------------
+
+export type CubIncidentSeverity = "low" | "medium" | "high" | "critical";
+export type CubIncidentStatus = "open" | "in_progress" | "closed";
+
+export type CubIncident = {
+  id: string;
+  opened_at: string;
+  severity: CubIncidentSeverity;
+  status: CubIncidentStatus;
+  title: string;
+  owner?: string | null;
+  notes?: string | null;
+  updated_at?: string | null;
+};
+
+export const getCubIncidents = async (args?: { status?: CubIncidentStatus; limit?: number }) => {
+  const params = new URLSearchParams();
+  if (args?.status) params.set("status", args.status);
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  const qs = params.toString();
+  const res = await http<{ incidents: CubIncident[] }>(`/cub/incidents${qs ? `?${qs}` : ""}`, "GET");
+  return res.incidents;
+};
+
+export const createCubIncident = async (payload: {
+  title: string;
+  severity: CubIncidentSeverity;
+  owner?: string;
+  notes?: string;
+}) => {
+  return http<{ incident: CubIncident }>(`/cub/incidents`, "POST", payload);
 };
 export interface PlanChild {
   id: string;

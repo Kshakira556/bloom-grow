@@ -127,7 +127,23 @@ export default function Privacy() {
             purpose and lawful, or where you have consented.
           </p>
           <p className="text-muted-foreground">
+            Objection and withdrawal: where you have the right to object to processing or withdraw consent, we will assess your request and respond
+            within a reasonable time. Some processing may continue where there is another lawful basis (for example, legal obligations, safety, or
+            dispute-resolution/audit requirements).
+          </p>
+          <p className="text-muted-foreground">
             Exports: if you export records (PDF/JSON/ZIP) you are responsible for keeping them secure and only sharing them with trusted recipients.
+          </p>
+
+          <h2 className="font-semibold pt-2">7.1 Security incidents (breach notification)</h2>
+          <p className="text-sm text-muted-foreground">
+            If we reasonably believe there has been unauthorised access to personal information, we will take steps to contain and investigate the incident,
+            preserve evidence, and notify affected parties and/or the regulator where required and appropriate.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Incident contact (placeholder): <span className="font-medium text-foreground">[INCIDENT_INBOX_EMAIL]</span> • Backup contacts (placeholder):{" "}
+            <span className="font-medium text-foreground">[BACKUP_CONTACT_1]</span>,{" "}
+            <span className="font-medium text-foreground">[BACKUP_CONTACT_2]</span>
           </p>
 
           <h2 className="font-semibold pt-2">8. Complaints</h2>

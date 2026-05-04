@@ -102,7 +102,7 @@ export function Navbar() {
               </button>
 
               <Link
-                to="/settings"
+                to={user?.role === "cub_internal" ? "/cub" : "/settings"}
                 className="w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:opacity-90 transition-opacity"
               >
                 <User className="w-5 h-5 text-primary-foreground" />

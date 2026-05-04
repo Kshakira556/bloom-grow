@@ -4,7 +4,7 @@ import type { MessagePurpose } from "@/types/messages";
 // --------------------
 // User/Auth
 // --------------------
-export type UserRole = "parent" | "mediator" | "admin";
+export type UserRole = "parent" | "mediator" | "admin" | "cub_internal";
 
 export interface SafeUser {
   id: string;
@@ -745,6 +745,54 @@ export const getAccountDeletionRequests = async (options?: { status?: string }) 
 export const processAccountDeletions = async (options?: { limit?: number }) => {
   const q = typeof options?.limit === "number" ? `?limit=${encodeURIComponent(String(options.limit))}` : "";
   return http<{ processed: number }>(`/admin/deletions/process${q}`, "POST");
+};
+
+// --------------------
+// CUB Internal Dashboard (cub_internal role)
+// --------------------
+export type CubUserMetrics = {
+  totals: {
+    users: number;
+    parents: number;
+    mediators: number;
+    admins: number;
+    cub_internal: number;
+  };
+  subscriptions: {
+    paid: number;
+    trial: number;
+  };
+};
+
+export const getCubUserMetrics = async (): Promise<CubUserMetrics> => {
+  const res = await http<{ metrics: CubUserMetrics }>("/cub/metrics/users", "GET");
+  return res.metrics;
+};
+
+export type CubStorageUsage = {
+  total_bytes: number;
+  total_files: number;
+  by_prefix: Record<string, { bytes: number; files: number }>;
+};
+
+export const getCubStorageUsage = async (): Promise<CubStorageUsage> => {
+  const res = await http<{ usage: CubStorageUsage }>("/cub/metrics/storage", "GET");
+  return res.usage;
+};
+
+export const getCubAuditLogs = async (): Promise<AuditLog[]> => {
+  const res = await http<{ logs: AuditLog[] }>("/cub/audit-logs", "GET");
+  return res.logs;
+};
+
+export const getCubDeletionRequests = async (): Promise<AccountDeletionRequest[]> => {
+  const res = await http<{ requests: AccountDeletionRequest[] }>("/cub/deletions/requests", "GET");
+  return res.requests;
+};
+
+export const processCubDeletions = async (options?: { limit?: number }) => {
+  const q = typeof options?.limit === "number" ? `?limit=${encodeURIComponent(String(options.limit))}` : "";
+  return http<{ processed: number }>(`/cub/deletions/process${q}`, "POST");
 };
 
 export const getAdminMessages = async (options?: { includeDeleted?: boolean }) => {

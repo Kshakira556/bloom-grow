@@ -141,7 +141,7 @@ export default function Privacy() {
             preserve evidence, and notify affected parties and/or the regulator where required and appropriate.
           </p>
           <p className="text-sm text-muted-foreground">
-            Incident contact (placeholder): <span className="font-medium text-foreground">[INCIDENT_INBOX_EMAIL]</span> • Backup contacts (placeholder):{" "}
+            Incident contact: <span className="font-medium text-foreground">incidents@cubapp.co.za</span> • Backup contacts (placeholder):{" "}
             <span className="font-medium text-foreground">[BACKUP_CONTACT_1]</span>,{" "}
             <span className="font-medium text-foreground">[BACKUP_CONTACT_2]</span>
           </p>

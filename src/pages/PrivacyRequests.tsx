@@ -12,7 +12,7 @@ import { useSearchParams } from "react-router-dom";
 type RequestType = "access" | "correction" | "deletion" | "objection";
 
 export default function PrivacyRequests() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [searchParams] = useSearchParams();
   const [requestType, setRequestType] = useState<RequestType>("access");
   const [details, setDetails] = useState("");
@@ -26,6 +26,14 @@ export default function PrivacyRequests() {
       setRequestType(t);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    // Safety: tie requests to the authenticated user's email to avoid any confusion/spoofing risk.
+    // (Backend also links by JWT user_id; this is just a UI guard.)
+    if (isAuthenticated && user?.email) {
+      setContactEmail(user.email);
+    }
+  }, [isAuthenticated, user?.email]);
 
   const submit = async () => {
     setError("");
@@ -82,12 +90,17 @@ export default function PrivacyRequests() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Contact email (optional)</label>
+                <label className="text-sm font-medium">Account email</label>
                 <Input
                   value={contactEmail}
                   onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="Email address we can contact you on"
+                  disabled
+                  placeholder=""
                 />
+                <p className="text-xs text-muted-foreground">
+                  This request is linked to your signed-in account. If you need us to contact you on a different address,
+                  include it in the details field.
+                </p>
               </div>
 
               <div className="space-y-2">

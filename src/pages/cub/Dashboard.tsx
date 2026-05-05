@@ -362,6 +362,26 @@ export default function CubDashboard() {
                             >
                               Fulfill
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={processing}
+                              onClick={async () => {
+                                const confirmed = window.confirm("Reject this privacy request?");
+                                if (!confirmed) return;
+                                setProcessing(true);
+                                try {
+                                  await api.updateCubPrivacyRequestStatus(r.id, "rejected");
+                                  await load();
+                                } catch (e) {
+                                  setError(e instanceof Error ? e.message : "Failed to update request");
+                                } finally {
+                                  setProcessing(false);
+                                }
+                              }}
+                            >
+                              Reject
+                            </Button>
                           </div>
                         </div>
                       ))

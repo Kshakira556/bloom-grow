@@ -904,11 +904,6 @@ export const getCubStorageUsage = async (): Promise<CubStorageUsage> => {
   return res.usage;
 };
 
-export const getCubAuditLogs = async (): Promise<AuditLog[]> => {
-  const res = await http<{ logs: AuditLog[] }>("/cub/audit-logs", "GET");
-  return res.logs;
-};
-
 export const getCubDeletionRequests = async (): Promise<AccountDeletionRequest[]> => {
   const res = await http<{ requests: AccountDeletionRequest[] }>("/cub/deletions/requests", "GET");
   return res.requests;

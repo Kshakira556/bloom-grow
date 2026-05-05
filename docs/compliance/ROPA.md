@@ -16,7 +16,7 @@ TODO (Owner: Shakira Knight / POPIA Director)
 
 ## 1) Responsible Party / Information Officer
 
-- Responsible Party: CUB (operator of the CUB website and application)
+- Responsible Party: **[INSERT LEGAL ENTITY NAME]** (operator of the CUB website and application)
 - POPIA Director / Information Officer: Shakira Knight
 - Contact: kni.shakira@gmail.com / +27818535226
 
@@ -82,6 +82,12 @@ Operators used by CUB:
 ## 7) International transfers / cross-border
 
 Operators may store/process data outside South Africa depending on their infrastructure. CUB uses reasonable safeguards and limits access in line with POPIA expectations.
+
+**Hosting regions (placeholder):**
+- Vercel: [INSERT REGION/COUNTRY]
+- Render: [INSERT REGION/COUNTRY]
+- Supabase: [INSERT REGION/COUNTRY]
+- Resend: [INSERT REGION/COUNTRY]
 
 ## 8) Retention (operational policy summary)
 

@@ -38,6 +38,10 @@ export default function CubDashboard() {
   const [incidentSeverity, setIncidentSeverity] = useState<api.CubIncidentSeverity>("medium");
   const [incidentOwner, setIncidentOwner] = useState("");
   const [incidentNotes, setIncidentNotes] = useState("");
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+  const [exportingAudit, setExportingAudit] = useState(false);
+  const [exportingIncidents, setExportingIncidents] = useState(false);
 
   const load = async () => {
     try {
@@ -199,6 +203,95 @@ export default function CubDashboard() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Export (Audit/Incidents)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <p className="text-muted-foreground">
+                    Export logs with timestamps and IDs for audits/incidents. After major actions (key rotations, policy changes),
+                    record a short entry in <span className="font-medium text-foreground">docs/compliance/DECISIONS_LOG.md</span>.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">From (optional)</label>
+                      <Input
+                        type="date"
+                        value={exportFrom}
+                        onChange={(e) => setExportFrom(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">To (optional)</label>
+                      <Input
+                        type="date"
+                        value={exportTo}
+                        onChange={(e) => setExportTo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={exportingAudit}
+                      onClick={async () => {
+                        setExportingAudit(true);
+                        try {
+                          const from = exportFrom ? new Date(`${exportFrom}T00:00:00.000Z`).toISOString() : undefined;
+                          const to = exportTo ? new Date(`${exportTo}T23:59:59.999Z`).toISOString() : undefined;
+                          const rows = await api.getCubAuditLogs({ from, to, limit: 5000 });
+                          const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `cub-audit-logs-${exportFrom || "all"}_${exportTo || "all"}.json`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Failed to export audit logs");
+                        } finally {
+                          setExportingAudit(false);
+                        }
+                      }}
+                    >
+                      {exportingAudit ? "Exporting..." : "Export audit logs (JSON)"}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      disabled={exportingIncidents}
+                      onClick={async () => {
+                        setExportingIncidents(true);
+                        try {
+                          const from = exportFrom ? new Date(`${exportFrom}T00:00:00.000Z`).toISOString() : undefined;
+                          const to = exportTo ? new Date(`${exportTo}T23:59:59.999Z`).toISOString() : undefined;
+                          const rows = await api.getCubIncidents({ from, to, limit: 500 });
+                          const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `cub-incidents-${exportFrom || "all"}_${exportTo || "all"}.json`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Failed to export incidents");
+                        } finally {
+                          setExportingIncidents(false);
+                        }
+                      }}
+                    >
+                      {exportingIncidents ? "Exporting..." : "Export incidents (JSON)"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Incidents</CardTitle>

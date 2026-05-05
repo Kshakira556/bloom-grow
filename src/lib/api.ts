@@ -296,10 +296,12 @@ export type CubIncident = {
   updated_at?: string | null;
 };
 
-export const getCubIncidents = async (args?: { status?: CubIncidentStatus; limit?: number }) => {
+export const getCubIncidents = async (args?: { status?: CubIncidentStatus; limit?: number; from?: string; to?: string }) => {
   const params = new URLSearchParams();
   if (args?.status) params.set("status", args.status);
   if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  if (args?.from) params.set("from", args.from);
+  if (args?.to) params.set("to", args.to);
   const qs = params.toString();
   const res = await http<{ incidents: CubIncident[] }>(`/cub/incidents${qs ? `?${qs}` : ""}`, "GET");
   return res.incidents;
@@ -312,6 +314,16 @@ export const createCubIncident = async (payload: {
   notes?: string;
 }) => {
   return http<{ incident: CubIncident }>(`/cub/incidents`, "POST", payload);
+};
+
+export const getCubAuditLogs = async (args?: { from?: string; to?: string; limit?: number }) => {
+  const params = new URLSearchParams();
+  if (args?.from) params.set("from", args.from);
+  if (args?.to) params.set("to", args.to);
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  const qs = params.toString();
+  const res = await http<{ logs: AuditLog[] }>(`/cub/audit-logs${qs ? `?${qs}` : ""}`, "GET");
+  return res.logs;
 };
 export interface PlanChild {
   id: string;

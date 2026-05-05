@@ -208,7 +208,9 @@ export default function CubDashboard() {
                     Capture suspected privacy/security incidents here. Placeholders: incident inbox and backups can be finalised later.
                   </p>
                   <p className="text-muted-foreground">
-                    Incident inbox: <span className="font-medium text-foreground">incidents@cubapp.co.za</span> (backup contacts placeholder)
+                    Incident inbox: <span className="font-medium text-foreground">incidents@cubapp.co.za</span> • Backups:{" "}
+                    <span className="font-medium text-foreground">nicole@cubapp.co.za</span>,{" "}
+                    <span className="font-medium text-foreground">shakira@cubapp.co.za</span>
                   </p>
                   <p className="text-muted-foreground">
                     Runbook (repo): <span className="font-medium text-foreground">docs/compliance/INCIDENT_RESPONSE.md</span>

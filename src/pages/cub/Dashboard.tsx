@@ -329,7 +329,7 @@ export default function CubDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={processing}
+                              disabled={processing || r.status !== "pending"}
                               onClick={async () => {
                                 setProcessing(true);
                                 try {
@@ -347,7 +347,7 @@ export default function CubDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={processing}
+                              disabled={processing || (r.status !== "pending" && r.status !== "acknowledged")}
                               onClick={async () => {
                                 setProcessing(true);
                                 try {
@@ -365,7 +365,7 @@ export default function CubDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={processing}
+                              disabled={processing || r.status === "fulfilled" || r.status === "rejected"}
                               onClick={async () => {
                                 const confirmed = window.confirm("Reject this privacy request?");
                                 if (!confirmed) return;

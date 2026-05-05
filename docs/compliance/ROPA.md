@@ -8,6 +8,7 @@ Last updated: 2026-05-04
 TODO (Owner: Shakira Knight / POPIA Director)
 - [ ] Confirm official entity name for “Responsible Party”.
 - [ ] Confirm deputy Information Officer (if any) and escalation chain.
+- [ ] Confirm incident inbox alias and backups (incidents@cubapp.co.za; backups: nicole@cubapp.co.za, shakira@cubapp.co.za).
 - [ ] Confirm data hosting regions for Vercel/Render/Supabase/Resend (cross-border statement).
 - [ ] Confirm retention positions for any items not covered by “retain while lawful / redact on destruction clock”.
 - [ ] Confirm list of staff/admin access roles and who can access production data.
@@ -117,4 +118,3 @@ Maintain evidence of:
 - policy versions (Privacy Notice + Terms)
 - major decisions about retention, deletion, redaction, and legal hold
 - key rotation dates and access changes
-

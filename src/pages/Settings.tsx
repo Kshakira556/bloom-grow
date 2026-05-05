@@ -181,6 +181,7 @@ export default function Settings() {
             <h3 className="font-semibold">Email preferences</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Transactional emails (invites, important account notices) may still be sent. Marketing emails are optional.
+              CUB does not currently send marketing emails, but you can set your preference in advance.
             </p>
 
             <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">

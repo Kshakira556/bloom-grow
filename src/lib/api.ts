@@ -280,6 +280,35 @@ export const updateCubPrivacyRequestStatus = async (id: string, status: PrivacyR
   return http<{ request: PrivacyRequest }>(`/cub/privacy/requests/${id}`, "PUT", { status });
 };
 
+export const getCubPendingPlanDestructions = async (): Promise<number> => {
+  const res = await http<{ pending: number }>(`/cub/destructions/pending`, "GET");
+  return typeof res.pending === "number" ? res.pending : 0;
+};
+
+export type CubDecisionLogEntry = {
+  id: string;
+  actor_id: string;
+  category: string;
+  title: string;
+  details: string | null;
+  created_at: string;
+};
+
+export const listCubDecisionLog = async (args?: { from?: string; to?: string; limit?: number }) => {
+  const params = new URLSearchParams();
+  if (args?.from) params.set("from", args.from);
+  if (args?.to) params.set("to", args.to);
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  const qs = params.toString();
+  const res = await http<{ entries: CubDecisionLogEntry[] }>(`/cub/decisions${qs ? `?${qs}` : ""}`, "GET");
+  return res.entries;
+};
+
+export const createCubDecisionLog = async (payload: { category: string; title: string; details?: string }) => {
+  const res = await http<{ entry: CubDecisionLogEntry }>(`/cub/decisions`, "POST", payload);
+  return res.entry;
+};
+
 // --------------------
 // CUB internal: Incidents (placeholders)
 // --------------------

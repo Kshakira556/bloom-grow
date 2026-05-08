@@ -24,6 +24,12 @@ export default function CubDashboard() {
   const [logs, setLogs] = useState<api.AuditLog[]>([]);
   const [deletions, setDeletions] = useState<api.AccountDeletionRequest[]>([]);
   const [privacyRequests, setPrivacyRequests] = useState<api.PrivacyRequest[]>([]);
+  const [pendingPlanDestructions, setPendingPlanDestructions] = useState<number>(0);
+  const [decisions, setDecisions] = useState<api.CubDecisionLogEntry[]>([]);
+  const [decisionCategory, setDecisionCategory] = useState("security");
+  const [decisionTitle, setDecisionTitle] = useState("");
+  const [decisionDetails, setDecisionDetails] = useState("");
+  const [savingDecision, setSavingDecision] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -65,16 +71,20 @@ export default function CubDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const [m, u, l, d] = await Promise.all([
+      const [m, u, l, d, pendingDestructions, decisionRows] = await Promise.all([
         api.getCubUserMetrics(),
         api.getCubStorageUsage(),
         api.getCubAuditLogs(),
         api.getCubDeletionRequests(),
+        api.getCubPendingPlanDestructions(),
+        api.listCubDecisionLog({ limit: 50 }),
       ]);
       setMetrics(m);
       setUsage(u);
       setLogs(l);
       setDeletions(d);
+      setPendingPlanDestructions(pendingDestructions);
+      setDecisions(decisionRows);
 
       try {
         const reqs = await api.getCubPrivacyRequests({ limit: 200 });
@@ -154,6 +164,22 @@ export default function CubDashboard() {
 
     return { overdue: false, ageBusinessDays };
   };
+
+  const privacyOverdueCount = useMemo(() => {
+    return privacyRequests.reduce((acc, r) => {
+      const meta = computePrivacyOverdue(r);
+      return acc + (meta.overdue ? 1 : 0);
+    }, 0);
+  }, [privacyRequests, slaAcknowledgeBusinessDays, slaOutcomeBusinessDays]);
+
+  const privacyEmailFailuresCount = useMemo(() => {
+    const actions = new Set(["privacy_request_email_failed", "privacy_status_email_failed"]);
+    return logs.filter((l) => actions.has(l.action)).length;
+  }, [logs]);
+
+  const pendingDeletionRequestsCount = useMemo(() => {
+    return deletions.filter((d) => d.status === "pending").length;
+  }, [deletions]);
 
   const handleProcessDeletions = async () => {
     const confirmed = window.confirm(
@@ -298,6 +324,30 @@ export default function CubDashboard() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
+                  <CardTitle>Operational Alerts</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Overdue privacy requests</span>
+                    <span className="font-medium">{privacyOverdueCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Privacy email failures (audit)</span>
+                    <span className="font-medium">{privacyEmailFailuresCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Pending deletion requests</span>
+                    <span className="font-medium">{pendingDeletionRequestsCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Pending plan redactions (due)</span>
+                    <span className="font-medium">{pendingPlanDestructions}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
                   <CardTitle>Export (Audit/Incidents)</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
@@ -409,6 +459,212 @@ export default function CubDashboard() {
                     >
                       {exportingPrivacyRequests ? "Exporting..." : "Export privacy requests (JSON)"}
                     </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Decisions Log</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <p className="text-muted-foreground">
+                    Record major actions (key rotations, policy changes, access changes) in a structured log for audits.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="space-y-1 sm:col-span-1">
+                      <label className="text-xs text-muted-foreground">Category</label>
+                      <select
+                        value={decisionCategory}
+                        onChange={(e) => setDecisionCategory(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
+                      >
+                        <option value="security">Security</option>
+                        <option value="policy">Policy</option>
+                        <option value="operator">Operator/Vendor</option>
+                        <option value="access">Access control</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-xs text-muted-foreground">Title</label>
+                      <Input
+                        value={decisionTitle}
+                        onChange={(e) => setDecisionTitle(e.target.value)}
+                        placeholder="Short summary (e.g., Rotated JWT_SECRET)"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Details (optional)</label>
+                    <textarea
+                      value={decisionDetails}
+                      onChange={(e) => setDecisionDetails(e.target.value)}
+                      className="w-full min-h-[92px] px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
+                      placeholder="What changed, why, and any verification notes (optional)"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      disabled={savingDecision || !decisionCategory.trim() || !decisionTitle.trim()}
+                      onClick={async () => {
+                        setSavingDecision(true);
+                        try {
+                          await api.createCubDecisionLog({
+                            category: decisionCategory.trim(),
+                            title: decisionTitle.trim(),
+                            details: decisionDetails.trim() || undefined,
+                          });
+                          setDecisionTitle("");
+                          setDecisionDetails("");
+                          const rows = await api.listCubDecisionLog({ limit: 50 });
+                          setDecisions(rows);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Failed to save decision entry");
+                        } finally {
+                          setSavingDecision(false);
+                        }
+                      }}
+                    >
+                      {savingDecision ? "Saving..." : "Add entry"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const rows = await api.listCubDecisionLog({ limit: 50 });
+                          setDecisions(rows);
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                    >
+                      Refresh
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {decisions.length === 0 ? (
+                      <div className="text-muted-foreground">No entries yet.</div>
+                    ) : (
+                      decisions.slice(0, 10).map((d) => (
+                        <div key={d.id} className="p-3 border rounded-lg bg-secondary/10">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">{d.category}</span>
+                            <span>{new Date(d.created_at).toLocaleString()}</span>
+                            <span className="truncate">ID: {d.id}</span>
+                          </div>
+                          <div className="text-sm font-medium mt-1">{d.title}</div>
+                          {d.details && <div className="text-sm whitespace-pre-wrap mt-1">{d.details}</div>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Decisions Log</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <p className="text-muted-foreground">
+                    Record major actions (key rotations, policy changes, access changes) in a structured log for audits.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="space-y-1 sm:col-span-1">
+                      <label className="text-xs text-muted-foreground">Category</label>
+                      <select
+                        value={decisionCategory}
+                        onChange={(e) => setDecisionCategory(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
+                      >
+                        <option value="security">Security</option>
+                        <option value="policy">Policy</option>
+                        <option value="operator">Operator/Vendor</option>
+                        <option value="access">Access control</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-xs text-muted-foreground">Title</label>
+                      <Input
+                        value={decisionTitle}
+                        onChange={(e) => setDecisionTitle(e.target.value)}
+                        placeholder="Short summary (e.g., Rotated JWT_SECRET)"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Details (optional)</label>
+                    <textarea
+                      value={decisionDetails}
+                      onChange={(e) => setDecisionDetails(e.target.value)}
+                      className="w-full min-h-[92px] px-3 py-2 rounded-lg border bg-secondary/30 text-sm"
+                      placeholder="What changed, why, and any verification notes (optional)"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      disabled={savingDecision || !decisionCategory.trim() || !decisionTitle.trim()}
+                      onClick={async () => {
+                        setSavingDecision(true);
+                        try {
+                          await api.createCubDecisionLog({
+                            category: decisionCategory.trim(),
+                            title: decisionTitle.trim(),
+                            details: decisionDetails.trim() || undefined,
+                          });
+                          setDecisionTitle("");
+                          setDecisionDetails("");
+                          const rows = await api.listCubDecisionLog({ limit: 50 });
+                          setDecisions(rows);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Failed to save decision entry");
+                        } finally {
+                          setSavingDecision(false);
+                        }
+                      }}
+                    >
+                      {savingDecision ? "Saving..." : "Add entry"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const rows = await api.listCubDecisionLog({ limit: 50 });
+                          setDecisions(rows);
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                    >
+                      Refresh
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {decisions.length === 0 ? (
+                      <div className="text-muted-foreground">No entries yet.</div>
+                    ) : (
+                      decisions.slice(0, 10).map((d) => (
+                        <div key={d.id} className="p-3 border rounded-lg bg-secondary/10">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">{d.category}</span>
+                            <span>{new Date(d.created_at).toLocaleString()}</span>
+                            <span className="truncate">ID: {d.id}</span>
+                          </div>
+                          <div className="text-sm font-medium mt-1">{d.title}</div>
+                          {d.details && <div className="text-sm whitespace-pre-wrap mt-1">{d.details}</div>}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>

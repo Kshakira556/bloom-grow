@@ -20,6 +20,7 @@ const bytesToHuman = (bytes: number): string => {
 
 export default function CubDashboard() {
   const [metrics, setMetrics] = useState<api.CubUserMetrics | null>(null);
+  const [accountMetrics, setAccountMetrics] = useState<api.CubAccountMetrics | null>(null);
   const [usage, setUsage] = useState<api.CubStorageUsage | null>(null);
   const [logs, setLogs] = useState<api.AuditLog[]>([]);
   const [deletions, setDeletions] = useState<api.AccountDeletionRequest[]>([]);
@@ -71,8 +72,9 @@ export default function CubDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const [m, u, l, d, pendingDestructions, decisionRows] = await Promise.all([
+      const [m, accounts, u, l, d, pendingDestructions, decisionRows] = await Promise.all([
         api.getCubUserMetrics(),
+        api.getCubAccountMetrics(),
         api.getCubStorageUsage(),
         api.getCubAuditLogs(),
         api.getCubDeletionRequests(),
@@ -80,6 +82,7 @@ export default function CubDashboard() {
         api.listCubDecisionLog({ limit: 50 }),
       ]);
       setMetrics(m);
+      setAccountMetrics(accounts);
       setUsage(u);
       setLogs(l);
       setDeletions(d);
@@ -263,7 +266,7 @@ export default function CubDashboard() {
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Parents</CardTitle>
+                    <CardTitle>Parent Users</CardTitle>
                   </CardHeader>
                   <CardContent className="text-2xl font-bold">
                     {metrics?.totals.parents ?? 0}
@@ -291,6 +294,52 @@ export default function CubDashboard() {
                   </CardHeader>
                   <CardContent className="text-2xl font-bold">
                     {metrics?.totals.cub_internal ?? 0}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Accounts (Plans)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    <div className="font-bold text-lg">{accountMetrics?.accounts_total ?? 0}</div>
+                    <div className="text-muted-foreground">
+                      Active {accountMetrics?.by_status.active ?? 0} · Draft {accountMetrics?.by_status.draft ?? 0} · Archived {accountMetrics?.by_status.archived ?? 0}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Accounts (2 Parents)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {accountMetrics?.plans_with_2_parents ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Accounts (1 Parent)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {accountMetrics?.plans_with_1_parent ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Accounts (0 Parents)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {accountMetrics?.plans_with_0_parents ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Accounts (Pending Invites)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {accountMetrics?.plans_with_pending_invites ?? 0}
                   </CardContent>
                 </Card>
               </div>

@@ -963,6 +963,24 @@ export const getCubUserMetrics = async (): Promise<CubUserMetrics> => {
   return res.metrics;
 };
 
+export type CubAccountMetrics = {
+  accounts_total: number;
+  by_status: {
+    active: number;
+    draft: number;
+    archived: number;
+  };
+  plans_with_2_parents: number;
+  plans_with_1_parent: number;
+  plans_with_0_parents: number;
+  plans_with_pending_invites: number;
+};
+
+export const getCubAccountMetrics = async (): Promise<CubAccountMetrics> => {
+  const res = await http<{ metrics: CubAccountMetrics }>("/cub/metrics/accounts", "GET");
+  return res.metrics;
+};
+
 export type CubStorageUsage = {
   total_bytes: number;
   total_files: number;

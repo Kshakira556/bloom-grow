@@ -232,6 +232,9 @@ export default function CubDashboard() {
             <Button variant="outline" onClick={load} disabled={loading}>
               Refresh
             </Button>
+            <Button variant="outline" onClick={() => (window.location.href = "/cub/users")}>
+              Manage users
+            </Button>
             <Button onClick={handleProcessDeletions} disabled={processing}>
               {processing ? "Processing..." : "Process due deletions"}
             </Button>

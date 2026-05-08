@@ -17,6 +17,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const PrivacyRequests = lazy(() => import("./pages/PrivacyRequests"));
 const Settings = lazy(() => import("./pages/Settings"));
 const CubDashboard = lazy(() => import("./pages/cub/Dashboard"));
+const CubUsers = lazy(() => import("./pages/cub/Users"));
 
 // Client pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -71,6 +72,22 @@ const App = () => (
               element={
                 <RoleProtectedRoute allowedRoles={["cub_internal"]}>
                   <CubDashboard />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/cub/users"
+              element={
+                <RoleProtectedRoute allowedRoles={["cub_internal"]}>
+                  <CubUsers />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/cub/users"
+              element={
+                <RoleProtectedRoute allowedRoles={["cub_internal"]}>
+                  <CubUsers />
                 </RoleProtectedRoute>
               }
             />

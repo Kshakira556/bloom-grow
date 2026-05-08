@@ -309,6 +309,45 @@ export const createCubDecisionLog = async (payload: { category: string; title: s
   return res.entry;
 };
 
+export type CubUserListRow = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: UserRole | string;
+  account_type: "trial" | "paid" | string | null;
+  subscription_status: string | null;
+  created_at: string | null;
+  deleted_at: string | null;
+  legal_hold?: boolean | null;
+  children_count?: number;
+  plans_count?: number;
+};
+
+export const getCubUsers = async (args?: { role?: UserRole | "all"; q?: string; limit?: number; offset?: number }) => {
+  const params = new URLSearchParams();
+  if (args?.role) params.set("role", args.role);
+  if (args?.q) params.set("q", args.q);
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  if (typeof args?.offset === "number") params.set("offset", String(args.offset));
+  const qs = params.toString();
+  return http<{ users: CubUserListRow[]; limit: number; offset: number }>(`/cub/users${qs ? `?${qs}` : ""}`, "GET");
+};
+
+export const cubSoftDeleteUser = async (userId: string) => {
+  return http<{ user: { id: string; deleted_at: string | null } }>(`/cub/users/${userId}/soft-delete`, "PUT");
+};
+
+export const cubHardDeleteUser = async (userId: string, payload: { confirm_password: string }) => {
+  return http<{ ok: boolean }>(`/cub/users/${userId}/hard-delete`, "POST", payload);
+};
+
+export const cubActivatePaidUser = async (userId: string) => {
+  return http<{ user: { id: string; account_type: string | null; subscription_status: string | null; trial_ends_at: string | null } }>(
+    `/cub/users/${userId}/activate-paid`,
+    "PUT"
+  );
+};
+
 // --------------------
 // CUB internal: Incidents (placeholders)
 // --------------------

@@ -265,10 +265,12 @@ export type PrivacyRequest = {
   updated_at?: string | null;
 };
 
-export const getCubPrivacyRequests = async (args?: { status?: PrivacyRequestStatus; limit?: number }) => {
+export const getCubPrivacyRequests = async (args?: { status?: PrivacyRequestStatus; limit?: number; from?: string; to?: string }) => {
   const params = new URLSearchParams();
   if (args?.status) params.set("status", args.status);
   if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  if (args?.from) params.set("from", args.from);
+  if (args?.to) params.set("to", args.to);
   const qs = params.toString();
   const res = await http<{ requests: PrivacyRequest[] }>(`/cub/privacy/requests${qs ? `?${qs}` : ""}`, "GET");
   return res.requests;

@@ -33,6 +33,9 @@ export default function CubDashboard() {
   const [legalHoldEnabled, setLegalHoldEnabled] = useState(true);
   const [legalHoldReason, setLegalHoldReason] = useState("");
   const [privacyStatusFilter, setPrivacyStatusFilter] = useState<api.PrivacyRequestStatus | "all">("all");
+  const [showOnlyOverduePrivacy, setShowOnlyOverduePrivacy] = useState(false);
+  const [slaAcknowledgeBusinessDays, setSlaAcknowledgeBusinessDays] = useState(5);
+  const [slaOutcomeBusinessDays, setSlaOutcomeBusinessDays] = useState(20);
   const [incidents, setIncidents] = useState<api.CubIncident[]>([]);
   const [incidentTitle, setIncidentTitle] = useState("");
   const [incidentSeverity, setIncidentSeverity] = useState<api.CubIncidentSeverity>("medium");
@@ -42,6 +45,21 @@ export default function CubDashboard() {
   const [exportTo, setExportTo] = useState("");
   const [exportingAudit, setExportingAudit] = useState(false);
   const [exportingIncidents, setExportingIncidents] = useState(false);
+  const [exportingPrivacyRequests, setExportingPrivacyRequests] = useState(false);
+  const [auditPackChecks, setAuditPackChecks] = useState<Record<string, boolean>>({
+    "policies_links": true,
+    "info_officer_contact": true,
+    "consent_capture": true,
+    "ropa_present": true,
+    "dsar_exports": true,
+    "privacy_requests_workflow": true,
+    "retention_deletion_jobs": true,
+    "security_safeguards": true,
+    "incident_runbook": true,
+    "operator_controls": false,
+    "secret_rotation_log": false,
+    "evidence_storage_defined": false,
+  });
 
   const load = async () => {
     try {
@@ -98,6 +116,44 @@ export default function CubDashboard() {
       return fields.includes(q);
     });
   }, [logs, logSearch]);
+
+  const businessDaysBetween = (start: Date, end: Date): number => {
+    // Counts business days from start (exclusive) to end (inclusive-ish) in local time, skipping Sat/Sun.
+    // Good enough for internal SLA monitoring; adjust later if you want public-holiday awareness.
+    const s = new Date(start);
+    const e = new Date(end);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0;
+    if (e <= s) return 0;
+
+    // Normalize to midnight local
+    s.setHours(0, 0, 0, 0);
+    e.setHours(0, 0, 0, 0);
+
+    let days = 0;
+    const cur = new Date(s);
+    while (cur < e) {
+      cur.setDate(cur.getDate() + 1);
+      const dow = cur.getDay(); // 0 Sun, 6 Sat
+      if (dow !== 0 && dow !== 6) days += 1;
+    }
+    return days;
+  };
+
+  const computePrivacyOverdue = (r: api.PrivacyRequest): { overdue: boolean; ageBusinessDays: number } => {
+    const createdAt = new Date(r.created_at);
+    const now = new Date();
+    const ageBusinessDays = businessDaysBetween(createdAt, now);
+
+    if (r.status === "pending") {
+      return { overdue: ageBusinessDays > slaAcknowledgeBusinessDays, ageBusinessDays };
+    }
+
+    if (r.status === "acknowledged") {
+      return { overdue: ageBusinessDays > slaOutcomeBusinessDays, ageBusinessDays };
+    }
+
+    return { overdue: false, ageBusinessDays };
+  };
 
   const handleProcessDeletions = async () => {
     const confirmed = window.confirm(
@@ -166,40 +222,77 @@ export default function CubDashboard() {
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Total Users</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-bold">
-                  {metrics?.totals.users ?? 0}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Paid</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-bold">
-                  {metrics?.subscriptions.paid ?? 0}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Trial</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-bold">
-                  {metrics?.subscriptions.trial ?? 0}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Vault Storage</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm">
-                  <div className="font-bold text-lg">{bytesToHuman(usage?.total_bytes ?? 0)}</div>
-                  <div className="text-muted-foreground">{usage?.total_files ?? 0} files</div>
-                </CardContent>
-              </Card>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Total Users</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {metrics?.totals.users ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Parents</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {metrics?.totals.parents ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Mediators</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {metrics?.totals.mediators ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Admins</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {metrics?.totals.admins ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>CUB Internal</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {metrics?.totals.cub_internal ?? 0}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Paid</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {metrics?.subscriptions.paid ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Trial</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {metrics?.subscriptions.trial ?? 0}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Vault Storage</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    <div className="font-bold text-lg">{bytesToHuman(usage?.total_bytes ?? 0)}</div>
+                    <div className="text-muted-foreground">{usage?.total_files ?? 0} files</div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -288,6 +381,73 @@ export default function CubDashboard() {
                     >
                       {exportingIncidents ? "Exporting..." : "Export incidents (JSON)"}
                     </Button>
+
+                    <Button
+                      variant="outline"
+                      disabled={exportingPrivacyRequests}
+                      onClick={async () => {
+                        setExportingPrivacyRequests(true);
+                        try {
+                          const from = exportFrom ? new Date(`${exportFrom}T00:00:00.000Z`).toISOString() : undefined;
+                          const to = exportTo ? new Date(`${exportTo}T23:59:59.999Z`).toISOString() : undefined;
+                          const rows = await api.getCubPrivacyRequests({ from, to, limit: 2000 });
+                          const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `cub-privacy-requests-${exportFrom || "all"}_${exportTo || "all"}.json`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Failed to export privacy requests");
+                        } finally {
+                          setExportingPrivacyRequests(false);
+                        }
+                      }}
+                    >
+                      {exportingPrivacyRequests ? "Exporting..." : "Export privacy requests (JSON)"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Audit Pack Checklist</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <p className="text-muted-foreground">
+                    Quick internal checklist for POPIA audit readiness. This list is local-only (not stored).
+                    Source reference: <span className="font-medium text-foreground">docs/compliance/AUDIT_PACK_CHECKLIST.md</span>.
+                  </p>
+                  <div className="grid gap-2">
+                    {[
+                      { k: "policies_links", label: "Privacy/Terms/Privacy Requests visible + linked" },
+                      { k: "info_officer_contact", label: "Information Officer contact shown + incident inbox set" },
+                      { k: "consent_capture", label: "Terms/Privacy acceptance captured (DB fields + UI)" },
+                      { k: "ropa_present", label: "RoPA present and updated (docs/compliance/ROPA.md)" },
+                      { k: "dsar_exports", label: "DSAR exports available (JSON + ZIP)" },
+                      { k: "privacy_requests_workflow", label: "Privacy requests workflow + statuses + emails working" },
+                      { k: "retention_deletion_jobs", label: "Deletion/anonymisation + plan redaction jobs running (cron)" },
+                      { k: "security_safeguards", label: "Rate limits + audit logging for sensitive actions" },
+                      { k: "incident_runbook", label: "Incident response runbook + incidents tracker" },
+                      { k: "operator_controls", label: "Operator access + least privilege documented" },
+                      { k: "secret_rotation_log", label: "Secret rotation log maintained" },
+                      { k: "evidence_storage_defined", label: "Evidence storage location defined" },
+                    ].map((item) => (
+                      <label key={item.k} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(auditPackChecks[item.k])}
+                          onChange={(e) =>
+                            setAuditPackChecks((prev) => ({ ...prev, [item.k]: e.target.checked }))
+                          }
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -398,29 +558,74 @@ export default function CubDashboard() {
                       <option value="fulfilled">Fulfilled</option>
                       <option value="rejected">Rejected</option>
                     </select>
+                    <label className="flex items-center gap-2 text-sm px-2 py-1 rounded-lg border bg-secondary/10">
+                      <input
+                        type="checkbox"
+                        checked={showOnlyOverduePrivacy}
+                        onChange={(e) => setShowOnlyOverduePrivacy(e.target.checked)}
+                      />
+                      Overdue only
+                    </label>
                     <Button variant="outline" onClick={load} disabled={loading}>
                       Refresh
                     </Button>
                   </div>
 
-                  {(privacyStatusFilter === "all"
-                    ? privacyRequests
-                    : privacyRequests.filter((r) => r.status === privacyStatusFilter)
-                  ).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No privacy requests.</p>
-                  ) : (
-                    (privacyStatusFilter === "all"
-                      ? privacyRequests
-                      : privacyRequests.filter((r) => r.status === privacyStatusFilter)
-                    )
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">SLA: Acknowledge within (business days)</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={slaAcknowledgeBusinessDays}
+                        onChange={(e) => setSlaAcknowledgeBusinessDays(Math.max(1, Number(e.target.value) || 1))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">SLA: Outcome within (business days)</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={slaOutcomeBusinessDays}
+                        onChange={(e) => setSlaOutcomeBusinessDays(Math.max(1, Number(e.target.value) || 1))}
+                      />
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const base =
+                      privacyStatusFilter === "all"
+                        ? privacyRequests
+                        : privacyRequests.filter((r) => r.status === privacyStatusFilter);
+
+                    const withOverdue = base.map((r) => ({
+                      r,
+                      meta: computePrivacyOverdue(r),
+                    }));
+
+                    const filtered = showOnlyOverduePrivacy
+                      ? withOverdue.filter((x) => x.meta.overdue)
+                      : withOverdue;
+
+                    if (filtered.length === 0) {
+                      return <p className="text-sm text-muted-foreground">No privacy requests.</p>;
+                    }
+
+                    return filtered
                       .slice(0, 30)
-                      .map((r) => (
-                        <div key={r.id} className="p-3 border rounded-xl space-y-2">
+                      .map(({ r, meta }) => (
+                        <div key={r.id} className={`p-3 border rounded-xl space-y-2 ${meta.overdue ? "border-destructive/40" : ""}`}>
                           <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
                             <span className="px-2 py-0.5 rounded-full bg-secondary">{r.status}</span>
+                            {meta.overdue && (
+                              <span className="px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                                overdue
+                              </span>
+                            )}
                             <span>Type: {r.request_type}</span>
                             {r.user_id ? <span>User: {r.user_id}</span> : <span>Unlinked</span>}
                             <span>{new Date(r.created_at).toLocaleString()}</span>
+                            <span>Age: {meta.ageBusinessDays} bd</span>
                           </div>
                           {r.contact_email && (
                             <div className="text-xs text-muted-foreground">Contact: {r.contact_email}</div>
@@ -485,8 +690,8 @@ export default function CubDashboard() {
                             </Button>
                           </div>
                         </div>
-                      ))
-                  )}
+                      ));
+                  })()}
                 </CardContent>
               </Card>
 

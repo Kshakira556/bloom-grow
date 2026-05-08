@@ -16,17 +16,26 @@ export function Navbar() {
   const hasTrialEnd = trialEndsAt != null && trialEndsAt !== "";
   const showTrial = Boolean(hasTrialEnd || user?.is_trial_active);
 
-  // Add Moderator link if user is a mediator
-  const navLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/visits", label: "Visits" },
-    { href: "/messages", label: "Messages" },
-    { href: "/journal", label: "Journal" },
-    { href: "/children", label: "Children" },
-    ...(isAuthenticated && (user?.role === "mediator" || user?.role === "admin")
-        ? [{ href: "/admin/moderator", label: "Moderator" }]
-        : []),
-  ];
+  const navLinks = (() => {
+    if (!isAuthenticated) return [];
+    if (user?.role === "cub_internal") return [{ href: "/cub", label: "CUB Internal" }];
+
+    // Parent nav
+    const links = [
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/visits", label: "Visits" },
+      { href: "/messages", label: "Messages" },
+      { href: "/journal", label: "Journal" },
+      { href: "/children", label: "Children" },
+    ];
+
+    // Add Moderator link if user is a mediator/admin (client-facing org roles)
+    if (user?.role === "mediator" || user?.role === "admin") {
+      links.push({ href: "/admin/moderator", label: "Moderator" });
+    }
+
+    return links;
+  })();
 
   const authLinks = [
     { href: "/register", label: "Register" },

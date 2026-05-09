@@ -71,7 +71,12 @@ export default function SignIn() {
         navigate("/dashboard", { replace: true });
       }
     } catch (err) {
-      setError((err as Error).message || "Login failed");
+      const msg = (err as Error).message || "Login failed";
+      if (msg === "Unauthorized") {
+        setError("Incorrect email or password.");
+      } else {
+        setError(msg);
+      }
     }
   };
 

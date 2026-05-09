@@ -7,9 +7,10 @@ export const http = async <T>(
   method: HttpMethod,
   body?: unknown
 ): Promise<T> => {
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
+  const headers: HeadersInit = {};
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (!API_URL) {
     throw new Error("API is not configured. Set VITE_API_URL.");

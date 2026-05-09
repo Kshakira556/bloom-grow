@@ -106,9 +106,21 @@ export const login = async (email: string, password: string) => {
   return http<LoginResponse>("/auth/login", "POST", { email, password });
 };
 
-export const getMe = async (): Promise<SafeUser> => {
-  const res = await http<{ user: SafeUser }>("/auth/me", "GET");
-  return res.user;
+export const getMe = async (): Promise<SafeUser | null> => {
+  // Avoid noisy console errors on cold loads: treat 401 as "not signed in"
+  // and return null instead of throwing.
+  if (!API_URL) throw new Error("API is not configured. Set VITE_API_URL.");
+
+  const res = await fetch(`${API_URL}/auth/me`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error("Failed to load session");
+
+  const data = (await res.json()) as { user: SafeUser };
+  return data.user;
 };
 
 export const getUsers = async (): Promise<SafeUser[]> => {

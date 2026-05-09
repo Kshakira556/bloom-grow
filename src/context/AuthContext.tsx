@@ -43,15 +43,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Cookie-based auth (HttpOnly). Restore session by asking the backend who we are.
     // Keep sessionStorage user as a UI hint, but treat the backend as source of truth.
     (async () => {
-      try {
-        const me = await getMe();
-        setUser(me);
-        sessionStorage.setItem("user", JSON.stringify(me));
-      } catch {
-        // No valid cookie session.
+      // Skip the request entirely unless we have a hint that a session might exist.
+      // (We can't read HttpOnly cookies, so we keep a small flag.)
+      const hasSessionHint = sessionStorage.getItem("has_session") === "1";
+      const hasUserHint = Boolean(sessionStorage.getItem("user"));
+      if (!hasSessionHint && !hasUserHint) return;
+
+      const me = await getMe();
+      if (!me) {
         setUser(null);
         sessionStorage.removeItem("user");
+        sessionStorage.removeItem("has_session");
+        return;
       }
+
+      setUser(me);
+      sessionStorage.setItem("user", JSON.stringify(me));
+      sessionStorage.setItem("has_session", "1");
     })();
   }, []);
 
@@ -60,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Persist only user profile; auth is stored in an HttpOnly cookie set by the backend.
     sessionStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("has_session", "1");
 
     setUser(user);
 
@@ -72,6 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Persist only user profile; auth is stored in an HttpOnly cookie set by the backend.
     sessionStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("has_session", "1");
 
     setUser(user);
 
@@ -83,6 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem("user");
+    sessionStorage.removeItem("has_session");
   }, []);
 
   return (

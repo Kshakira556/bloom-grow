@@ -24,9 +24,16 @@ export const http = async <T>(
 
   if (res.status === 401) {
     sessionStorage.removeItem("user");
+    sessionStorage.removeItem("has_session");
 
-    // Let React Router handle navigation instead of hard reload
-    throw new Error("Unauthorized");
+    // Prefer backend-provided message (e.g., wrong password vs no account).
+    const errorJson = await res.json().catch(() => ({}));
+    const message =
+      typeof (errorJson as any)?.error === "string"
+        ? (errorJson as any).error
+        : "Unauthorized";
+
+    throw new Error(message);
   }
 
   if (res.status === 404) {

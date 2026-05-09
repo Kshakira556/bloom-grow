@@ -35,17 +35,11 @@ export interface Child {
 }
 
 export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
-  const token = sessionStorage.getItem("token");
-
-  if (!token) {
-    return { invites: [] };
-  }
+  if (!API_URL) throw new Error("API is not configured. Set VITE_API_URL.");
 
   const res = await fetch(`${API_URL}/plans/invites`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -58,12 +52,14 @@ export const getMyInvites = async (): Promise<{ invites: PlanInvite[] }> => {
 };
 
 export const acceptInvite = async (invite_id: string) => {
+  if (!API_URL) throw new Error("API is not configured. Set VITE_API_URL.");
+
   const res = await fetch(`${API_URL}/plans/accept`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${sessionStorage.getItem("token")}`,
     },
+    credentials: "include",
     body: JSON.stringify({ invite_id }),
   });
 
@@ -110,6 +106,11 @@ export const login = async (email: string, password: string) => {
   return http<LoginResponse>("/auth/login", "POST", { email, password });
 };
 
+export const getMe = async (): Promise<SafeUser> => {
+  const res = await http<{ user: SafeUser }>("/auth/me", "GET");
+  return res.user;
+};
+
 export const getUsers = async (): Promise<SafeUser[]> => {
   const res = await http<{ users: SafeUser[] }>("/users", "GET");
   return res.users;
@@ -140,14 +141,12 @@ export const createPrivacyRequest = async (payload: {
 };
 
 export const downloadMyDataExport = async () => {
-  const token = sessionStorage.getItem("token");
-  if (!token) throw new Error("Not authenticated");
-
+  if (!API_URL) throw new Error("API is not configured. Set VITE_API_URL.");
   const res = await fetch(`${API_URL}/privacy/my-data`, {
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -159,13 +158,12 @@ export const downloadMyDataExport = async () => {
 };
 
 export const downloadMyDataExportBundle = async (): Promise<Blob> => {
-  const token = sessionStorage.getItem("token");
-  if (!token) throw new Error("Not authenticated");
-
+  if (!API_URL) throw new Error("API is not configured. Set VITE_API_URL.");
   const res = await fetch(`${API_URL}/privacy/my-data/bundle`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      // no content-type header for download
     },
+    credentials: "include",
   });
 
   if (!res.ok) {

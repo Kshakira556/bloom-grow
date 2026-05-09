@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { login as loginApi, register as registerApi, SafeUser } from "@/lib/api";
-import { setAuthToken } from "@/lib/http";
+import { login as loginApi, register as registerApi, SafeUser, getMe } from "@/lib/api";
 
 type AuthContextValue = {
   user: SafeUser | null;
@@ -41,21 +40,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    if (token) {
-      setAuthToken(token);
-    }
+    // Cookie-based auth (HttpOnly). Restore session by asking the backend who we are.
+    // Keep sessionStorage user as a UI hint, but treat the backend as source of truth.
+    (async () => {
+      try {
+        const me = await getMe();
+        setUser(me);
+        sessionStorage.setItem("user", JSON.stringify(me));
+      } catch {
+        // No valid cookie session.
+        setUser(null);
+        sessionStorage.removeItem("user");
+      }
+    })();
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { user, token } = await loginApi(email, password);
+    const { user } = await loginApi(email, password);
 
-    // 1. Persist first
-    sessionStorage.setItem("token", token);
+    // Persist only user profile; auth is stored in an HttpOnly cookie set by the backend.
     sessionStorage.setItem("user", JSON.stringify(user));
 
-    // 2. Then apply
-    setAuthToken(token);
     setUser(user);
 
     return user; 
@@ -63,16 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const register = useCallback(
   async (data) => {
-    const { user, token } = await registerApi(data);
+    const { user } = await registerApi(data);
 
-    // 1. Persist FIRST (critical)
-    sessionStorage.setItem("token", token);
+    // Persist only user profile; auth is stored in an HttpOnly cookie set by the backend.
     sessionStorage.setItem("user", JSON.stringify(user));
 
-    // 2. Set token globally BEFORE React updates
-    setAuthToken(token);
-
-    // 3. Then update React state
     setUser(user);
 
     return user;
@@ -81,10 +81,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 );
 
   const logout = useCallback(() => {
-    setAuthToken(null);
     setUser(null);
     sessionStorage.removeItem("user");
-    sessionStorage.removeItem("token");
   }, []);
 
   return (

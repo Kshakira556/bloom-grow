@@ -23,15 +23,14 @@ export const useMessagesWS = ({
 }: Params) => {
   useEffect(() => {
     if (!user || !activePlan) return;
-    const token = sessionStorage.getItem("token");
-    if (!token) return;
 
     const wsBaseUrl = import.meta.env.VITE_WS_URL;
 
     if (!wsBaseUrl) return;
 
     try {
-      const ws = new WebSocket(`${wsBaseUrl}/messages/ws?token=${token}`);
+      // Cookie-based auth: backend authenticates the WS handshake via HttpOnly cookie.
+      const ws = new WebSocket(`${wsBaseUrl}/messages/ws`);
 
       const handleMessage = async (event: MessageEvent) => {
         const data = JSON.parse(event.data);

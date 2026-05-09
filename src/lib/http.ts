@@ -1,12 +1,6 @@
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-let authToken: string | null = null;
-
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
-
-export const setAuthToken = (token: string | null) => {
-  authToken = token;
-};
 
 export const http = async <T>(
   url: string,
@@ -17,24 +11,17 @@ export const http = async <T>(
     "Content-Type": "application/json",
   };
 
-  // Prefer in-memory token, but fall back to sessionStorage to avoid edge cases
-  // where the app state says "authenticated" but the in-memory token wasn't set yet.
-  const token = authToken || sessionStorage.getItem("token");
-  if (token) headers.Authorization = `Bearer ${token}`;
-
   if (!API_URL) {
     throw new Error("API is not configured. Set VITE_API_URL.");
   }
   const res = await fetch(`${API_URL}${url}`, {
     method,
     headers,
+    credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
 
   if (res.status === 401) {
-    setAuthToken(null);
-
-    sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
 
     // Let React Router handle navigation instead of hard reload

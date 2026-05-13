@@ -33,6 +33,7 @@ type Props = {
   user: { id: string } | null;
   isUserParticipantOfPlan: (plan: api.FullPlan | null, userId: string) => boolean;
   messages: Message[];
+  className?: string;
 };
 
 const mapContactsToConversations = (
@@ -79,6 +80,7 @@ const ConversationSidebar = ({
   user,
   isUserParticipantOfPlan,
   messages,
+  className,
 }: Props) => {
   const { user: authUser } = useAuth();
   const userId = authUser?.id || "";
@@ -200,7 +202,7 @@ const ConversationSidebar = ({
   }, [activePlan?.id, contacts, messages, setConversations]);
 
   return (
-    <div className="md:col-span-4 border-r">
+    <div className={["md:col-span-4 border-r", className].filter(Boolean).join(" ")}>
       {/* Add Contact Section */}
       <div className="p-4">
         {!showAddContact ? (

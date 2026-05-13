@@ -345,14 +345,14 @@ useEffect(() => {
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
 
-      <main className="flex-1 py-4 px-2 sm:py-8 sm:px-4">
-        <div className="container max-w-5xl mx-auto">
+      <main className="flex-1 py-4 px-0 sm:py-8 sm:px-4">
+        <div className="container max-w-none sm:max-w-5xl mx-auto px-0">
           {/* Page Title */}
           <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">Visits</h1>
 
           {/* Calendar Card */}
-          <Card className="rounded-3xl overflow-hidden">
-            <CardContent className="pt-4">
+          <Card className="rounded-none sm:rounded-3xl overflow-hidden border-0 shadow-none sm:shadow-sm">
+            <CardContent className="pt-4 px-0 sm:px-6">
               {/* Legend, Plan & Child Selector */}
 <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 relative">
 
@@ -576,14 +576,14 @@ useEffect(() => {
     ))}
   </div>
 )}
-              <div className="border rounded-2xl overflow-hidden p-2 sm:p-4 overflow-x-auto">
+              <div className="overflow-hidden px-0 sm:px-0">
                 <Calendar
                   localizer={localizer}
                   events={mapToCalendarEvents(events)}
                   views={['month', 'week', 'day']}
                   startAccessor="start"
                   endAccessor="end"
-                  style={{ height: "min(600px, calc(100vh - 260px))", minWidth: 720 }}
+                  style={{ height: "min(600px, calc(100vh - 260px))", width: "100%" }}
                   onSelectEvent={(event) => {
                     setModalEvent(event.resource);
                     setModalMode("view");
@@ -598,7 +598,7 @@ useEffect(() => {
               </div>
 
               {/* Legend */}
-              <div className="flex items-center gap-6 mt-4 pt-4">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-4 px-3 sm:px-0 pt-4">
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded bg-[#85B3E0]" />
                   <span className="text-sm">My Events</span>

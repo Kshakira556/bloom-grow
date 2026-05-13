@@ -149,11 +149,11 @@ const Journal = () => {
     };
 
   return (
-    <div className="min-h-screen gradient-bg flex flex-col">
+    <div className="min-h-screen gradient-bg flex flex-col overflow-x-hidden">
       <Navbar />
 
-      <main className="flex-1 py-4 px-2 sm:py-8 sm:px-4">
-        <div className="container max-w-4xl mx-auto">
+      <main className="flex-1 py-4 px-0 sm:py-8 sm:px-4">
+        <div className="w-full sm:container sm:max-w-4xl sm:mx-auto px-2 sm:px-0">
           <h1 className="font-display text-3xl font-bold text-primary text-center mb-2">
             My Little Journal
           </h1>
@@ -161,9 +161,9 @@ const Journal = () => {
             Secure, child-specific journal entries linked to your parenting plan.
           </p>
 
-          <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Entry Form */}
-            <Card className="rounded-3xl">
+            <Card className="rounded-none sm:rounded-3xl">
               <CardContent className="p-4 sm:p-6 space-y-4">
                 <h2 className="font-display font-bold text-xl">Journal</h2>
 
@@ -243,8 +243,8 @@ const Journal = () => {
                   onChange={(e) => setEntryText(e.target.value.slice(0, maxChars))}
                 />
 
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2 items-center">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap gap-2 items-center min-w-0">
                     <span className="text-sm text-muted-foreground">Mood:</span>
                     <div className="flex gap-1 flex-wrap">
                       {moods.map((mood) => (
@@ -260,7 +260,7 @@ const Journal = () => {
                       ))}
                     </div>
                     {selectedMood && (
-                      <span className="ml-2 text-sm font-bold">
+                      <span className="ml-0 sm:ml-2 text-sm font-bold break-words">
                         Current Mood: {selectedMood}
                       </span>
                     )}
@@ -283,7 +283,7 @@ const Journal = () => {
             </Card>
 
             {/* Entries List */}
-            <Card className="rounded-3xl">
+            <Card className="rounded-none sm:rounded-3xl">
               <CardContent className="p-4 sm:p-6">
                 <h2 className="font-display font-bold text-xl mb-4">
                   {viewMode === "all" && `All Entries (${filteredEntries.length})`}
@@ -291,11 +291,11 @@ const Journal = () => {
                   {viewMode === "sent" && `Sent Entries (${filteredEntries.length})`}
                 </h2>
 
-                <div className="flex gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-4">
                   <Button
                     variant={viewMode === "all" ? "default" : "ghost"}
                     size="sm"
-                    className="rounded-full"
+                    className="rounded-full text-xs sm:text-sm"
                     onClick={() => setViewMode("all")}
                   >
                     All Entries
@@ -303,7 +303,7 @@ const Journal = () => {
                   <Button
                     variant={viewMode === "received" ? "default" : "ghost"}
                     size="sm"
-                    className="rounded-full"
+                    className="rounded-full text-xs sm:text-sm"
                     onClick={() => setViewMode("received")}
                   >
                     Received Entries
@@ -311,7 +311,7 @@ const Journal = () => {
                   <Button
                     variant={viewMode === "sent" ? "default" : "ghost"}
                     size="sm"
-                    className="rounded-full"
+                    className="rounded-full text-xs sm:text-sm"
                     onClick={() => setViewMode("sent")}
                   >
                     Sent Entries

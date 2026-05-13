@@ -79,7 +79,7 @@ const ViewJournalModal = ({
       onClick={onClose} // close when clicking backdrop
     >
       <div
-        className="bg-card rounded-none sm:rounded-3xl w-screen h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:w-full sm:mx-4 relative p-3 sm:p-6 space-y-4 overflow-y-auto"
+        className="bg-card rounded-none sm:rounded-3xl w-full max-w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:w-full sm:mx-4 relative p-3 sm:p-6 space-y-4 overflow-y-auto overflow-x-hidden"
         onClick={(e) => e.stopPropagation()} // prevent closing when clicking modal content
       >
         {/* Left Arrow */}
@@ -99,20 +99,20 @@ const ViewJournalModal = ({
         </button>
 
         {/* Mobile controls */}
-        <div className="sm:hidden flex items-center justify-between gap-2 sticky top-0 bg-card pb-2 z-10">
+        <div className="sm:hidden grid grid-cols-3 gap-2 sticky top-0 bg-card pb-2 z-10">
           <button
             type="button"
-            className="px-3 py-1 text-sm rounded-full border disabled:opacity-40"
+            className="px-2 py-1 text-xs rounded-full border disabled:opacity-40"
             disabled={!onPrev || disablePrev}
             onClick={onPrev}
           >
             Prev
           </button>
-          <div className="text-sm font-semibold">Journal Entry</div>
-          <div className="flex items-center gap-2">
+          <div className="text-xs font-semibold text-center self-center">Journal Entry</div>
+          <div className="flex items-center gap-1 justify-end min-w-0">
             <button
               type="button"
-              className="px-3 py-1 text-sm rounded-full border disabled:opacity-40"
+              className="px-2 py-1 text-xs rounded-full border disabled:opacity-40"
               disabled={!onNext || disableNext}
               onClick={onNext}
             >
@@ -121,7 +121,7 @@ const ViewJournalModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1 text-sm rounded-full border"
+              className="px-2 py-1 text-xs rounded-full border"
             >
               Close
             </button>

@@ -43,6 +43,8 @@ type Conversation = {
 
 const Messages = () => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [purposeFilter, setPurposeFilter] = useState<MessagePurpose | "All">("All");
   const [draft, setDraft] = useState<DraftMessage>({ content: "", purpose: "General", attachments: [] });
   const [sending, setSending] = useState(false);
@@ -58,6 +60,7 @@ const Messages = () => {
   const [plansOpen, setPlansOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const hasAutoSelectedRef = useRef(false);
+  const paginationLimitRef = useRef(50);
 
   useEffect(() => {
     setInvitesResolved(false);
@@ -180,8 +183,17 @@ useEffect(() => {
 
   const fetchMessages = async () => {
     try {
-      const mappedMessages = await fetchByPlan(activePlanId, userId);
-      setMessages(mappedMessages);
+      const mappedMessages = await fetchByPlan(activePlanId, userId, {
+        limit: paginationLimitRef.current,
+      });
+      setMessages((prev) => {
+        if (!prev.length) return mappedMessages;
+
+        const byId = new Map(prev.map((m) => [m.id, m]));
+        for (const msg of mappedMessages) byId.set(msg.id, msg);
+        return Array.from(byId.values());
+      });
+      setHasMoreMessages(mappedMessages.length >= paginationLimitRef.current);
     } catch (err) {
       console.error("Failed to fetch messages:", err);
     }
@@ -192,6 +204,11 @@ useEffect(() => {
   const interval = window.setInterval(fetchMessages, 12000);
   return () => window.clearInterval(interval);
 }, [activePlan?.id, userId, fetchByPlan]);
+
+useEffect(() => {
+  setHasMoreMessages(true);
+  setLoadingOlderMessages(false);
+}, [activePlan?.id]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const seenRequestsRef = useRef<Set<string>>(new Set());
@@ -233,6 +250,75 @@ useEffect(() => {
           String(m.sender_id) === String(selectedConversation.user_id))
     );
   }, [messages, selectedConversation?.user_id, userId]);
+
+  const oldestVisibleMessage = useMemo(() => {
+    if (!visibleMessages.length) return null;
+    return [...visibleMessages].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )[0];
+  }, [visibleMessages]);
+
+  useEffect(() => {
+    const activePlanId = activePlan?.id;
+    if (!activePlanId || !selectedConversation?.user_id || !hasMoreMessages) return;
+    if (loadingOlderMessages) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const onScroll = async () => {
+      if (container.scrollTop > 20) return;
+      if (loadingOlderMessages || !hasMoreMessages) return;
+      if (!oldestVisibleMessage?.createdAt) return;
+
+      setLoadingOlderMessages(true);
+      const previousHeight = container.scrollHeight;
+
+      try {
+        const older = await fetchByPlan(activePlanId, userId, {
+          limit: paginationLimitRef.current,
+          before: oldestVisibleMessage.createdAt,
+        });
+
+        if (!older.length) {
+          setHasMoreMessages(false);
+          return;
+        }
+
+        setMessages((prev) => {
+          const byId = new Map(prev.map((m) => [m.id, m]));
+          for (const msg of older) {
+            if (!byId.has(msg.id)) byId.set(msg.id, msg);
+          }
+          return Array.from(byId.values());
+        });
+
+        if (older.length < paginationLimitRef.current) {
+          setHasMoreMessages(false);
+        }
+
+        requestAnimationFrame(() => {
+          const newHeight = container.scrollHeight;
+          container.scrollTop = Math.max(0, newHeight - previousHeight);
+        });
+      } catch (err) {
+        console.error("Failed to load older messages:", err);
+      } finally {
+        setLoadingOlderMessages(false);
+      }
+    };
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [
+    activePlan?.id,
+    userId,
+    selectedConversation?.user_id,
+    hasMoreMessages,
+    loadingOlderMessages,
+    oldestVisibleMessage?.createdAt,
+    fetchByPlan,
+  ]);
 
   // When a conversation is open, mark any incoming unseen messages as seen.
   useEffect(() => {

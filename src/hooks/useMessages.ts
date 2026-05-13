@@ -6,8 +6,12 @@ import { Message } from "@/types/messages";
 
 export const useMessages = () => {
   const fetchByPlan = useCallback(
-    async (planId: string, userId: string): Promise<Message[]> => {
-      const apiMessages = await api.getMessagesByPlan(planId);
+    async (
+      planId: string,
+      userId: string,
+      options?: { limit?: number; before?: string }
+    ): Promise<Message[]> => {
+      const apiMessages = await api.getMessagesByPlan(planId, options);
       return apiMessages.map((msg) => mapApiMessageToMessage(msg, userId));
     },
     []

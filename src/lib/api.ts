@@ -663,9 +663,13 @@ export interface ApiMessage {
 
 export const getMessagesByPlan = async (
   planId: string,
-  options?: { includeDeleted?: boolean }
+  options?: { includeDeleted?: boolean; limit?: number; before?: string }
 ) => {
-  const query = options?.includeDeleted ? "?include_deleted=true" : "";
+  const params = new URLSearchParams();
+  if (options?.includeDeleted) params.set("include_deleted", "true");
+  if (typeof options?.limit === "number") params.set("limit", String(options.limit));
+  if (options?.before) params.set("before", options.before);
+  const query = params.toString() ? `?${params.toString()}` : "";
   const res = await http<{ messages: ApiMessage[] }>(
     `/messages/plan/${planId}${query}`,
     "GET"

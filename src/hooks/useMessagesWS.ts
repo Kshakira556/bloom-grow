@@ -47,8 +47,15 @@ export const useMessagesWS = ({
           return [...prev, mappedMsg];
         });
 
-        if (msg.receiver_id === user.id && !msg.is_seen) {
-          await markSeen(msg.id);
+        if (
+          String(msg.receiver_id) === String(user.id) &&
+          !msg.is_seen
+        ) {
+          try {
+            await markSeen(msg.id);
+          } catch {
+            // ignore duplicate/stale seen updates
+          }
         }
       };
 

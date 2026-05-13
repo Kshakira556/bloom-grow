@@ -220,7 +220,9 @@ const Messages = () => {
     if (!selectedConversation?.user_id || !userId) return;
 
     const unseenIncoming = visibleMessages.filter(
-      (m) => m.receiver_id === userId && m.status !== "Read"
+      (m) =>
+        String(m.receiver_id) === String(userId) &&
+        !m.is_seen
     );
 
     if (!unseenIncoming.length) return;
@@ -229,11 +231,20 @@ const Messages = () => {
       for (const msg of unseenIncoming) {
         try {
           await markSeen(msg.id);
+
           setMessages((prev) =>
-            prev.map((m) => (m.id === msg.id ? { ...m, status: "Read" } : m))
+            prev.map((m) =>
+              m.id === msg.id
+                ? {
+                    ...m,
+                    status: "Read",
+                    is_seen: true,
+                  }
+                : m
+            )
           );
         } catch {
-          // ignore (already seen, network, etc.)
+          // ignore duplicate/stale requests
         }
       }
     })();

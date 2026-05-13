@@ -31,6 +31,7 @@ export type Message = {
   updated_at?: string | null;
   purpose: MessagePurpose;
   status?: MessageStatus;
+  is_seen?: boolean;
   attachments?: Attachment[];
   is_flagged?: boolean;
   flagged_reason?: string;

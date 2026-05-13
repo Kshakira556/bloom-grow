@@ -48,15 +48,24 @@ const MessageInput: React.FC<Props> = ({
           type="file"
           multiple
           onChange={(e) => {
-            const files = Array.from(e.target.files || []).map((file, idx) => ({
-              id: `att-${Date.now()}-${idx}`,
-              name: file.name,
-              type: "Document" as AttachmentType,
-              url: URL.createObjectURL(file),
-              content_type: file.type || "application/octet-stream",
-              size_bytes: file.size,
-              file,
-            }));
+            const files = Array.from(e.target.files || []).map((file, idx) => {
+              let previewUrl = "";
+              try {
+                previewUrl = URL.createObjectURL(file);
+              } catch {
+                previewUrl = "";
+              }
+
+              return {
+                id: `att-${Date.now()}-${idx}`,
+                name: file.name,
+                type: "Document" as AttachmentType,
+                url: previewUrl,
+                content_type: file.type || "application/octet-stream",
+                size_bytes: file.size,
+                file,
+              };
+            });
 
             setDraft((prev) => ({
               ...prev,
@@ -64,7 +73,7 @@ const MessageInput: React.FC<Props> = ({
             }));
             e.currentTarget.value = "";
           }}
-          className="hidden"
+          className="sr-only"
           id="file-upload"
         />
 

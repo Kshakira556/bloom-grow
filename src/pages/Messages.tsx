@@ -56,6 +56,7 @@ const Messages = () => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [plansOpen, setPlansOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const hasAutoSelectedRef = useRef(false);
 
   useEffect(() => {
     setInvitesResolved(false);
@@ -175,15 +176,18 @@ const Messages = () => {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-select first contact once conversations are loaded.
-  // Keeps mobile chat immediately usable without requiring a first tap.
+  // Auto-select only once after contacts are first loaded.
+  // This keeps initial mobile UX smooth, but still allows "Back" to stay on contacts.
   useEffect(() => {
     if (!conversations.length) return;
 
-    if (!selectedConversation) {
+    if (!selectedConversation && !hasAutoSelectedRef.current) {
+      hasAutoSelectedRef.current = true;
       setSelectedConversation(conversations[0]);
       return;
     }
+
+    if (!selectedConversation) return;
 
     const stillExists = conversations.some(
       (conv) =>

@@ -642,6 +642,8 @@ export interface Attachment {
   name: string;
   type: AttachmentType;
   url: string;
+  content_type?: string;
+  size_bytes?: number;
 }
 export interface ApiMessage {
   id: string;
@@ -677,7 +679,13 @@ export type SendMessagePayload = {
   plan_id: string;
   content: string;
   purpose?: MessagePurpose;
-  attachments?: Attachment[];
+  attachments?: Array<{
+    name: string;
+    type: AttachmentType;
+    url: string;
+    content_type?: string;
+    size_bytes?: number;
+  }>;
 };
 
 export const sendMessage = async (
@@ -748,6 +756,24 @@ export const flagMessage = async (id: string, reason?: string) => {
     flagged_reason: reason,
   });
   return res.message;
+};
+
+export const createMessageAttachmentSignedUpload = async (payload: {
+  plan_id: string;
+  receiver_id: string;
+  filename: string;
+  content_type: string;
+}) => {
+  return http<{ path: string; signed_url: string }>(
+    "/messages/attachments/signed-upload",
+    "POST",
+    payload,
+  );
+};
+
+export const getSignedMessageAttachmentUrl = async (id: string) => {
+  const res = await http<{ url: string }>(`/messages/attachments/${id}/signed-url`, "GET");
+  return res.url;
 };
 
 export const createJournalEntry = async (

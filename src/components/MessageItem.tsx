@@ -1,5 +1,7 @@
 import React from "react";
 import { Message } from "@/types/messages";
+import { getSignedMessageAttachmentUrl } from "@/lib/api";
+import { toast } from "@/lib/toastHelper";
 
 interface Props {
   message: Message;
@@ -7,6 +9,26 @@ interface Props {
 
 const MessageItem: React.FC<Props> = ({ message }) => {
   const isMe = message.sender === "me";
+
+  const openAttachment = async (attachment: { id: string; url: string; name: string }) => {
+    try {
+      const rawUrl = attachment.url || "";
+
+      if (rawUrl.startsWith("blob:") || rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+        window.open(rawUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      const signedUrl = await getSignedMessageAttachmentUrl(attachment.id);
+      window.open(signedUrl, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast({
+        title: "Failed to open attachment",
+        description: err instanceof Error ? err.message : "Unable to open attachment",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-2`}>
@@ -30,15 +52,14 @@ const MessageItem: React.FC<Props> = ({ message }) => {
         {message.attachments && message.attachments.length > 0 && (
           <div className="mt-2 space-y-1">
             {message.attachments.map((file) => (
-              <a
+              <button
                 key={file.id}
-                href={file.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-xs underline"
+                type="button"
+                onClick={() => void openAttachment({ id: file.id, url: file.url, name: file.name })}
+                className="block text-xs underline text-left"
               >
                 📎 {file.name}
-              </a>
+              </button>
             ))}
           </div>
         )}

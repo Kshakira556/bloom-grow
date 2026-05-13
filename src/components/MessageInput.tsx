@@ -53,6 +53,9 @@ const MessageInput: React.FC<Props> = ({
               name: file.name,
               type: "Document" as AttachmentType,
               url: URL.createObjectURL(file),
+              content_type: file.type || "application/octet-stream",
+              size_bytes: file.size,
+              file,
             }));
 
             setDraft((prev) => ({
@@ -114,12 +117,20 @@ const MessageInput: React.FC<Props> = ({
                 type="button"
                 aria-label={`Remove ${file.name}`}
                 className="text-muted-foreground hover:text-foreground"
-                onClick={() =>
+                onClick={() => {
+                  if (file.url?.startsWith("blob:")) {
+                    try {
+                      URL.revokeObjectURL(file.url);
+                    } catch {
+                      // ignore
+                    }
+                  }
+
                   setDraft((prev) => ({
                     ...prev,
                     attachments: (prev.attachments || []).filter((att) => att.id !== file.id),
-                  }))
-                }
+                  }));
+                }}
               >x</button>
             </div>
           ))}

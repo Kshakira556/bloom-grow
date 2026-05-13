@@ -15,6 +15,9 @@ export type Attachment = {
   name: string;
   type: AttachmentType;
   url: string;
+  content_type?: string;
+  size_bytes?: number;
+  file?: File;
 };
 
 export type Message = {

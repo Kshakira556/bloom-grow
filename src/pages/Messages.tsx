@@ -45,6 +45,7 @@ const Messages = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [purposeFilter, setPurposeFilter] = useState<MessagePurpose | "All">("All");
   const [draft, setDraft] = useState<DraftMessage>({ content: "", purpose: "General", attachments: [] });
+  const [sending, setSending] = useState(false);
   const { user } = useAuth();
   const userId = user?.id?.toString() ?? "";
   const { fetchByPlan, send, markSeen, update, remove } = useMessages();
@@ -392,9 +393,72 @@ const Messages = () => {
                     }
 
                     const trimmedContent = draft.content.trim();
-                    const attachmentNames = (draft.attachments || [])
-                      .map((attachment) => attachment.name)
-                      .filter(Boolean);
+                    const draftAttachments = draft.attachments || [];
+
+                    if (sending) return;
+                    setSending(true);
+
+                    let uploadedAttachments: Array<{
+                      name: string;
+                      type: string;
+                      url: string;
+                      content_type?: string;
+                      size_bytes?: number;
+                    }> = [];
+
+                    try {
+                      for (const attachment of draftAttachments) {
+                        const file = (attachment as any)?.file as File | undefined;
+                        if (!file) continue;
+
+                        const ticket = await api.createMessageAttachmentSignedUpload({
+                          plan_id: activePlan.id,
+                          receiver_id: selectedConversation.user_id,
+                          filename: attachment.name || "attachment",
+                          content_type: attachment.content_type || file.type || "application/octet-stream",
+                        });
+
+                        const uploadRes = await fetch(ticket.signed_url, {
+                          method: "PUT",
+                          headers: {
+                            "Content-Type": attachment.content_type || file.type || "application/octet-stream",
+                          },
+                          body: file,
+                        });
+
+                        if (!uploadRes.ok) {
+                          const text = await uploadRes.text().catch(() => "");
+                          throw new Error(`Upload failed (${uploadRes.status}): ${text || "Unable to upload file"}`);
+                        }
+
+                        if (attachment.url?.startsWith("blob:")) {
+                          try {
+                            URL.revokeObjectURL(attachment.url);
+                          } catch {
+                            // ignore
+                          }
+                        }
+
+                        uploadedAttachments.push({
+                          name: attachment.name,
+                          type: attachment.type,
+                          url: ticket.path,
+                          content_type: attachment.content_type,
+                          size_bytes: attachment.size_bytes,
+                        });
+                      }
+                    } catch (err) {
+                      const message = err instanceof Error ? err.message : "Failed to upload attachment(s)";
+                      toast({
+                        title: "Attachment upload failed",
+                        description: message,
+                        variant: "destructive",
+                      });
+                      setSending(false);
+                      return;
+                    }
+
+                    const attachmentNames = draftAttachments.map((attachment) => attachment.name).filter(Boolean);
                     const fallbackAttachmentContent =
                       attachmentNames.length > 0
                         ? `Attachment${attachmentNames.length > 1 ? "s" : ""}: ${attachmentNames.join(", ")}`
@@ -417,18 +481,13 @@ const Messages = () => {
                         plan_id: activePlan.id,
                         content: contentToSend,
                         purpose: draft.purpose,
-                        attachments: draft.attachments || [],
+                        attachments: uploadedAttachments,
                       });
 
-                      const sentWithLocalAttachments =
-                        (sentMessage.attachments?.length ?? 0) === 0 && (draft.attachments?.length ?? 0) > 0
-                          ? { ...sentMessage, attachments: draft.attachments }
-                          : sentMessage;
-
                       setMessages((prev) =>
-                        prev.some((m) => m.id === sentWithLocalAttachments.id)
+                        prev.some((m) => m.id === sentMessage.id)
                           ? prev
-                          : [...prev, sentWithLocalAttachments]
+                          : [...prev, sentMessage]
                       );
 
                       setDraft({
@@ -436,6 +495,7 @@ const Messages = () => {
                         purpose: "General",
                         attachments: [],
                       });
+                      setSending(false);
 
                     } catch (err: unknown) {
                       let description = "Unknown error";
@@ -449,9 +509,10 @@ const Messages = () => {
                         description,
                         variant: "destructive",
                       });
+                      setSending(false);
                     }
                   }}
-                  disabled={!selectedConversation?.user_id}
+                  disabled={!selectedConversation?.user_id || sending}
                   selectedConversation={selectedConversation}
                 />
               </div>

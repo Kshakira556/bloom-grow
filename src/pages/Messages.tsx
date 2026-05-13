@@ -186,14 +186,15 @@ useEffect(() => {
       const mappedMessages = await fetchByPlan(activePlanId, userId, {
         limit: paginationLimitRef.current,
       });
+      const hasMore = mappedMessages.hasMore;
       setMessages((prev) => {
-        if (!prev.length) return mappedMessages;
+        if (!prev.length) return mappedMessages.messages;
 
         const byId = new Map(prev.map((m) => [m.id, m]));
-        for (const msg of mappedMessages) byId.set(msg.id, msg);
+        for (const msg of mappedMessages.messages) byId.set(msg.id, msg);
         return Array.from(byId.values());
       });
-      setHasMoreMessages(mappedMessages.length >= paginationLimitRef.current);
+      setHasMoreMessages(hasMore);
     } catch (err) {
       console.error("Failed to fetch messages:", err);
     }
@@ -280,22 +281,20 @@ useEffect(() => {
           before: oldestVisibleMessage.createdAt,
         });
 
-        if (!older.length) {
+        if (!older.messages.length) {
           setHasMoreMessages(false);
           return;
         }
 
         setMessages((prev) => {
           const byId = new Map(prev.map((m) => [m.id, m]));
-          for (const msg of older) {
+          for (const msg of older.messages) {
             if (!byId.has(msg.id)) byId.set(msg.id, msg);
           }
           return Array.from(byId.values());
         });
 
-        if (older.length < paginationLimitRef.current) {
-          setHasMoreMessages(false);
-        }
+        setHasMoreMessages(older.hasMore);
 
         requestAnimationFrame(() => {
           const newHeight = container.scrollHeight;

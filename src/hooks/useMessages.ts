@@ -10,9 +10,12 @@ export const useMessages = () => {
       planId: string,
       userId: string,
       options?: { limit?: number; before?: string }
-    ): Promise<Message[]> => {
-      const apiMessages = await api.getMessagesByPlan(planId, options);
-      return apiMessages.map((msg) => mapApiMessageToMessage(msg, userId));
+    ): Promise<{ messages: Message[]; hasMore: boolean }> => {
+      const page = await api.getMessagesByPlan(planId, options);
+      return {
+        messages: page.messages.map((msg) => mapApiMessageToMessage(msg, userId)),
+        hasMore: page.hasMore,
+      };
     },
     []
   );

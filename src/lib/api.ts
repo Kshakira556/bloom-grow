@@ -670,11 +670,14 @@ export const getMessagesByPlan = async (
   if (typeof options?.limit === "number") params.set("limit", String(options.limit));
   if (options?.before) params.set("before", options.before);
   const query = params.toString() ? `?${params.toString()}` : "";
-  const res = await http<{ messages: ApiMessage[] }>(
+  const res = await http<{ messages: ApiMessage[]; has_more?: boolean }>(
     `/messages/plan/${planId}${query}`,
     "GET"
   );
-  return res.messages;
+  return {
+    messages: res.messages,
+    hasMore: Boolean(res.has_more),
+  };
 };
 
 export type SendMessagePayload = {

@@ -226,7 +226,7 @@ const Moderator = () => {
                               size="sm"
                               variant="outline"
                               className="w-full sm:w-auto"
-                              onClick={() => handleReview(msg.id, "rejected", msg.reason)}
+                              onClick={() => handleReview(msg.id, "rejected")}
                               disabled={reviewingIds[msg.id]}
                             >
                               Reject

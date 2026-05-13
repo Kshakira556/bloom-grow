@@ -345,14 +345,16 @@ useEffect(() => {
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
 
-      <main className="flex-1 py-4 px-0 sm:py-8 sm:px-4">
-        <div className="container max-w-none sm:max-w-5xl mx-auto px-0">
+      <main className="flex-1 py-4 px-0 sm:py-8 sm:px-4 overflow-hidden">
+        <div className="container max-w-none sm:max-w-5xl mx-auto px-0 h-full flex flex-col">
           {/* Page Title */}
-          <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">Visits</h1>
+          <h1 className="font-display text-3xl font-bold text-primary text-center mb-6 hidden sm:block">
+            Visits
+          </h1>
 
           {/* Calendar Card */}
-          <Card className="rounded-none sm:rounded-3xl overflow-hidden border-0 shadow-none sm:shadow-sm">
-            <CardContent className="pt-4 px-0 sm:px-6">
+          <Card className="rounded-none sm:rounded-3xl overflow-hidden border-0 shadow-none sm:shadow-sm flex-1 min-h-0">
+            <CardContent className="pt-4 px-0 sm:px-6 h-full flex flex-col min-h-0">
               {/* Legend, Plan & Child Selector */}
 <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 relative">
 
@@ -576,14 +578,14 @@ useEffect(() => {
     ))}
   </div>
 )}
-              <div className="overflow-hidden px-0 sm:px-0">
+              <div className="overflow-hidden px-0 sm:px-0 flex-1 min-h-0">
                 <Calendar
                   localizer={localizer}
                   events={mapToCalendarEvents(events)}
                   views={['month', 'week', 'day']}
                   startAccessor="start"
                   endAccessor="end"
-                  style={{ height: "min(600px, calc(100vh - 260px))", width: "100%" }}
+                  style={{ height: "100%", width: "100%" }}
                   onSelectEvent={(event) => {
                     setModalEvent(event.resource);
                     setModalMode("view");

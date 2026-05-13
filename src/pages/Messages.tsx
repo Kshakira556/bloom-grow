@@ -391,12 +391,31 @@ const Messages = () => {
                       return;
                     }
 
+                    const trimmedContent = draft.content.trim();
+                    const attachmentNames = (draft.attachments || [])
+                      .map((attachment) => attachment.name)
+                      .filter(Boolean);
+                    const fallbackAttachmentContent =
+                      attachmentNames.length > 0
+                        ? `Attachment${attachmentNames.length > 1 ? "s" : ""}: ${attachmentNames.join(", ")}`
+                        : "";
+                    const contentToSend = trimmedContent || fallbackAttachmentContent;
+
+                    if (!contentToSend) {
+                      toast({
+                        title: "Nothing to send",
+                        description: "Type a message or attach a file first.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
                     try {
                       const sentMessage = await send({
                         sender_id: userId,
                         receiver_id: selectedConversation.user_id,
                         plan_id: activePlan.id,
-                        content: draft.content.trim(),
+                        content: contentToSend,
                         purpose: draft.purpose,
                         attachments: draft.attachments || [],
                       });

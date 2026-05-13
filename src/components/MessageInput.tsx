@@ -19,6 +19,10 @@ const MessageInput: React.FC<Props> = ({
   disabled = false,
   selectedConversation,
 }) => {
+  const hasContent = draft.content.trim().length > 0;
+  const hasAttachments = (draft.attachments?.length ?? 0) > 0;
+  const canSend = Boolean(selectedConversation?.user_id) && !disabled && (hasContent || hasAttachments);
+
   return (
     <div className="p-3 sm:p-4 border-t flex flex-col gap-2">
       <div className="flex items-center gap-2">
@@ -88,16 +92,42 @@ const MessageInput: React.FC<Props> = ({
           key={draft.purpose + selectedConversation?.user_id}
           aria-label="Send message"
           className={`w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground ${
-            draft.content.trim() === "" || !selectedConversation?.user_id
+            !canSend
               ? "bg-muted cursor-not-allowed"
               : "bg-primary"
           }`}
-          disabled={draft.content.trim() === "" || !selectedConversation?.user_id}
+          disabled={!canSend}
           onClick={onSend}
         >
           <Send className="w-5 h-5" />
         </button>
       </div>
+
+      {hasAttachments && (
+        <div className="flex flex-wrap gap-2 px-1">
+          {(draft.attachments || []).map((file) => (
+            <div
+              key={file.id}
+              className="inline-flex items-center gap-2 rounded-full border bg-secondary/60 px-3 py-1 text-xs"
+            >
+              <span className="max-w-[180px] truncate">{file.name}</span>
+              <button
+                type="button"
+                aria-label={`Remove ${file.name}`}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    attachments: (prev.attachments || []).filter((att) => att.id !== file.id),
+                  }))
+                }
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Guidance and character count */}
       <div className="flex justify-between text-xs text-muted-foreground px-2">

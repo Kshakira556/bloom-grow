@@ -207,34 +207,43 @@ const Messages = () => {
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
 
-      <main className="flex-1 py-8 px-4">
+      <main className="flex-1 py-4 px-0 sm:py-8 sm:px-4">
         <div className="container max-w-5xl mx-auto">
           <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">Messages</h1>
 
-          <div className="bg-card rounded-3xl shadow-sm overflow-hidden">
+          <div className="bg-card rounded-none sm:rounded-3xl shadow-sm overflow-hidden">
             <div className="grid md:grid-cols-12">
-              <ConversationSidebar
-                plans={plans}
-                activePlan={activePlan}
-                setActivePlan={setActivePlan}
-                plansOpen={plansOpen}
-                setPlansOpen={setPlansOpen}
-                conversations={conversations}
-                setConversations={setConversations}
-                selectedConversation={selectedConversation}
-                setSelectedConversation={setSelectedConversation}
-                user={user}
-                isUserParticipantOfPlan={isUserParticipantOfPlan}
-                messages={messages}
-              />
+              <div className={selectedConversation ? "hidden md:block" : "block"}>
+                <ConversationSidebar
+                  plans={plans}
+                  activePlan={activePlan}
+                  setActivePlan={setActivePlan}
+                  plansOpen={plansOpen}
+                  setPlansOpen={setPlansOpen}
+                  conversations={conversations}
+                  setConversations={setConversations}
+                  selectedConversation={selectedConversation}
+                  setSelectedConversation={setSelectedConversation}
+                  user={user}
+                  isUserParticipantOfPlan={isUserParticipantOfPlan}
+                  messages={messages}
+                />
+              </div>
 
               {/* Chat Area */}
-              <div className="md:col-span-8 flex flex-col h-[600px]">
+              <div
+                className={[
+                  "md:col-span-8 flex flex-col",
+                  selectedConversation ? "flex" : "hidden md:flex",
+                  "h-[calc(100vh-180px)] md:h-[600px]",
+                ].join(" ")}
+              >
                 {/* Chat Header */}
                 <ChatHeader
                   selectedConversation={selectedConversation}
                   purposeFilter={purposeFilter}
                   setPurposeFilter={setPurposeFilter}
+                  onBack={() => setSelectedConversation(null)}
                   exportConversation={async () => {
                     if (!selectedConversation) return;
 

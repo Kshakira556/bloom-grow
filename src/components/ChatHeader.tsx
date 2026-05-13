@@ -7,6 +7,7 @@ type ChatHeaderProps = {
   purposeFilter: MessagePurpose | "All";
   setPurposeFilter: (p: MessagePurpose | "All") => void;
   exportConversation: () => void | Promise<void>;
+  onBack?: () => void;
 };
 
 const ChatHeader = ({
@@ -14,12 +15,23 @@ const ChatHeader = ({
   purposeFilter,
   setPurposeFilter,
   exportConversation,
+  onBack,
 }: ChatHeaderProps) => {
   return (
-    <div className="border-b px-6 py-4 bg-muted/30">
+    <div className="border-b px-4 sm:px-6 py-3 sm:py-4 bg-muted/30">
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
+            {selectedConversation && onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="md:hidden text-xs px-3 py-1.5 rounded-full border bg-background hover:bg-muted transition"
+                title="Back to conversations"
+              >
+                Back
+              </button>
+            )}
             {selectedConversation && (
               <>
                 <h2 className="font-display font-bold text-lg">{selectedConversation.name}</h2>

@@ -152,7 +152,7 @@ const Journal = () => {
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
 
-      <main className="flex-1 py-8 px-4">
+      <main className="flex-1 py-4 px-2 sm:py-8 sm:px-4">
         <div className="container max-w-4xl mx-auto">
           <h1 className="font-display text-3xl font-bold text-primary text-center mb-2">
             My Little Journal
@@ -161,10 +161,10 @@ const Journal = () => {
             Secure, child-specific journal entries linked to your parenting plan.
           </p>
 
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Entry Form */}
             <Card className="rounded-3xl">
-              <CardContent className="p-6 space-y-4">
+              <CardContent className="p-4 sm:p-6 space-y-4">
                 <h2 className="font-display font-bold text-xl">Journal</h2>
 
                 {/* Child Selector */}
@@ -246,11 +246,11 @@ const Journal = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex gap-2 items-center">
                     <span className="text-sm text-muted-foreground">Mood:</span>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap">
                       {moods.map((mood) => (
                         <button
                           key={mood}
-                          className={`text-lg p-1 rounded-full transition-transform ${
+                          className={`text-lg p-2 rounded-full transition-transform ${
                             selectedMood === mood ? "bg-cub-blue text-white" : "hover:scale-125"
                           }`}
                           onClick={() => setSelectedMood(mood)}
@@ -284,7 +284,7 @@ const Journal = () => {
 
             {/* Entries List */}
             <Card className="rounded-3xl">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <h2 className="font-display font-bold text-xl mb-4">
                   {viewMode === "all" && `All Entries (${filteredEntries.length})`}
                   {viewMode === "received" && `Received Entries (${filteredEntries.length})`}

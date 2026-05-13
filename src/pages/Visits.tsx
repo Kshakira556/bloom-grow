@@ -345,7 +345,7 @@ useEffect(() => {
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
 
-      <main className="flex-1 py-8 px-4">
+      <main className="flex-1 py-4 px-2 sm:py-8 sm:px-4">
         <div className="container max-w-5xl mx-auto">
           {/* Page Title */}
           <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">Visits</h1>
@@ -360,7 +360,7 @@ useEffect(() => {
   <Button
     id="plans-button"
     variant="outline"
-    className="rounded-full flex items-center gap-2"
+    className="w-full sm:w-auto rounded-full flex items-center gap-2"
     onClick={() => setPlansOpen((prev) => !prev)}
   >
     <span>{activePlan?.title || "Select Plan"}</span>
@@ -413,7 +413,7 @@ useEffect(() => {
           const child = children.find(c => c.id === e.target.value) || null;
           setSelectedChild(child);
         }}
-        className="w-48 p-2 border rounded-lg"
+        className="w-full sm:w-48 p-2 border rounded-lg"
       >
         {children.map((child) => (
           <option key={child.id} value={child.id}>
@@ -576,14 +576,14 @@ useEffect(() => {
     ))}
   </div>
 )}
-              <div className="border rounded-2xl overflow-hidden p-4">
+              <div className="border rounded-2xl overflow-hidden p-2 sm:p-4 overflow-x-auto">
                 <Calendar
                   localizer={localizer}
                   events={mapToCalendarEvents(events)}
                   views={['month', 'week', 'day']}
                   startAccessor="start"
                   endAccessor="end"
-                  style={{ height: 600 }}
+                  style={{ height: "min(600px, calc(100vh - 260px))", minWidth: 720 }}
                   onSelectEvent={(event) => {
                     setModalEvent(event.resource);
                     setModalMode("view");

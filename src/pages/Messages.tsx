@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useMessagesWS } from "@/hooks/useMessagesWS";
+import { SlidersHorizontal } from "lucide-react";
 
 //UI Components
 import { Navbar } from "@/components/layout/Navbar";
@@ -11,12 +12,14 @@ import ConversationSidebar from "@/components/ConversationSidebar";
 import ChatHeader from "@/components/ChatHeader";
 import MessageList from "@/components/MessageList";
 import MessageInput from "@/components/MessageInput";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 //API & utilities
 import * as api from "@/lib/api";
 import { toast } from "@/lib/toastHelper";
 import { isUserParticipantOfPlan, mapApiMessageToMessage } from "@/lib/messages";
 import { exportConversation } from "@/lib/exportConversation";
+import { PURPOSES } from "@/constants/purposes";
 
 // Types
 import { Message, DraftMessage, MessagePurpose } from "@/types/messages";
@@ -52,6 +55,7 @@ const Messages = () => {
   const [invitesResolved, setInvitesResolved] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [plansOpen, setPlansOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setInvitesResolved(false);
@@ -203,13 +207,78 @@ const Messages = () => {
     })();
   }, [selectedConversation?.user_id, userId, visibleMessages, markSeen]);
 
+  const handleExportConversation = async () => {
+    if (!selectedConversation || !activePlan) return;
+
+    try {
+      const apiMessages = await api.getMessagesByPlan(activePlan.id, {
+        includeDeleted: true,
+      });
+      const allMessages = apiMessages.map((msg) => mapApiMessageToMessage(msg, userId));
+
+      const conversationMessages = allMessages.filter(
+        (m) =>
+          (m.sender_id === userId && m.receiver_id === selectedConversation.user_id) ||
+          (m.receiver_id === userId && m.sender_id === selectedConversation.user_id),
+      );
+
+      const exportMessages =
+        purposeFilter === "All"
+          ? conversationMessages
+          : conversationMessages.filter((m) => m.purpose === purposeFilter);
+
+      const historyEntries = await Promise.all(
+        exportMessages.map(async (msg) => [msg.id, await api.getMessageHistory(msg.id)] as const),
+      );
+
+      const historyById = Object.fromEntries(historyEntries);
+
+      try {
+        await api.createAuditEvent({
+          action: "messages_export_pdf",
+          target_type: "plan",
+          target_id: activePlan.id,
+          notes: {
+            purpose_filter: purposeFilter,
+            conversation_with_user_id: selectedConversation.user_id,
+          },
+        });
+      } catch (err) {
+        console.warn("Audit log failed (messages export):", err);
+      }
+
+      await exportConversation(
+        conversationMessages,
+        {
+          user_id: selectedConversation.user_id,
+          name: selectedConversation.name,
+          role: selectedConversation.role,
+          caseRef: selectedConversation.caseRef,
+          childName: selectedConversation.childName,
+        },
+        purposeFilter,
+        historyById,
+      );
+    } catch (err: unknown) {
+      let description = "Failed to export conversation";
+      if (err instanceof Error) description = err.message;
+      toast({
+        title: "Export failed",
+        description,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen gradient-bg flex flex-col">
       <Navbar />
 
       <main className="flex-1 py-0 px-0 sm:py-8 sm:px-4">
         <div className="container max-w-5xl mx-auto">
-          <h1 className="font-display text-3xl font-bold text-primary text-center mb-6">Messages</h1>
+          <h1 className="hidden sm:block font-display text-3xl font-bold text-primary text-center mb-6">
+            Messages
+          </h1>
 
           <div className="bg-card rounded-none sm:rounded-3xl shadow-sm overflow-hidden border-0 sm:border">
             <div className="grid md:grid-cols-12">
@@ -243,78 +312,18 @@ const Messages = () => {
                   purposeFilter={purposeFilter}
                   setPurposeFilter={setPurposeFilter}
                   onBack={() => setSelectedConversation(null)}
-                  exportConversation={async () => {
-                    if (!selectedConversation) return;
-
-                    try {
-                      if (!activePlan || !selectedConversation) return;
-
-                      const apiMessages = await api.getMessagesByPlan(activePlan.id, {
-                        includeDeleted: true,
-                      });
-                      const allMessages = apiMessages.map((msg) =>
-                        mapApiMessageToMessage(msg, userId)
-                      );
-
-                      const conversationMessages = allMessages.filter(
-                        (m) =>
-                          (m.sender_id === userId && m.receiver_id === selectedConversation.user_id) ||
-                          (m.receiver_id === userId && m.sender_id === selectedConversation.user_id)
-                      );
-
-                      const exportMessages =
-                        purposeFilter === "All"
-                          ? conversationMessages
-                          : conversationMessages.filter((m) => m.purpose === purposeFilter);
-
-                      const historyEntries = await Promise.all(
-                        exportMessages.map(async (msg) =>
-                          [msg.id, await api.getMessageHistory(msg.id)] as const
-                        )
-                      );
-
-                      const historyById = Object.fromEntries(historyEntries);
-
-                      try {
-                        await api.createAuditEvent({
-                          action: "messages_export_pdf",
-                          target_type: "plan",
-                          target_id: activePlan.id,
-                          notes: {
-                            purpose_filter: purposeFilter,
-                            conversation_with_user_id: selectedConversation.user_id,
-                          },
-                        });
-                      } catch (err) {
-                        console.warn("Audit log failed (messages export):", err);
-                      }
-
-                      await exportConversation(
-                        conversationMessages,
-                        {
-                          user_id: selectedConversation.user_id,
-                          name: selectedConversation.name,
-                          role: selectedConversation.role,
-                          caseRef: selectedConversation.caseRef,
-                          childName: selectedConversation.childName,
-                        },
-                        purposeFilter,
-                        historyById
-                      );
-                    } catch (err: unknown) {
-                      let description = "Failed to export conversation";
-
-                      if (err instanceof Error) {
-                        description = err.message;
-                      }
-
-                      toast({
-                        title: "Export failed",
-                        description,
-                        variant: "destructive",
-                      });
-                    }
-                  }}
+                  exportConversation={handleExportConversation}
+                  mobileMenuButton={
+                    <button
+                      type="button"
+                      onClick={() => setMobileMenuOpen(true)}
+                      className="text-xs px-3 py-1.5 rounded-full border bg-background hover:bg-muted transition inline-flex items-center gap-1"
+                      title="Open chat menu"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      Menu
+                    </button>
+                  }
                 />
 
                 {/* Audit & Oversight Banner */}
@@ -397,6 +406,113 @@ const Messages = () => {
             </div>
           </div>
         </div>
+
+        <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <DrawerContent className="md:hidden max-h-[85vh] rounded-t-2xl">
+            <DrawerHeader className="pb-2">
+              <DrawerTitle>Message Menu</DrawerTitle>
+            </DrawerHeader>
+
+            <div className="px-4 pb-6 overflow-y-auto space-y-5">
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold text-primary">Contacts</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedConversation(null);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-xs px-3 py-2 rounded-full border bg-background hover:bg-muted transition"
+                >
+                  Open Contacts Panel
+                </button>
+                <div className="space-y-2 max-h-44 overflow-y-auto">
+                  {conversations.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No contacts yet.</p>
+                  ) : (
+                    conversations.map((conv) => (
+                      <button
+                        key={`${conv.user_id}-${conv.createdAt}`}
+                        type="button"
+                        onClick={() => {
+                          setSelectedConversation(conv);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`w-full text-left p-3 rounded-xl border ${
+                          selectedConversation?.createdAt === conv.createdAt
+                            ? "bg-cub-mint-light border-primary"
+                            : "bg-background border-border"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold">{conv.name || "Unnamed"}</p>
+                        <p className="text-xs text-muted-foreground">{conv.role || "Co-Parent"}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold text-primary">Filter</h3>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPurposeFilter("All")}
+                    className={`text-xs px-3 py-1 rounded-full border transition ${
+                      purposeFilter === "All"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {PURPOSES.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPurposeFilter(p)}
+                      className={`text-xs px-3 py-1 rounded-full border transition ${
+                        purposeFilter === p
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold text-primary">Actions</h3>
+                <button
+                  type="button"
+                  disabled={!selectedConversation}
+                  onClick={async () => {
+                    await handleExportConversation();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-xs px-3 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:opacity-50"
+                >
+                  Export PDF
+                </button>
+              </section>
+
+              <section className="space-y-1 text-xs text-muted-foreground">
+                <h3 className="text-sm font-semibold text-primary">Conversation</h3>
+                <p>
+                  <strong>Case:</strong> {selectedConversation?.caseRef || "-"}
+                </p>
+                <p>
+                  <strong>Started:</strong>{" "}
+                  {selectedConversation
+                    ? new Date(selectedConversation.createdAt).toLocaleDateString()
+                    : "-"}
+                </p>
+              </section>
+            </div>
+          </DrawerContent>
+        </Drawer>
       </main>
     </div>
   );

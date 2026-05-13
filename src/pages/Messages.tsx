@@ -174,6 +174,28 @@ const Messages = () => {
   }, [activePlan, fetchByPlan, userId]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-select first contact once conversations are loaded.
+  // Keeps mobile chat immediately usable without requiring a first tap.
+  useEffect(() => {
+    if (!conversations.length) return;
+
+    if (!selectedConversation) {
+      setSelectedConversation(conversations[0]);
+      return;
+    }
+
+    const stillExists = conversations.some(
+      (conv) =>
+        conv.user_id === selectedConversation.user_id &&
+        conv.plan_id === selectedConversation.plan_id,
+    );
+
+    if (!stillExists) {
+      setSelectedConversation(conversations[0]);
+    }
+  }, [conversations, selectedConversation]);
+
   const visibleMessages =
     selectedConversation?.user_id && userId
       ? messages.filter(

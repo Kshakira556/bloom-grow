@@ -175,11 +175,12 @@ const Messages = () => {
   }, [activePlan, invitesResolved]);
 
 useEffect(() => {
-  if (!activePlan || !userId) return;
+  const activePlanId = activePlan?.id;
+  if (!activePlanId || !userId) return;
 
   const fetchMessages = async () => {
     try {
-      const mappedMessages = await fetchByPlan(activePlan.id, userId);
+      const mappedMessages = await fetchByPlan(activePlanId, userId);
       setMessages(mappedMessages);
     } catch (err) {
       console.error("Failed to fetch messages:", err);
@@ -190,7 +191,7 @@ useEffect(() => {
 
   const interval = window.setInterval(fetchMessages, 12000);
   return () => window.clearInterval(interval);
-}, [activePlan, userId, fetchByPlan]);
+}, [activePlan?.id, userId, fetchByPlan]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const seenRequestsRef = useRef<Set<string>>(new Set());
@@ -676,4 +677,3 @@ useEffect(() => {
 };
 
 export default Messages;
-

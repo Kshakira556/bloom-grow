@@ -179,9 +179,11 @@ const ConversationSidebar = ({
       if (!activePlan) return;
 
       try {
-        const contacts = await api.getContacts();
+        const [contacts, invites] = await Promise.all([
+          api.getContacts(),
+          api.getContactInvites(),
+        ]);
         setContacts(contacts);
-        const invites = await api.getContactInvites();
         setPendingContactInvites(invites);
       } catch (err) {
         console.error("Failed to fetch contacts:", err);
@@ -315,6 +317,10 @@ const ConversationSidebar = ({
               <button
                 key={plan.id}
                 onClick={async () => {
+                  if (activePlan?.id === plan.id) {
+                    setPlansOpen(false);
+                    return;
+                  }
                   try {
                     const { plan: fullPlan } = await api.getPlanById(plan.id);
                     setActivePlan(fullPlan);

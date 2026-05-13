@@ -174,7 +174,7 @@ const Messages = () => {
     resolveInvites();
   }, [activePlan, invitesResolved]);
 
-  useEffect(() => {
+useEffect(() => {
   if (!activePlan || !userId) return;
 
   const fetchMessages = async () => {
@@ -187,6 +187,9 @@ const Messages = () => {
   };
 
   fetchMessages();
+
+  const interval = window.setInterval(fetchMessages, 12000);
+  return () => window.clearInterval(interval);
 }, [activePlan, userId, fetchByPlan]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -676,6 +679,5 @@ const Messages = () => {
 };
 
 export default Messages;
-
 
 

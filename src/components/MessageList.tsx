@@ -60,7 +60,9 @@ const MessageItem = ({ message, onEdit, onDelete, onFlag }: MessageItemProps) =>
         >
           {message.purpose}
         </span>
-        <p className="break-words">{message.content}</p>
+        <p className="break-words whitespace-pre-wrap [text-transform:none]" dir="auto">
+          {message.content}
+        </p>
       </div>
 
       {/* Seen / Unseen */}
@@ -225,7 +227,11 @@ const MessageList = ({ messages, purposeFilter, onEdit, onDelete, onFlag, scroll
       ? messages
       : messages.filter((m) => m.purpose === purposeFilter);
 
-  const grouped = groupMessagesByDate(filtered);
+  const ordered = [...filtered].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  const grouped = groupMessagesByDate(ordered);
 
   // Scroll only if a ref is provided
   useLayoutEffect(() => {

@@ -44,6 +44,7 @@ const MessageInput: React.FC<Props> = ({
 
         {/* Text input */}
         <Input
+          type="text"
           placeholder="Type a message..."
           value={draft.content}
           onChange={(e) =>
@@ -52,6 +53,10 @@ const MessageInput: React.FC<Props> = ({
               content: e.target.value,
             }))
           }
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          dir="auto"
           className="flex-1 rounded-full"
         />
 

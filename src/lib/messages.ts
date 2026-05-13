@@ -25,11 +25,15 @@ export const getSenderName = (sender: "me" | "them", selectedConversation: { nam
 
 
 export const mapApiMessageToMessage = (msg: ApiMessage, userId: string): Message => {
+  const senderId = String(msg.sender_id ?? "");
+  const receiverId = String(msg.receiver_id ?? "");
+  const currentUserId = String(userId ?? "");
+
   return {
     id: msg.id,
-    sender: msg.sender_id === userId ? "me" : "them",
-    sender_id: msg.sender_id,
-    receiver_id: msg.receiver_id,
+    sender: senderId === currentUserId ? "me" : "them",
+    sender_id: senderId,
+    receiver_id: receiverId,
     content: msg.content,
     createdAt: msg.created_at,
     updated_at: msg.updated_at ?? null,

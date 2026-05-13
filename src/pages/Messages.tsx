@@ -204,8 +204,10 @@ const Messages = () => {
     selectedConversation?.user_id && userId
       ? messages.filter(
           (m) =>
-            (m.sender_id === userId && m.receiver_id === selectedConversation.user_id) ||
-            (m.receiver_id === userId && m.sender_id === selectedConversation.user_id)
+            (String(m.sender_id) === String(userId) &&
+              String(m.receiver_id) === String(selectedConversation.user_id)) ||
+            (String(m.receiver_id) === String(userId) &&
+              String(m.sender_id) === String(selectedConversation.user_id))
         )
       : [];
 

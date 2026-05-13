@@ -247,9 +247,19 @@ const Messages = () => {
                 : m
             )
           );
-        } catch {
-          // allow retry if request genuinely failed
-          seenRequestsRef.current.delete(msg.id);
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message.toLowerCase() : "";
+          const isPermanentFailure =
+            message.includes("message not found") ||
+            message.includes("forbidden") ||
+            message.includes("access denied") ||
+            message.includes("receiver");
+
+          if (!isPermanentFailure) {
+            // allow retry only for transient/network failures
+            seenRequestsRef.current.delete(msg.id);
+          }
         }
       })();
     }
@@ -651,7 +661,6 @@ const Messages = () => {
 };
 
 export default Messages;
-
 
 
 

@@ -420,10 +420,15 @@ const Messages = () => {
                         attachments: draft.attachments || [],
                       });
 
+                      const sentWithLocalAttachments =
+                        (sentMessage.attachments?.length ?? 0) === 0 && (draft.attachments?.length ?? 0) > 0
+                          ? { ...sentMessage, attachments: draft.attachments }
+                          : sentMessage;
+
                       setMessages((prev) =>
-                        prev.some((m) => m.id === sentMessage.id)
+                        prev.some((m) => m.id === sentWithLocalAttachments.id)
                           ? prev
-                          : [...prev, sentMessage]
+                          : [...prev, sentWithLocalAttachments]
                       );
 
                       setDraft({

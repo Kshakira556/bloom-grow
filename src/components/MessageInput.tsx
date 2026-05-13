@@ -59,6 +59,7 @@ const MessageInput: React.FC<Props> = ({
               ...prev,
               attachments: [...(prev.attachments || []), ...files],
             }));
+            e.currentTarget.value = "";
           }}
           className="hidden"
           id="file-upload"
@@ -92,9 +93,7 @@ const MessageInput: React.FC<Props> = ({
           key={draft.purpose + selectedConversation?.user_id}
           aria-label="Send message"
           className={`w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground ${
-            !canSend
-              ? "bg-muted cursor-not-allowed"
-              : "bg-primary"
+            !canSend ? "bg-muted cursor-not-allowed" : "bg-primary"
           }`}
           disabled={!canSend}
           onClick={onSend}
@@ -121,15 +120,12 @@ const MessageInput: React.FC<Props> = ({
                     attachments: (prev.attachments || []).filter((att) => att.id !== file.id),
                   }))
                 }
-              >
-                ×
-              </button>
+              >x</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Guidance and character count */}
       <div className="flex justify-between text-xs text-muted-foreground px-2">
         <span>Type a clear, professional message.</span>
         <span>{draft.content.length} / 500</span>

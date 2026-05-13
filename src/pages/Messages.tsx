@@ -297,7 +297,7 @@ const Messages = () => {
       <Navbar />
 
       <main className="flex-1 py-0 px-0 sm:py-8 sm:px-4">
-        <div className="container max-w-5xl mx-auto">
+        <div className="w-full sm:container sm:max-w-5xl sm:mx-auto">
           <h1 className="hidden sm:block font-display text-3xl font-bold text-primary text-center mb-6">
             Messages
           </h1>
@@ -325,7 +325,7 @@ const Messages = () => {
                 className={[
                   "md:col-span-8 flex flex-col",
                   selectedConversation ? "flex" : "hidden md:flex",
-                  "h-[calc(100vh-170px)] md:h-[600px]",
+                  "h-[calc(100dvh-64px)] md:h-[600px]",
                 ].join(" ")}
               >
                 {/* Chat Header */}

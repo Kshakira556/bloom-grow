@@ -53,10 +53,6 @@ const MessageInput: React.FC<Props> = ({
               content: e.target.value,
             }))
           }
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          dir="auto"
           className="flex-1 rounded-full"
         />
 

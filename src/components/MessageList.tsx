@@ -60,7 +60,7 @@ const MessageItem = ({ message, onEdit, onDelete, onFlag }: MessageItemProps) =>
         >
           {message.purpose}
         </span>
-        <p className="break-words whitespace-pre-wrap [text-transform:none]" dir="auto">
+        <p className="break-words whitespace-pre-wrap [text-transform:none]">
           {message.content}
         </p>
       </div>

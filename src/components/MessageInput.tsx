@@ -21,7 +21,8 @@ const MessageInput: React.FC<Props> = ({
 }) => {
   return (
     <div className="p-4 border-t flex flex-col gap-2">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:contents">
         {/* Purpose selector */}
         <select
           aria-label="Draft"
@@ -32,7 +33,7 @@ const MessageInput: React.FC<Props> = ({
               purpose: e.target.value as MessagePurpose,
             }))
           }
-          className="rounded-full border px-3 py-1 text-sm bg-muted"
+          className="rounded-full border px-3 py-1 text-sm bg-muted w-full sm:w-auto"
         >
           {MESSAGE_PURPOSES.map((purpose) => (
             <option key={purpose} value={purpose}>
@@ -77,10 +78,13 @@ const MessageInput: React.FC<Props> = ({
 
         <label
           htmlFor="file-upload"
-          className="cursor-pointer px-3 py-2 bg-secondary rounded-full text-sm hover:bg-secondary/80"
+          className="cursor-pointer px-3 py-2 bg-secondary rounded-full text-sm hover:bg-secondary/80 whitespace-nowrap"
         >
           Attach
         </label>
+        </div>
+
+        <div className="flex items-center gap-2 w-full">
 
         {/* Send button */}
         <button
@@ -96,6 +100,7 @@ const MessageInput: React.FC<Props> = ({
         >
           <Send className="w-5 h-5" />
         </button>
+        </div>
       </div>
 
       {/* Guidance and character count */}

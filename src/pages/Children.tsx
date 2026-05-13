@@ -431,27 +431,6 @@ const Children = () => {
                     {selectedChild?.vault?.fullName || "Select Child"}
                   </div>
                 </div>
-
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMobileSection("form")}
-                    className={`rounded-full border px-3 py-2 text-xs ${
-                      mobileSection === "form" ? "bg-primary text-primary-foreground" : "bg-background"
-                    }`}
-                  >
-                    Child Record
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobileSection("documents")}
-                    className={`rounded-full border px-3 py-2 text-xs ${
-                      mobileSection === "documents" ? "bg-primary text-primary-foreground" : "bg-background"
-                    }`}
-                  >
-                    Documents
-                  </button>
-                </div>
               </div>
 
               <Card className="rounded-none sm:rounded-3xl border-x-0 sm:border">

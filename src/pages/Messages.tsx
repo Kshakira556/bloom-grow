@@ -1,5 +1,5 @@
 // React &
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useMessagesWS } from "@/hooks/useMessagesWS";
@@ -161,19 +161,19 @@ const Messages = () => {
   }, [activePlan, invitesResolved]);
 
   useEffect(() => {
-    if (!activePlan || !userId) return;
+  if (!activePlan || !userId) return;
 
-    const fetchMessages = async () => {
-      try {
-        const mappedMessages = await fetchByPlan(activePlan.id, userId);
-        setMessages(mappedMessages);
-      } catch (err) {
-        console.error("Failed to fetch messages:", err);
-      }
-    };
+  const fetchMessages = async () => {
+    try {
+      const mappedMessages = await fetchByPlan(activePlan.id, userId);
+      setMessages(mappedMessages);
+    } catch (err) {
+      console.error("Failed to fetch messages:", err);
+    }
+  };
 
-    fetchMessages();
-  }, [activePlan, fetchByPlan, userId]);
+  fetchMessages();
+}, [activePlan, userId, fetchByPlan]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -201,16 +201,19 @@ const Messages = () => {
     }
   }, [conversations, selectedConversation]);
 
-  const visibleMessages =
-    selectedConversation?.user_id && userId
-      ? messages.filter(
-          (m) =>
-            (String(m.sender_id) === String(userId) &&
-              String(m.receiver_id) === String(selectedConversation.user_id)) ||
-            (String(m.receiver_id) === String(userId) &&
-              String(m.sender_id) === String(selectedConversation.user_id))
-        )
-      : [];
+  const visibleMessages = useMemo(() => {
+    if (!selectedConversation?.user_id || !userId) {
+      return [];
+    }
+
+    return messages.filter(
+      (m) =>
+        (String(m.sender_id) === String(userId) &&
+          String(m.receiver_id) === String(selectedConversation.user_id)) ||
+        (String(m.receiver_id) === String(userId) &&
+          String(m.sender_id) === String(selectedConversation.user_id))
+    );
+  }, [messages, selectedConversation?.user_id, userId]);
 
   // When a conversation is open, mark any incoming unseen messages as seen.
   useEffect(() => {
@@ -398,9 +401,9 @@ const Messages = () => {
                     if (sending) return;
                     setSending(true);
 
-                    let uploadedAttachments: Array<{
+                    const uploadedAttachments: Array<{
                       name: string;
-                      type: string;
+                      type: api.AttachmentType;
                       url: string;
                       content_type?: string;
                       size_bytes?: number;
@@ -408,7 +411,7 @@ const Messages = () => {
 
                     try {
                       for (const attachment of draftAttachments) {
-                        const file = (attachment as any)?.file as File | undefined;
+                        const file = (attachment as { file?: File })?.file;
                         if (!file) continue;
 
                         const ticket = await api.createMessageAttachmentSignedUpload({
@@ -441,7 +444,7 @@ const Messages = () => {
 
                         uploadedAttachments.push({
                           name: attachment.name,
-                          type: attachment.type,
+                          type: attachment.type as api.AttachmentType,
                           url: ticket.path,
                           content_type: attachment.content_type,
                           size_bytes: attachment.size_bytes,

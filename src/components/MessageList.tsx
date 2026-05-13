@@ -9,7 +9,7 @@ type Props = {
   onEdit: (id: string, content: string) => void;
   onDelete: (id: string) => void;
   onFlag: (id: string, reason?: string) => void;
-  scrollContainerRef?: React.RefObject<HTMLDivElement>; 
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 };
 
 type MessageItemProps = {
@@ -20,7 +20,7 @@ type MessageItemProps = {
 };
 
 const MessageItem = ({ message, onEdit, onDelete, onFlag }: MessageItemProps) => {
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);

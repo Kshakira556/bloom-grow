@@ -22,7 +22,7 @@ export const useMessagesWS = ({
   selectedConversation,
 }: Params) => {
   useEffect(() => {
-    if (!user || !activePlan) return;
+    if (!user?.id || !activePlan?.id) return;
 
     const wsBaseUrl = import.meta.env.VITE_WS_URL;
 
@@ -37,7 +37,7 @@ export const useMessagesWS = ({
         if (data.type !== "new_message") return;
 
         const msg: ApiMessage = data.message;
-        if (msg.plan_id !== activePlan.id) return;
+        if (msg.plan_id !== activePlan?.id) return;
 
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
@@ -61,5 +61,5 @@ export const useMessagesWS = ({
     } catch {
       // silent failure (prevents console noise)
     }
-  }, [user, activePlan, userId, markSeen, setMessages, selectedConversation]);
+    }, [user?.id, activePlan?.id, userId, markSeen, setMessages]);
 };

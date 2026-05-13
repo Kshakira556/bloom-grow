@@ -250,14 +250,15 @@ const Messages = () => {
         } catch (err) {
           const message =
             err instanceof Error ? err.message.toLowerCase() : "";
-          const isPermanentFailure =
-            message.includes("message not found") ||
-            message.includes("forbidden") ||
-            message.includes("access denied") ||
-            message.includes("receiver");
+          const isTransientFailure =
+            message.includes("failed to fetch") ||
+            message.includes("networkerror") ||
+            message.includes("network request failed") ||
+            message.includes("timeout") ||
+            message.includes("temporar");
 
-          if (!isPermanentFailure) {
-            // allow retry only for transient/network failures
+          if (isTransientFailure) {
+            // allow retry only for likely transient/network failures
             seenRequestsRef.current.delete(msg.id);
           }
         }
@@ -661,7 +662,6 @@ const Messages = () => {
 };
 
 export default Messages;
-
 
 
 

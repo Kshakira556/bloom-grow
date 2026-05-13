@@ -75,17 +75,17 @@ const ViewJournalModal = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/40"
       onClick={onClose} // close when clicking backdrop
     >
       <div
-        className="bg-card rounded-3xl max-w-3xl w-full mx-4 relative p-6 space-y-4"
+        className="bg-card rounded-none sm:rounded-3xl w-screen h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:w-full sm:mx-4 relative p-3 sm:p-6 space-y-4 overflow-y-auto"
         onClick={(e) => e.stopPropagation()} // prevent closing when clicking modal content
       >
         {/* Left Arrow */}
         {onPrev && (
           <button
-            className="absolute -left-6 top-1/2 -translate-y-1/2 text-3xl disabled:opacity-30"
+            className="hidden sm:block absolute -left-6 top-1/2 -translate-y-1/2 text-3xl disabled:opacity-30"
             disabled={disablePrev}
             onClick={onPrev}
           >
@@ -94,15 +94,45 @@ const ViewJournalModal = ({
         )}
 
         {/* Close */}
-        <button onClick={onClose} className="absolute top-3 right-3 text-xl">
+        <button onClick={onClose} className="hidden sm:block absolute top-3 right-3 text-xl">
           ✕
         </button>
+
+        {/* Mobile controls */}
+        <div className="sm:hidden flex items-center justify-between gap-2 sticky top-0 bg-card pb-2 z-10">
+          <button
+            type="button"
+            className="px-3 py-1 text-sm rounded-full border disabled:opacity-40"
+            disabled={!onPrev || disablePrev}
+            onClick={onPrev}
+          >
+            Prev
+          </button>
+          <div className="text-sm font-semibold">Journal Entry</div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-1 text-sm rounded-full border disabled:opacity-40"
+              disabled={!onNext || disableNext}
+              onClick={onNext}
+            >
+              Next
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1 text-sm rounded-full border"
+            >
+              Close
+            </button>
+          </div>
+        </div>
 
         {/* Content */}
         <div className="space-y-4">
 
         {/* Header Row */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2">
             {isEditing ? (
             <div className="flex gap-2 items-center">
                 {["😊", "😢", "😴", "🤒", "😤", "🥰"].map((m) => (
@@ -225,7 +255,7 @@ const ViewJournalModal = ({
         {/* Right Arrow */}
         {onNext && (
           <button
-            className="absolute -right-6 top-1/2 -translate-y-1/2 text-3xl disabled:opacity-30"
+            className="hidden sm:block absolute -right-6 top-1/2 -translate-y-1/2 text-3xl disabled:opacity-30"
             disabled={disableNext}
             onClick={onNext}
           >

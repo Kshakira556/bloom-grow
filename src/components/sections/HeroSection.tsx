@@ -1,6 +1,7 @@
 import img from "@/assets/images/index-page.png"
 import { delayClass } from "@/utils/animation";
 import { Button } from "../ui/button";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
@@ -31,17 +32,21 @@ const HeroSection = () => {
 
         <div className="flex justify-center gap-4 flex-wrap">
           <Button
+            asChild
             variant="coral"
+            size="lg"
+          >
+            <Link to="/register">Get Started</Link>
+          </Button>
+          <Button
+            variant="outline"
             size="lg"
             onClick={() => {
               document
-                .getElementById("pricing-section")
+                .getElementById("how-it-works-section")
                 ?.scrollIntoView({ behavior: "smooth" });
             }}
           >
-            Get Started
-          </Button>
-          <Button variant="outline" size="lg">
             Learn More
           </Button>
         </div>

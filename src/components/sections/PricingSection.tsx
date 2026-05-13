@@ -1,6 +1,7 @@
 // components/sections/PricingSection.tsx
 import { useState } from "react";
 import { Button } from "../ui/button";
+import { Link } from "react-router-dom";
 
 const PRICES = {
   cubPlan: 399, // per plan
@@ -166,8 +167,8 @@ const total = monthlySubtotal * multiplier;
 
           {/* CTA */}
           <div className="text-center mt-6">
-            <Button variant="coral" size="lg">
-              Sign Up
+            <Button asChild variant="coral" size="lg">
+              <Link to="/register">Sign Up</Link>
             </Button>
           </div>
         </div>

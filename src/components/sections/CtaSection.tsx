@@ -1,4 +1,5 @@
 import { Button } from "../ui/button";
+import { Link } from "react-router-dom";
 
 const CtaSection = () => {
   return (
@@ -11,8 +12,8 @@ const CtaSection = () => {
           Start building a clearer, calmer co-parenting structure today.
         </p>
 
-        <Button variant="coral" size="xl" aria-label="Start your co-parenting plan">
-          Start Your Plan
+        <Button asChild variant="coral" size="xl" aria-label="Start your co-parenting plan">
+          <Link to="/register">Start Your Plan</Link>
         </Button>
       </div>
     </section>

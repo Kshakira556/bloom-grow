@@ -3,7 +3,7 @@ import { delayClass } from "@/utils/animation";
 
 const HowItWorksSection = () => {
   return (
-    <section className="py-16 px-4">
+    <section className="py-16 px-4" id="how-it-works-section">
       <div className="w-full text-center px-4 md:px-8">
         <h2 className="font-display text-2xl md:text-3xl font-bold text-primary mb-12">
           How It Works

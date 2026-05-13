@@ -11,7 +11,7 @@ export const fetchAllPlanMessages = async (
     plans.map((plan) => api.getMessagesByPlan(plan.id, options))
   );
 
-  return messageSets.flat();
+  return messageSets.flatMap((result) => result.messages);
 };
 
 export const buildUserNameMap = (users: SafeUser[]) => {

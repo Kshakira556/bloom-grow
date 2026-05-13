@@ -1067,6 +1067,11 @@ export interface ModeratorAssignment {
   created_at: string;
 }
 
+export interface ModeratorFlaggedMessage extends ApiMessage {
+  sender_name?: string | null;
+  receiver_name?: string | null;
+}
+
 export const getModeratorAssignments = async () => {
   const res = await http<{ assignments: ModeratorAssignment[] }>(
     "/admin/moderator-assignments",
@@ -1088,6 +1093,19 @@ export const createModeratorAssignment = async (payload: {
   return res?.assignment;
 };
 
+export const getMyModeratorAssignedPlans = async (): Promise<Plan[]> => {
+  const res = await http<{ plans: Plan[] }>("/admin/moderator/assigned-plans", "GET");
+  return res?.plans ?? [];
+};
+
+export const getMyModeratorFlaggedMessages = async (options?: { includeDeleted?: boolean }) => {
+  const params = new URLSearchParams();
+  if (options?.includeDeleted) params.set("include_deleted", "true");
+  const query = params.toString() ? `?${params.toString()}` : "";
+  const res = await http<{ messages: ModeratorFlaggedMessage[] }>(`/admin/moderator/flagged-messages${query}`, "GET");
+  return res?.messages ?? [];
+};
+
 export const fetchAllPlanMessages = async (
   plans: { id: string }[],
   options?: { includeDeleted?: boolean }
@@ -1095,7 +1113,7 @@ export const fetchAllPlanMessages = async (
   const allMessages: ApiMessage[] = [];
 
   for (const plan of plans) {
-    const messages = await getMessagesByPlan(plan.id, options);
+    const { messages } = await getMessagesByPlan(plan.id, options);
     allMessages.push(...messages);
   }
 

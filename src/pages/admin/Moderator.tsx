@@ -39,20 +39,19 @@ const Moderator = () => {
       try {
         setLoading(true);
         setError(null);
-        const [usersRes, plansRes, childrenRes, reviewRes, proposalRes] = await Promise.all([
+        const [usersRes, assignedPlansRes, childrenRes, reviewRes, proposalRes] = await Promise.all([
           api.getUsers(),
-          api.getPlans(),
+          api.getMyModeratorAssignedPlans(),
           api.getChildren(),
           api.getReviewHistory(),
           api.getProposals("pending"),
         ]);
 
-        const planList = plansRes?.plans ?? [];
+        const planList = assignedPlansRes ?? [];
         let allMessages: api.ApiMessage[] = [];
         try {
-          allMessages = await api.getAdminMessages({ includeDeleted: true });
+          allMessages = await api.getMyModeratorFlaggedMessages({ includeDeleted: true });
         } catch {
-          // Safe fallback: preserve prior behavior if admin endpoint isn't available/authorized
           allMessages = await fetchAllPlanMessages(planList, { includeDeleted: true });
         }
 
@@ -106,6 +105,17 @@ const Moderator = () => {
         setReviews((prev) => [review, ...prev]);
       }
       setResolvedFlagIds((prev) => (prev.includes(messageId) ? prev : [...prev, messageId]));
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                is_flagged: action === "rejected",
+                flagged_reason: action === "approved" ? null : (reason ?? message.flagged_reason),
+              }
+            : message
+        )
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit review");
     } finally {
@@ -127,7 +137,7 @@ const Moderator = () => {
   return (
     <ModeratorLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="font-display text-2xl font-bold flex items-center gap-2">
               <Shield className="w-6 h-6 text-primary" />
@@ -137,7 +147,7 @@ const Moderator = () => {
               Manage communication oversight and conflict resolution
             </p>
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2 w-full sm:w-auto">
             <Plus className="w-4 h-4" />
             Request Session
           </Button>
@@ -145,7 +155,7 @@ const Moderator = () => {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
             <Card key={stat.label}>
               <CardContent className="p-4">
@@ -159,10 +169,10 @@ const Moderator = () => {
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="flex-wrap gap-2">
+              <TabsList className="w-full overflow-x-auto whitespace-nowrap gap-2 justify-start md:flex-wrap">
                 <TabsTrigger value="flagged" className="gap-2">
                   <AlertTriangle className="w-4 h-4" /> Flagged Messages
                   <span className="ml-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
@@ -203,9 +213,10 @@ const Moderator = () => {
                           </div>
                           <p className="text-sm mt-1">{msg.preview}</p>
                           <p className="text-xs text-destructive mt-1">{msg.reason}</p>
-                          <div className="mt-3 flex gap-2">
+                          <div className="mt-3 flex flex-col sm:flex-row gap-2">
                             <Button
                               size="sm"
+                              className="w-full sm:w-auto"
                               onClick={() => handleReview(msg.id, "approved", msg.reason)}
                               disabled={reviewingIds[msg.id]}
                             >
@@ -214,6 +225,7 @@ const Moderator = () => {
                             <Button
                               size="sm"
                               variant="outline"
+                              className="w-full sm:w-auto"
                               onClick={() => handleReview(msg.id, "rejected", msg.reason)}
                               disabled={reviewingIds[msg.id]}
                             >
@@ -264,12 +276,12 @@ const Moderator = () => {
                     <div className="space-y-2">
                       {filteredClients.length > 0 ? (
                         filteredClients.map((client) => (
-                          <div key={client.id} className="p-3 border rounded-xl flex justify-between items-center">
+                          <div key={client.id} className="p-3 border rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                             <div>
                               <p className="font-medium">{client.full_name}</p>
                               <p className="text-xs text-muted-foreground">Role: {client.role}</p>
                             </div>
-                            <Button size="sm" variant="outline" className="gap-1">
+                            <Button size="sm" variant="outline" className="gap-1 w-full sm:w-auto">
                               <Eye className="w-4 h-4" /> View
                             </Button>
                           </div>
@@ -292,14 +304,14 @@ const Moderator = () => {
                     <div className="space-y-2">
                       {plans.length > 0 ? (
                         plans.map((plan) => (
-                          <div key={plan.id} className="p-3 border rounded-xl flex justify-between items-center">
+                          <div key={plan.id} className="p-3 border rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                             <div>
                               <p className="font-medium">{plan.title}</p>
                               <p className="text-xs text-muted-foreground">
                                 Created by: {userMap[plan.created_by ?? ""] || plan.created_by || "Unknown"}
                               </p>
                             </div>
-                            <Button size="sm" variant="outline" className="gap-1">
+                            <Button size="sm" variant="outline" className="gap-1 w-full sm:w-auto">
                               <Eye className="w-4 h-4" /> View
                             </Button>
                           </div>
@@ -322,14 +334,14 @@ const Moderator = () => {
                     <div className="space-y-2">
                       {children.length > 0 ? (
                         children.map((child) => (
-                          <div key={child.id} className="p-3 border rounded-xl flex justify-between items-center">
+                          <div key={child.id} className="p-3 border rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                             <div>
                               <p className="font-medium">{child.first_name} {child.last_name ?? ""}</p>
                               <p className="text-xs text-muted-foreground">
                                 DOB: {child.birth_date ? new Date(child.birth_date).toLocaleDateString() : "-"}
                               </p>
                             </div>
-                            <Button size="sm" variant="outline" className="gap-1">
+                            <Button size="sm" variant="outline" className="gap-1 w-full sm:w-auto">
                               <Eye className="w-4 h-4" /> View
                             </Button>
                           </div>

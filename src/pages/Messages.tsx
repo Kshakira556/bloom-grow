@@ -88,7 +88,21 @@ const Messages = () => {
 
       setMessages((prev) => prev.filter((m) => m.id !== id));
     } catch (err) {
-      console.error("Failed to delete message:", err);
+      const message = err instanceof Error ? err.message : "";
+      const alreadyGone =
+        message.toLowerCase().includes("not found") ||
+        message.toLowerCase().includes("already deleted");
+
+      if (alreadyGone) {
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+        return;
+      }
+
+      toast({
+        title: "Delete failed",
+        description: message || "Could not delete message.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -662,7 +676,6 @@ const Messages = () => {
 };
 
 export default Messages;
-
 
 
 

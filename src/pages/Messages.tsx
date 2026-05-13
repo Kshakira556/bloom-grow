@@ -176,6 +176,7 @@ const Messages = () => {
 }, [activePlan, userId, fetchByPlan]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const seenRequestsRef = useRef<Set<string>>(new Set());
 
   // Auto-select only once after contacts are first loaded.
   // This keeps initial mobile UX smooth, but still allows "Back" to stay on contacts.
@@ -222,13 +223,16 @@ const Messages = () => {
     const unseenIncoming = visibleMessages.filter(
       (m) =>
         String(m.receiver_id) === String(userId) &&
-        !m.is_seen
+        !m.is_seen &&
+        !seenRequestsRef.current.has(m.id)
     );
 
     if (!unseenIncoming.length) return;
 
-    (async () => {
-      for (const msg of unseenIncoming) {
+    for (const msg of unseenIncoming) {
+      seenRequestsRef.current.add(msg.id);
+
+      (async () => {
         try {
           await markSeen(msg.id);
 
@@ -244,10 +248,11 @@ const Messages = () => {
             )
           );
         } catch {
-          // ignore duplicate/stale requests
+          // allow retry if request genuinely failed
+          seenRequestsRef.current.delete(msg.id);
         }
-      }
-    })();
+      })();
+    }
   }, [selectedConversation?.user_id, userId, visibleMessages, markSeen]);
 
   const handleExportConversation = async () => {

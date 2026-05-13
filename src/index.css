@@ -129,30 +129,31 @@
   }
 }
 
-/* Mobile tweaks for react-big-calendar (Visits) */
+/* Visits: keep react-big-calendar within viewport on small screens */
 @media (max-width: 640px) {
-  .rbc-calendar {
-    width: 100% !important;
-    font-size: 12px;
+  .cub-rbc {
+    min-width: 0 !important;
   }
 
-  .rbc-toolbar {
+  .cub-rbc .rbc-month-view,
+  .cub-rbc .rbc-time-view {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .cub-rbc .rbc-toolbar {
+    gap: 6px;
     padding: 0 8px;
   }
 
-  .rbc-toolbar-label {
+  .cub-rbc .rbc-toolbar-label {
     font-size: 16px;
     font-weight: 700;
   }
 
-  .rbc-btn-group button {
+  .cub-rbc .rbc-btn-group button {
     padding: 6px 8px;
     font-size: 12px;
-  }
-
-  .rbc-month-view,
-  .rbc-time-view {
-    width: 100% !important;
   }
 }
 

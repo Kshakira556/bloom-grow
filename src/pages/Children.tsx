@@ -1,8 +1,9 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { Plus, Upload, FileText, Download, Eye } from "lucide-react";
+import { Plus, Upload, FileText, Download, Eye, Menu } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Edit3 } from "lucide-react";
 import * as api from "@/lib/api";
@@ -40,6 +41,8 @@ const Children = () => {
   const [loading, setLoading] = useState(true);
   const restrictedNames = selectedChild?.legal?.contactType || "";
   const [showAddChild, setShowAddChild] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSection, setMobileSection] = useState<"form" | "documents">("form");
 
   const fetchChildren = async () => {
     try {
@@ -232,6 +235,25 @@ const Children = () => {
       (!selectedSubcategory || f.subcategory === selectedSubcategory)
   );
 
+  const handleExportPdf = async () => {
+    try {
+      if (selectedChild?.id) {
+        await api.createAuditEvent({
+          action: "vault_export_pdf",
+          target_type: "child",
+          target_id: selectedChild.id,
+          notes: {
+            child_name: selectedChild?.name ?? null,
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("Audit log failed (vault export):", err);
+    }
+
+    window.print();
+  };
+
   if (loading) return <div>Loading...</div>;
 
   if (!selectedChild) {
@@ -356,14 +378,14 @@ const Children = () => {
         </style>
 
       <Navbar />
-      <main className="flex-1 py-8 px-4">
-        <div className="container max-w-5xl mx-auto">
-          <h1 className="font-display text-3xl font-bold text-primary text-center mb-6 no-print">
+      <main className="flex-1 py-4 px-0 sm:py-8 sm:px-4">
+        <div className="w-full sm:container sm:max-w-5xl sm:mx-auto">
+          <h1 className="hidden sm:block font-display text-3xl font-bold text-primary text-center mb-6 no-print">
             Vault
           </h1>
 
           <div className="grid lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-3 space-y-3 no-print">
+            <div className="hidden lg:block lg:col-span-3 space-y-3 no-print">
               <select
                 aria-label="Child-Name"
                 value={selectedChild?.childId || ""}
@@ -395,7 +417,44 @@ const Children = () => {
 
             {/* Child Details */}
             <div className="lg:col-span-9">
-              <Card className="rounded-3xl">
+              <div className="lg:hidden mb-3 px-3 no-print">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-full border bg-card px-3 py-2 text-xs"
+                  >
+                    <Menu className="w-4 h-4" />
+                    Vault Menu
+                  </button>
+                  <div className="flex-1 rounded-full border bg-card/70 px-3 py-2 text-sm truncate">
+                    {selectedChild?.vault?.fullName || "Select Child"}
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMobileSection("form")}
+                    className={`rounded-full border px-3 py-2 text-xs ${
+                      mobileSection === "form" ? "bg-primary text-primary-foreground" : "bg-background"
+                    }`}
+                  >
+                    Child Record
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileSection("documents")}
+                    className={`rounded-full border px-3 py-2 text-xs ${
+                      mobileSection === "documents" ? "bg-primary text-primary-foreground" : "bg-background"
+                    }`}
+                  >
+                    Documents
+                  </button>
+                </div>
+              </div>
+
+              <Card className="rounded-none sm:rounded-3xl border-x-0 sm:border">
                 <CardContent className="p-6 space-y-6">
                   <div id="print-area">
                     <div style={{ marginBottom: "16px" }}>
@@ -449,6 +508,7 @@ const Children = () => {
 
                       <div style={{ pageBreakAfter: "always" }} />
                     </div>
+                    <div className={`${mobileSection === "form" ? "block" : "hidden"} lg:block`}>
                     {/* Basic Info */}
                     <div>
                       <div className="flex justify-between items-start mb-4">
@@ -856,7 +916,10 @@ const Children = () => {
                       </div>
                     </div>
 
+                    </div>
+
                     {/* Documents */}
+                    <div className={`${mobileSection === "documents" ? "block" : "hidden"} lg:block`}>
                     <div>
                       <h3 className="font-display font-bold mb-3">
                         Child Documents
@@ -1050,6 +1113,7 @@ const Children = () => {
                         )}
                       </div>
                     </div>
+                    </div>
                     <p style={{ marginTop: "40px", fontSize: "10px", borderTop: "1px solid #000", paddingTop: "8px" }}>
                       This record reflects information provided by the legal guardian(s) at the time
                       of generation and is intended for official reference only.
@@ -1109,24 +1173,7 @@ const Children = () => {
                   ) : (
                     <Button
                       className="w-full rounded-full no-print"
-                      onClick={async () => {
-                        try {
-                          if (selectedChild?.id) {
-                            await api.createAuditEvent({
-                              action: "vault_export_pdf",
-                              target_type: "child",
-                              target_id: selectedChild.id,
-                              notes: {
-                                child_name: selectedChild?.name ?? null,
-                              },
-                            });
-                          }
-                        } catch (err) {
-                          console.warn("Audit log failed (vault export):", err);
-                        }
-
-                        window.print();
-                      }}
+                      onClick={handleExportPdf}
                     >
                       Export to PDF
                     </Button>
@@ -1137,6 +1184,93 @@ const Children = () => {
           </div>
         </div>
       </main>
+      <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <DrawerContent className="lg:hidden max-h-[88vh] rounded-t-2xl">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle>Vault Menu</DrawerTitle>
+          </DrawerHeader>
+
+          <div className="px-4 pb-6 overflow-y-auto space-y-5">
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-primary">Child</h3>
+              <select
+                aria-label="Child-Name-Mobile"
+                value={selectedChild?.childId || ""}
+                onChange={async (e) => {
+                  const id = e.target.value;
+                  const matched = children.find((c) => c.id === id);
+                  setSelectedChild(null);
+                  await handleChildChange(id, matched?.name, matched?.birth_date);
+                }}
+                className="w-full p-3 rounded-xl bg-card/80 border text-sm font-display"
+              >
+                {children.map((child) => (
+                  <option key={child.id} value={child.id}>
+                    {child.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddChild(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full p-3 rounded-xl border bg-background text-sm text-left"
+              >
+                Add Child
+              </button>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-primary">View</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileSection("form");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`rounded-full border px-3 py-2 text-xs ${
+                    mobileSection === "form" ? "bg-primary text-primary-foreground" : "bg-background"
+                  }`}
+                >
+                  Child Record
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileSection("documents");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`rounded-full border px-3 py-2 text-xs ${
+                    mobileSection === "documents" ? "bg-primary text-primary-foreground" : "bg-background"
+                  }`}
+                >
+                  Documents
+                </button>
+              </div>
+            </section>
+
+            {!editMode && (
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold text-primary">Actions</h3>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleExportPdf();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full rounded-full border px-4 py-2 text-sm bg-background"
+                >
+                  Export to PDF
+                </button>
+              </section>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
       {showAddChild && (
         <AddChildModal
           planId={defaultPlanId}

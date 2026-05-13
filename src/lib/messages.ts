@@ -39,6 +39,7 @@ export const mapApiMessageToMessage = (msg: ApiMessage, userId: string): Message
     updated_at: msg.updated_at ?? null,
     time: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     purpose: msg.purpose || "General",
+    is_seen: Boolean(msg.is_seen),
     status: msg.is_seen ? "Read" : "Delivered",
     attachments: msg.attachments || [],
     is_flagged: msg.is_flagged,

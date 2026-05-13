@@ -34,6 +34,17 @@ export const useMessagesWS = ({
 
       const handleMessage = async (event: MessageEvent) => {
         const data = JSON.parse(event.data);
+        if (data.type === "message_seen" && typeof data.message_id === "string") {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === data.message_id
+                ? { ...message, is_seen: true, status: "Read" }
+                : message
+            )
+          );
+          return;
+        }
+
         if (data.type !== "new_message") return;
 
         const msg: ApiMessage = data.message;

@@ -2,6 +2,8 @@ import { format, isToday, isYesterday } from "date-fns";
 import { Message, MessagePurpose } from "@/types/messages";
 import { useRef, useState, useLayoutEffect } from "react";
 import Modal from "./Modal";
+import { getSignedMessageAttachmentUrl } from "@/lib/api";
+import { toast } from "@/lib/toastHelper";
 
 type Props = {
   messages: Message[];
@@ -42,6 +44,26 @@ const MessageItem = ({ message, onEdit, onDelete, onFlag }: MessageItemProps) =>
     if (timerRef.current) clearTimeout(timerRef.current);
   };
 
+  const openAttachment = async (attachment: { id: string; url: string; name: string }) => {
+    try {
+      const rawUrl = attachment.url || "";
+
+      if (rawUrl.startsWith("blob:") || rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+        window.open(rawUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      const signedUrl = await getSignedMessageAttachmentUrl(attachment.id);
+      window.open(signedUrl, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast({
+        title: "Failed to open attachment",
+        description: err instanceof Error ? err.message : "Unable to open attachment",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div
       onMouseDown={handleLongPressStart}
@@ -63,6 +85,22 @@ const MessageItem = ({ message, onEdit, onDelete, onFlag }: MessageItemProps) =>
         <p className="break-words whitespace-pre-wrap [text-transform:none]">
           {message.content}
         </p>
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {message.attachments.map((file) => (
+              <button
+                key={file.id}
+                type="button"
+                onClick={() => void openAttachment({ id: file.id, url: file.url, name: file.name })}
+                className={`block text-xs underline text-left ${
+                  message.sender === "me" ? "text-white/90" : "text-primary"
+                }`}
+              >
+                📎 {file.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Seen / Unseen */}

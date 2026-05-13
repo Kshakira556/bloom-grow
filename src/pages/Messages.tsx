@@ -505,11 +505,8 @@ useEffect(() => {
                       return;
                     }
 
-                    const attachmentNames = draftAttachments.map((attachment) => attachment.name).filter(Boolean);
                     const fallbackAttachmentContent =
-                      attachmentNames.length > 0
-                        ? `Attachment${attachmentNames.length > 1 ? "s" : ""}: ${attachmentNames.join(", ")}`
-                        : "";
+                      draftAttachments.length > 0 ? "Attachment" : "";
                     const contentToSend = trimmedContent || fallbackAttachmentContent;
 
                     if (!contentToSend) {
@@ -679,5 +676,4 @@ useEffect(() => {
 };
 
 export default Messages;
-
 

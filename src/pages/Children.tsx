@@ -508,7 +508,7 @@ const Children = () => {
 
                       <div style={{ pageBreakAfter: "always" }} />
                     </div>
-                    <div className={`${mobileSection === "form" ? "block" : "hidden"} lg:block`}>
+                    <div className={`${mobileSection === "form" ? "block" : "hidden"} lg:block print:block`}>
                     {/* Basic Info */}
                     <div>
                       <div className="flex justify-between items-start mb-4">
@@ -919,7 +919,7 @@ const Children = () => {
                     </div>
 
                     {/* Documents */}
-                    <div className={`${mobileSection === "documents" ? "block" : "hidden"} lg:block`}>
+                    <div className={`${mobileSection === "documents" ? "block" : "hidden"} lg:block print:block`}>
                     <div>
                       <h3 className="font-display font-bold mb-3">
                         Child Documents

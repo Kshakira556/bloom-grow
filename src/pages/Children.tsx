@@ -378,13 +378,13 @@ const Children = () => {
         </style>
 
       <Navbar />
-      <main className="flex-1 py-4 px-0 sm:py-8 sm:px-4">
-        <div className="w-full sm:container sm:max-w-5xl sm:mx-auto">
+      <main className="flex-1 py-0 px-0 sm:py-8 sm:px-4 overflow-hidden sm:overflow-visible">
+        <div className="w-full sm:container sm:max-w-5xl sm:mx-auto h-full sm:h-auto">
           <h1 className="hidden sm:block font-display text-3xl font-bold text-primary text-center mb-6 no-print">
             Vault
           </h1>
 
-          <div className="grid lg:grid-cols-12 gap-6">
+          <div className="grid lg:grid-cols-12 gap-0 sm:gap-6 h-full sm:h-auto">
             <div className="hidden lg:block lg:col-span-3 space-y-3 no-print">
               <select
                 aria-label="Child-Name"
@@ -416,8 +416,8 @@ const Children = () => {
             </div>
 
             {/* Child Details */}
-            <div className="lg:col-span-9">
-              <div className="lg:hidden mb-3 px-3 no-print">
+            <div className="lg:col-span-9 flex flex-col min-h-0">
+              <div className="lg:hidden mb-3 px-3 no-print shrink-0">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -433,8 +433,8 @@ const Children = () => {
                 </div>
               </div>
 
-              <Card className="rounded-none sm:rounded-3xl border-x-0 sm:border">
-                <CardContent className="p-6 space-y-6">
+              <Card className="rounded-none sm:rounded-3xl border-x-0 sm:border flex-1 min-h-0 print:h-auto">
+                <CardContent className="p-4 sm:p-6 space-y-6 h-full overflow-y-auto print:h-auto print:overflow-visible">
                   <div id="print-area">
                     <div style={{ marginBottom: "16px" }}>
                       <h1 style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold" }}>

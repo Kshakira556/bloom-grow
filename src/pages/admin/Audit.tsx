@@ -12,6 +12,22 @@ import { useAuth } from "@/hooks/useAuth";
 
 const formatDateTime = (value: string) => format(new Date(value), "yyyy-MM-dd HH:mm");
 
+const redactSecrets = (value: string) => {
+  let out = value;
+
+  // Bearer/JWT-style tokens
+  out = out.replace(/\bBearer\s+[A-Za-z0-9\-._~+/]+=*\b/gi, "Bearer [REDACTED]");
+  out = out.replace(/\beyJ[A-Za-z0-9\-_]+?\.[A-Za-z0-9\-_]+?\.[A-Za-z0-9\-_]+?\b/g, "[REDACTED_JWT]");
+
+  // Common querystring / key-value token patterns
+  out = out.replace(/\b(access_token|auth_token|id_token|refresh_token|token)\s*[:=]\s*([A-Za-z0-9\-._~+/]+=*)/gi, "$1=[REDACTED]");
+
+  // Long opaque strings (avoid leaking session ids / API keys)
+  out = out.replace(/\b[A-Fa-f0-9]{32,}\b/g, "[REDACTED]");
+
+  return out;
+};
+
 const AdminAudit = () => {
   const { user } = useAuth();
   const isMediator = user?.role === "mediator";
@@ -78,6 +94,37 @@ const AdminAudit = () => {
 
   const userMap = useMemo(() => buildUserNameMap(users), [users]);
 
+  const messageMap = useMemo(() => {
+    return messages.reduce<Record<string, api.ApiMessage>>((acc, msg) => {
+      acc[msg.id] = msg;
+      return acc;
+    }, {});
+  }, [messages]);
+
+  const displayUser = (id?: string | null) => {
+    if (!id) return "";
+    if (user?.id && String(id) === String(user.id)) return user.full_name || "You";
+    return userMap[id] || id;
+  };
+
+  const displayTarget = (targetType?: string | null, targetId?: string | null) => {
+    if (!targetId) return "";
+
+    // If the id matches a user we know, show the person's name.
+    if (userMap[targetId]) return userMap[targetId];
+
+    const type = (targetType || "").toLowerCase();
+
+    // If it looks like a message, try show a human label.
+    if (type.includes("message") && messageMap[targetId]) {
+      const msg = messageMap[targetId];
+      return `Message: ${displayUser(msg.sender_id)} → ${displayUser(msg.receiver_id)}`;
+    }
+
+    // Fallback to the raw id, but redact obvious secrets.
+    return redactSecrets(targetId);
+  };
+
   const filteredMessages = useMemo(() => {
     return messages
       .filter((msg) => (purposeFilter === "All" ? true : msg.purpose === purposeFilter))
@@ -103,13 +150,13 @@ const AdminAudit = () => {
         const actor = (userMap[log.actor_id] || log.actor_id).toLowerCase();
         const action = (log.action || "").toLowerCase();
         const target = (log.target_type || "").toLowerCase();
-        const notes = (log.notes || "").toLowerCase();
+        const notes = redactSecrets(log.notes || "").toLowerCase();
         return (
           actor.includes(q) ||
           action.includes(q) ||
           target.includes(q) ||
           notes.includes(q) ||
-          (log.target_id || "").toLowerCase().includes(q)
+          redactSecrets(log.target_id || "").toLowerCase().includes(q)
         );
       })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -248,7 +295,7 @@ const AdminAudit = () => {
                   <div key={log.id} className="p-3 border rounded-xl flex flex-col gap-1">
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
                       <span>{formatDateTime(log.created_at)}</span>
-                      <span className="font-medium">{userMap[log.actor_id] || log.actor_id}</span>
+                      <span className="font-medium">{displayUser(log.actor_id)}</span>
                       <span className="px-2 py-0.5 rounded-full bg-secondary">
                         {log.action}
                       </span>
@@ -257,9 +304,15 @@ const AdminAudit = () => {
                           {log.target_type}
                         </span>
                       )}
-                      {log.target_id && <span className="font-mono text-[10px]">{log.target_id}</span>}
+                      {log.target_id && (
+                        <span className="text-[10px]">
+                          {displayTarget(log.target_type, log.target_id)}
+                        </span>
+                      )}
                     </div>
-                    {log.notes && <p className="text-xs text-muted-foreground">{log.notes}</p>}
+                    {log.notes && (
+                      <p className="text-xs text-muted-foreground">{redactSecrets(log.notes)}</p>
+                    )}
                   </div>
                 ))}
                 {filteredAuditLogs.length > 200 && (

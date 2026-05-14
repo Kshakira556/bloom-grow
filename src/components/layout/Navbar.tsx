@@ -23,6 +23,7 @@ export function Navbar() {
     // Parent nav
     const links = [
       { href: "/dashboard", label: "Dashboard" },
+      { href: "/mediator", label: "Mediator" },
       { href: "/visits", label: "Visits" },
       { href: "/messages", label: "Messages" },
       { href: "/journal", label: "Journal" },

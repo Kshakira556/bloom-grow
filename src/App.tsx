@@ -27,6 +27,7 @@ const Journal = lazy(() => import("./pages/Journal"));
 const Children = lazy(() => import("./pages/Children"));
 const Admin = lazy(() => import("./pages/admin/System"));
 const CreatePlan = lazy(() => import("./pages/CreatePlan"));
+const Mediator = lazy(() => import("./pages/Mediator"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -130,6 +131,11 @@ const App = () => (
                 <Children />
               </RoleProtectedRoute>
             } /> 
+            <Route path="/mediator" element={
+              <RoleProtectedRoute allowedRoles={["parent"]}>
+                <Mediator />
+              </RoleProtectedRoute>
+            } />
             <Route path="/create-plan" element={
               <RoleProtectedRoute allowedRoles={["parent"]}>
                 <CreatePlan />

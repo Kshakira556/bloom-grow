@@ -518,6 +518,98 @@ export const resolvePlanInviteToken = async (token: string): Promise<{ invite_id
 };
 
 // --------------------
+// Mediation requests (parent -> mediator assignment request)
+// --------------------
+export type MediationRequestStatus = "pending" | "accepted" | "rejected" | "cancelled";
+
+export type MediationRequest = {
+  id: string;
+  plan_id: string;
+  requester_user_id: string;
+  status: MediationRequestStatus;
+  notes: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export const getMyMediationRequestForPlan = async (planId: string): Promise<MediationRequest | null> => {
+  try {
+    const res = await http<{ request: MediationRequest | null }>(`/plans/${planId}/mediation-request`, "GET");
+    return res?.request ?? null;
+  } catch {
+    return null;
+  }
+};
+
+export const createMyMediationRequestForPlan = async (
+  planId: string,
+  payload?: { notes?: string | null; target_mediator_id?: string | null; target_email?: string | null },
+) => {
+  const res = await http<{ request: MediationRequest }>(`/plans/${planId}/mediation-request`, "POST", {
+    notes: payload?.notes ?? null,
+    target_mediator_id: payload?.target_mediator_id ?? null,
+    target_email: payload?.target_email ?? null,
+  });
+  return res?.request;
+};
+
+export const cancelMyMediationRequest = async (requestId: string) => {
+  const res = await http<{ request: MediationRequest }>(`/plans/mediation-request/${requestId}`, "DELETE");
+  return res?.request;
+};
+
+// --------------------
+// Mediator directory (opt-in)
+// --------------------
+export type ListedMediator = {
+  user_id: string;
+  display_name: string;
+  province: string | null;
+  city: string | null;
+  languages: string[];
+  bio: string | null;
+};
+
+export const getMediatorDirectory = async (args?: { limit?: number }): Promise<ListedMediator[]> => {
+  const params = new URLSearchParams();
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await http<{ mediators: ListedMediator[] }>(`/mediators/directory${qs}`, "GET");
+  return res?.mediators ?? [];
+};
+
+export type MediatorProfile = {
+  user_id: string;
+  is_listed: boolean;
+  display_name: string;
+  province: string | null;
+  city: string | null;
+  languages: string[];
+  bio: string | null;
+  listed_at: string | null;
+  updated_at: string | null;
+};
+
+export const getMyMediatorProfile = async (): Promise<MediatorProfile | null> => {
+  const res = await http<{ profile: MediatorProfile | null }>(`/mediators/me`, "GET");
+  return res?.profile ?? null;
+};
+
+export const upsertMyMediatorProfile = async (payload: Partial<{
+  is_listed: boolean;
+  display_name: string;
+  province: string | null;
+  city: string | null;
+  languages: string[];
+  bio: string | null;
+}>) => {
+  const res = await http<{ profile: MediatorProfile }>(`/mediators/me`, "PUT", payload);
+  return res?.profile ?? null;
+};
+
+// --------------------
 // Visits
 // --------------------
 export type VisitType = "mine" | "theirs" | "deleted";

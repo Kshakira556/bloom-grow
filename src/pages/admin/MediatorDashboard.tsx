@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Calendar, FileText, ShieldCheck } from "lucide-react";
 import * as api from "@/lib/api";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const MediatorDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -15,6 +16,11 @@ const MediatorDashboard = () => {
   const [flaggedMessages, setFlaggedMessages] = useState<api.ApiMessage[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<api.MediatorSession[]>([]);
   const [overdueActionItems, setOverdueActionItems] = useState<api.MediatorSessionActionItemWithContext[]>([]);
+
+  const [profilePromptOpen, setProfilePromptOpen] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [wantsListed, setWantsListed] = useState<boolean>(true);
 
   useEffect(() => {
     const load = async () => {
@@ -38,6 +44,16 @@ const MediatorDashboard = () => {
         setFlaggedMessages(flaggedRes);
         setUpcomingSessions(sessionsRes);
         setOverdueActionItems(overdueItemsRes.filter((i) => !i.is_done));
+
+        // Prompt mediators once to opt into (or out of) the public directory.
+        try {
+          const profile = await api.getMyMediatorProfile().catch(() => null);
+          if (!profile) {
+            setProfilePromptOpen(true);
+          }
+        } catch {
+          // ignore
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard");
       } finally {
@@ -267,6 +283,68 @@ const MediatorDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={profilePromptOpen} onOpenChange={setProfilePromptOpen}>
+        <DialogContent className="max-w-lg w-[95vw]">
+          <DialogHeader>
+            <DialogTitle>Find a mediator directory</DialogTitle>
+            <DialogDescription>
+              Would you like to be listed publicly so parents can find and select you? You can change this later.
+            </DialogDescription>
+          </DialogHeader>
+
+          {profileError && <p className="text-sm text-destructive">{profileError}</p>}
+
+          <label className="flex items-start gap-2 p-3 border rounded-xl">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={wantsListed}
+              onChange={(e) => setWantsListed(e.target.checked)}
+              disabled={profileSaving}
+            />
+            <span className="text-sm">List me in the directory</span>
+          </label>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              disabled={profileSaving}
+              onClick={async () => {
+                try {
+                  setProfileSaving(true);
+                  setProfileError(null);
+                  await api.upsertMyMediatorProfile({ is_listed: false });
+                  setProfilePromptOpen(false);
+                } catch (e) {
+                  setProfileError(e instanceof Error ? e.message : "Failed to save");
+                } finally {
+                  setProfileSaving(false);
+                }
+              }}
+            >
+              No thanks
+            </Button>
+            <Button
+              disabled={profileSaving}
+              onClick={async () => {
+                try {
+                  setProfileSaving(true);
+                  setProfileError(null);
+                  await api.upsertMyMediatorProfile({ is_listed: wantsListed });
+                  setProfilePromptOpen(false);
+                } catch (e) {
+                  setProfileError(e instanceof Error ? e.message : "Failed to save");
+                } finally {
+                  setProfileSaving(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </ModeratorLayout>
   );
 };

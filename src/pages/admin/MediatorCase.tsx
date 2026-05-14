@@ -45,6 +45,11 @@ const MediatorCase = () => {
   const [actionItems, setActionItems] = useState<api.MediatorSessionActionItem[]>([]);
   const [newActionText, setNewActionText] = useState("");
   const [sessionOutcomeNotes, setSessionOutcomeNotes] = useState("");
+  const [documents, setDocuments] = useState<api.CaseDocument[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [docsError, setDocsError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadVisibility, setUploadVisibility] = useState<api.CaseDocumentVisibility>("shared");
 
   useEffect(() => {
     const load = async () => {
@@ -72,6 +77,18 @@ const MediatorCase = () => {
         const firstSessionId = sessionsRes[0]?.id ?? "";
         setSelectedSessionId(firstSessionId);
         setSessionOutcomeNotes(sessionsRes[0]?.outcome_notes ?? "");
+
+        // Documents are case-scoped. If the backend endpoint isn't available yet, keep the UI usable.
+        try {
+          setDocsLoading(true);
+          setDocsError(null);
+          const docs = await api.getCaseDocuments(id);
+          setDocuments(docs.filter((d) => !d.is_deleted));
+        } catch (e) {
+          setDocsError(e instanceof Error ? e.message : "Failed to load documents");
+        } finally {
+          setDocsLoading(false);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load case");
       } finally {
@@ -367,6 +384,124 @@ const MediatorCase = () => {
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground">No pending approvals for this case.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Documents</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {docsError && <p className="text-xs text-destructive">{docsError}</p>}
+
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <select
+                    value={uploadVisibility}
+                    onChange={(e) => setUploadVisibility(e.target.value as api.CaseDocumentVisibility)}
+                    className="px-3 py-2 rounded-md border bg-background text-sm"
+                    disabled={loading || uploading || !id}
+                    title="Visibility for new uploads"
+                  >
+                    <option value="shared">Shared</option>
+                    <option value="mediator_only">Mediator-only</option>
+                  </select>
+
+                  <label className="flex-1">
+                    <input
+                      type="file"
+                      className="block w-full text-sm"
+                      disabled={loading || uploading || !id}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !id) return;
+                        try {
+                          setUploading(true);
+                          setDocsError(null);
+
+                          const signed = await api.createCaseDocumentSignedUpload(id, {
+                            filename: file.name,
+                            content_type: file.type || "application/octet-stream",
+                          });
+
+                          await fetch(signed.signed_url, {
+                            method: "PUT",
+                            headers: {
+                              "Content-Type": file.type || "application/octet-stream",
+                            },
+                            body: file,
+                          });
+
+                          const created = await api.createCaseDocument(id, {
+                            name: file.name,
+                            storage_path: signed.path,
+                            content_type: file.type || "application/octet-stream",
+                            visibility: uploadVisibility,
+                          });
+
+                          if (created) setDocuments((prev) => [created, ...prev]);
+                        } catch (err) {
+                          setDocsError(err instanceof Error ? err.message : "Failed to upload document");
+                        } finally {
+                          setUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {docsLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading…</p>
+                ) : documents.length ? (
+                  <div className="space-y-2">
+                    {documents
+                      .slice()
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((d) => (
+                        <div key={d.id} className="p-3 border rounded-xl flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate" title={d.name}>{d.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Visibility: {d.visibility.replaceAll("_", " ")} · v{d.version}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  const url = await api.getCaseDocumentSignedUrl(d.id, { expires_in: 60 * 10 });
+                                  if (url) window.open(url, "_blank", "noopener,noreferrer");
+                                } catch (err) {
+                                  setDocsError(err instanceof Error ? err.message : "Failed to open document");
+                                }
+                              }}
+                            >
+                              Open
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={async () => {
+                                if (!confirm("Delete this document?")) return;
+                                try {
+                                  await api.deleteCaseDocument(d.id);
+                                  setDocuments((prev) => prev.filter((x) => x.id !== d.id));
+                                } catch (err) {
+                                  setDocsError(err instanceof Error ? err.message : "Failed to delete document");
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No documents yet.</p>
                 )}
               </CardContent>
             </Card>

@@ -1154,6 +1154,7 @@ export const setMyMediatorCaseStage = async (planId: string, stage: MediatorCase
 
 export type MediatorSessionMode = "in_person" | "online" | "phone" | "other";
 export type ActionItemVisibility = "shared" | "mediator_only";
+export type CaseDocumentVisibility = "shared" | "mediator_only";
 
 export type MediatorSession = {
   id: string;
@@ -1246,6 +1247,60 @@ export const getMyModeratorFlaggedMessages = async (options?: { includeDeleted?:
   const query = params.toString() ? `?${params.toString()}` : "";
   const res = await http<{ messages: ModeratorFlaggedMessage[] }>(`/admin/moderator/flagged-messages${query}`, "GET");
   return res?.messages ?? [];
+};
+
+export type CaseDocument = {
+  id: string;
+  plan_id: string;
+  name: string;
+  storage_path: string;
+  content_type: string | null;
+  visibility: CaseDocumentVisibility;
+  version: number;
+  is_deleted: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export const getCaseDocuments = async (planId: string) => {
+  const res = await http<{ documents: CaseDocument[] }>(`/admin/moderator/cases/${planId}/documents`, "GET");
+  return res?.documents ?? [];
+};
+
+export const createCaseDocumentSignedUpload = async (
+  planId: string,
+  payload: { filename: string; content_type?: string | null }
+) => {
+  const res = await http<{ signed_url: string; path: string }>(
+    `/admin/moderator/cases/${planId}/documents/signed-upload`,
+    "POST",
+    payload
+  );
+  return res;
+};
+
+export const createCaseDocument = async (
+  planId: string,
+  payload: { name: string; storage_path: string; content_type?: string | null; visibility?: CaseDocumentVisibility }
+) => {
+  const res = await http<{ document: CaseDocument }>(`/admin/moderator/cases/${planId}/documents`, "POST", payload);
+  return res?.document;
+};
+
+export const updateCaseDocument = async (id: string, payload: Partial<{ name: string; visibility: CaseDocumentVisibility }>) => {
+  const res = await http<{ document: CaseDocument }>(`/admin/moderator/documents/${id}`, "PUT", payload);
+  return res?.document;
+};
+
+export const deleteCaseDocument = async (id: string) => {
+  return http<{ ok: true }>(`/admin/moderator/documents/${id}`, "DELETE");
+};
+
+export const getCaseDocumentSignedUrl = async (id: string, options?: { expires_in?: number }) => {
+  const q = typeof options?.expires_in === "number" ? `?expires_in=${encodeURIComponent(String(options.expires_in))}` : "";
+  const res = await http<{ signed_url: string }>(`/admin/moderator/documents/${id}/signed-url${q}`, "GET");
+  return res?.signed_url ?? "";
 };
 
 export const fetchAllPlanMessages = async (

@@ -37,7 +37,7 @@ export default function Dashboard() {
     }
 
     try {
-      const messages = await api.getMessagesByPlan(activePlan.id);
+      const { messages } = await api.getMessagesByPlan(activePlan.id);
 
       // Only unread messages
       const unreadAll = messages

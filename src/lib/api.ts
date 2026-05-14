@@ -1125,6 +1125,7 @@ export interface ModeratorAssignedPlanWithClients {
     full_name: string;
     email: string;
   }>;
+  stage?: MediatorCaseStage;
 }
 
 export const getMyModeratorAssignedPlansWithClients = async (): Promise<ModeratorAssignedPlanWithClients[]> => {
@@ -1132,6 +1133,22 @@ export const getMyModeratorAssignedPlansWithClients = async (): Promise<Moderato
   // Keep a dedicated helper for mediator pages that need clients grouped per plan.
   const res = await http<{ plans: ModeratorAssignedPlanWithClients[] }>("/admin/moderator/assigned-plans", "GET");
   return res?.plans ?? [];
+};
+
+export type MediatorCaseStage =
+  | "intake"
+  | "screening"
+  | "onboarding"
+  | "info_gathering"
+  | "active_mediation"
+  | "drafting"
+  | "finalisation"
+  | "follow_up"
+  | "closed";
+
+export const setMyMediatorCaseStage = async (planId: string, stage: MediatorCaseStage) => {
+  const res = await http<{ stage: MediatorCaseStage }>(`/admin/moderator/cases/${planId}/stage`, "PUT", { stage });
+  return res?.stage;
 };
 
 export const getMyModeratorFlaggedMessages = async (options?: { includeDeleted?: boolean }) => {

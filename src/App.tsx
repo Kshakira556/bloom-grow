@@ -30,6 +30,7 @@ const CreatePlan = lazy(() => import("./pages/CreatePlan"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const MediatorDashboard = lazy(() => import("./pages/admin/MediatorDashboard"));
 const AdminClients = lazy(() => import("./pages/admin/Clients"));
 const AdminChildren = lazy(() => import("./pages/admin/Children"));
 const AdminPlans = lazy(() => import("./pages/admin/Plans"));
@@ -37,6 +38,7 @@ const AdminMessages = lazy(() => import("./pages/admin/Messages"));
 const AdminProposals = lazy(() => import("./pages/admin/Proposals"));
 const AdminAudit = lazy(() => import("./pages/admin/Audit"));
 const Moderator = lazy(() => import("./pages/admin/Moderator"));
+const MediatorCase = lazy(() => import("./pages/admin/MediatorCase"));
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -138,6 +140,12 @@ const App = () => (
                 <AdminDashboard />
               </RoleProtectedRoute>
             } />
+            <Route path="/admin" element={<Navigate to="/admin/mediator" replace />} />
+            <Route path="/admin/mediator" element={
+              <RoleProtectedRoute allowedRoles={["mediator"]}>
+                <MediatorDashboard />
+              </RoleProtectedRoute>
+            } />
             <Route path="/admin/clients" element={
               <RoleProtectedRoute allowedRoles={["mediator"]}>
                 <AdminClients />
@@ -151,6 +159,11 @@ const App = () => (
             <Route path="/admin/plans" element={
               <RoleProtectedRoute allowedRoles={["mediator"]}>
                 <AdminPlans />
+              </RoleProtectedRoute>
+            } />
+            <Route path="/admin/cases/:id" element={
+              <RoleProtectedRoute allowedRoles={["mediator"]}>
+                <MediatorCase />
               </RoleProtectedRoute>
             } />
             <Route path="/admin/messages" element={

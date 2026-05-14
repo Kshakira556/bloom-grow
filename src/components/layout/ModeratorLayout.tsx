@@ -22,6 +22,7 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
   const { user, logout } = useAuth();
 
   const sidebarLinks = [
+    { href: "/admin/mediator", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/plans", label: "Cases", icon: Calendar },
     { href: "/admin/messages", label: "Messages", icon: MessageSquare },
     { href: "/admin/proposals", label: "Pending", icon: FileText },

@@ -853,6 +853,79 @@ export interface Proposal {
   reviewed_notes?: string | null;
 }
 
+// --------------------
+// Parent mediator shared artifacts
+// --------------------
+
+export type PlanMediator = {
+  user_id: string;
+  full_name: string;
+  city?: string | null;
+  province?: string | null;
+  bio?: string | null;
+};
+
+export const getPlanMediators = async (planId: string): Promise<PlanMediator[]> => {
+  const res = await http<{ mediators: PlanMediator[] }>(`/plans/${planId}/mediators`, "GET");
+  return res.mediators ?? [];
+};
+
+export type SharedMediatorSession = {
+  id: string;
+  plan_id: string;
+  starts_at: string;
+  ends_at: string | null;
+  visibility: "shared" | "mediator_only";
+  mode: "in_person" | "online" | "phone" | "other";
+  location: string | null;
+  agenda: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export const getSharedMediatorSessions = async (planId: string): Promise<SharedMediatorSession[]> => {
+  const res = await http<{ sessions: SharedMediatorSession[] }>(`/plans/${planId}/shared-sessions`, "GET");
+  return res.sessions ?? [];
+};
+
+export const getSharedSessionActionItems = async (planId: string, sessionId: string) => {
+  const res = await http<{ items: MediatorSessionActionItem[] }>(
+    `/plans/${planId}/shared-sessions/${sessionId}/action-items`,
+    "GET",
+  );
+  return res.items ?? [];
+};
+
+export const getSharedCaseDocuments = async (planId: string): Promise<CaseDocument[]> => {
+  const res = await http<{ documents: CaseDocument[] }>(`/plans/${planId}/shared-documents`, "GET");
+  return res.documents ?? [];
+};
+
+export const getSharedCaseDocumentSignedUrl = async (planId: string, docId: string): Promise<string> => {
+  const res = await http<{ signed_url: string; url: string }>(`/plans/${planId}/shared-documents/${docId}/signed-url`, "GET");
+  return res.signed_url || res.url;
+};
+
+export type PlanDecision = {
+  id: string;
+  plan_id: string;
+  title: string;
+  description: string;
+  status: string;
+  created_at: string;
+  updated_at: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  reviewed_notes: string | null;
+  reviewer_name: string | null;
+};
+
+export const getPlanDecisions = async (planId: string): Promise<PlanDecision[]> => {
+  const res = await http<{ decisions: PlanDecision[] }>(`/plans/${planId}/decisions`, "GET");
+  return res.decisions ?? [];
+};
+
 export interface ReviewHistory {
   id: string;
   message_id: string;

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import * as api from "@/lib/api";
 
 const stageLabel = (stage?: api.MediatorCaseStage) => {
@@ -52,6 +53,12 @@ const MediatorCase = () => {
   const [uploadVisibility, setUploadVisibility] = useState<api.CaseDocumentVisibility>("shared");
   const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
   const [openingDocId, setOpeningDocId] = useState<string>("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDocName, setPreviewDocName] = useState("");
+  const [previewContentType, setPreviewContentType] = useState<string | null>(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string>("");
+  const [previewDownloadUrl, setPreviewDownloadUrl] = useState<string>("");
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -122,6 +129,13 @@ const MediatorCase = () => {
     };
     loadItems();
   }, [selectedSessionId, sessions]);
+
+  useEffect(() => {
+    if (!previewOpen && previewBlobUrl) {
+      URL.revokeObjectURL(previewBlobUrl);
+      setPreviewBlobUrl("");
+    }
+  }, [previewOpen, previewBlobUrl]);
 
   return (
     <ModeratorLayout>
@@ -398,17 +412,6 @@ const MediatorCase = () => {
                 {docsError && <p className="text-xs text-destructive">{docsError}</p>}
 
                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                  <select
-                    value={uploadVisibility}
-                    onChange={(e) => setUploadVisibility(e.target.value as api.CaseDocumentVisibility)}
-                    className="px-3 py-2 rounded-md border bg-background text-sm"
-                    disabled={loading || uploading || !id}
-                    title="Visibility for new uploads"
-                  >
-                    <option value="shared">Shared</option>
-                    <option value="mediator_only">Mediator-only</option>
-                  </select>
-
                   <label className="flex-1">
                     <input
                       type="file"
@@ -425,6 +428,7 @@ const MediatorCase = () => {
 
                   <Button
                     size="sm"
+                    variant="outline"
                     disabled={loading || uploading || !id || !selectedDocFile}
                     onClick={async () => {
                       if (!selectedDocFile || !id) return;
@@ -432,6 +436,7 @@ const MediatorCase = () => {
                       try {
                         setUploading(true);
                         setDocsError(null);
+                        setUploadVisibility("mediator_only");
 
                         const signed = await api.createCaseDocumentSignedUpload(id, {
                           filename: file.name,
@@ -448,7 +453,7 @@ const MediatorCase = () => {
                           name: file.name,
                           storage_path: signed.path,
                           content_type: file.type || "application/octet-stream",
-                          visibility: uploadVisibility,
+                          visibility: "mediator_only",
                         });
 
                         if (created) setDocuments((prev) => [created, ...prev]);
@@ -460,7 +465,48 @@ const MediatorCase = () => {
                       }
                     }}
                   >
-                    Upload
+                    Save draft
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    disabled={loading || uploading || !id || !selectedDocFile}
+                    onClick={async () => {
+                      if (!selectedDocFile || !id) return;
+                      const file = selectedDocFile;
+                      try {
+                        setUploading(true);
+                        setDocsError(null);
+                        setUploadVisibility("shared");
+
+                        const signed = await api.createCaseDocumentSignedUpload(id, {
+                          filename: file.name,
+                          content_type: file.type || "application/octet-stream",
+                        });
+
+                        await fetch(signed.signed_url, {
+                          method: "PUT",
+                          headers: { "Content-Type": file.type || "application/octet-stream" },
+                          body: file,
+                        });
+
+                        const created = await api.createCaseDocument(id, {
+                          name: file.name,
+                          storage_path: signed.path,
+                          content_type: file.type || "application/octet-stream",
+                          visibility: "shared",
+                        });
+
+                        if (created) setDocuments((prev) => [created, ...prev]);
+                        setSelectedDocFile(null);
+                      } catch (err) {
+                        setDocsError(err instanceof Error ? err.message : "Failed to upload document");
+                      } finally {
+                        setUploading(false);
+                      }
+                    }}
+                  >
+                    Send to parties
                   </Button>
                 </div>
 
@@ -492,23 +538,31 @@ const MediatorCase = () => {
                               onClick={async () => {
                                 try {
                                   setOpeningDocId(d.id);
+                                  setDocsError(null);
+                                  setPreviewOpen(true);
+                                  setPreviewLoading(true);
+                                  setPreviewDocName(d.name);
+                                  setPreviewContentType(d.content_type);
+
                                   const url = await api.getCaseDocumentSignedUrl(d.id, { expires_in: 60 * 10 });
                                   if (!url) throw new Error("No signed URL returned");
+                                  setPreviewDownloadUrl(url);
 
-                                  const opened = window.open(url, "_blank", "noopener,noreferrer");
-                                  if (!opened) {
-                                    // Fallback for popup blockers
-                                    window.location.href = url;
-                                  }
+                                  const res = await fetch(url);
+                                  if (!res.ok) throw new Error(`Failed to fetch document (${res.status})`);
+                                  const blob = await res.blob();
+                                  const blobUrl = URL.createObjectURL(blob);
+                                  setPreviewBlobUrl(blobUrl);
                                 } catch (err) {
                                   setDocsError(err instanceof Error ? err.message : "Failed to open document");
                                 } finally {
                                   setOpeningDocId("");
+                                  setPreviewLoading(false);
                                 }
                               }}
                               disabled={openingDocId === d.id}
                             >
-                              {openingDocId === d.id ? "Opening…" : "Open"}
+                              {openingDocId === d.id ? "Opening…" : "View"}
                             </Button>
                             <Button
                               size="sm"
@@ -565,6 +619,54 @@ const MediatorCase = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="truncate" title={previewDocName}>
+              {previewDocName || "Document"}
+            </DialogTitle>
+            <DialogDescription>
+              Preview (download available)
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!previewDownloadUrl}
+              onClick={() => {
+                if (!previewDownloadUrl) return;
+                const opened = window.open(previewDownloadUrl, "_blank", "noopener,noreferrer");
+                if (!opened) window.location.href = previewDownloadUrl;
+              }}
+            >
+              Download
+            </Button>
+          </div>
+
+          <div className="border rounded-lg bg-muted/20 overflow-hidden h-[70vh]">
+            {previewLoading ? (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading preview…</div>
+            ) : previewBlobUrl ? (
+              previewContentType?.startsWith("image/") ? (
+                <div className="h-full overflow-auto p-4 flex justify-center">
+                  <img src={previewBlobUrl} alt={previewDocName || "Document"} className="max-w-full h-auto" />
+                </div>
+              ) : previewContentType === "application/pdf" ? (
+                <iframe title={previewDocName || "Document"} src={previewBlobUrl} className="w-full h-full" />
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground px-6 text-center">
+                  Preview isn’t available for this file type. Use Download.
+                </div>
+              )
+            ) : (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No preview.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </ModeratorLayout>
   );
 };

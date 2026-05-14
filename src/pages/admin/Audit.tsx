@@ -8,10 +8,14 @@ import jsPDF from "jspdf";
 import * as api from "@/lib/api";
 import type { MessagePurpose } from "@/types/messages";
 import { buildUserNameMap, fetchAllPlanMessages } from "@/lib/adminData";
+import { useAuth } from "@/hooks/useAuth";
 
 const formatDateTime = (value: string) => format(new Date(value), "yyyy-MM-dd HH:mm");
 
 const AdminAudit = () => {
+  const { user } = useAuth();
+  const isMediator = user?.role === "mediator";
+
   const [purposeFilter, setPurposeFilter] = useState<MessagePurpose | "All">("All");
   const [search, setSearch] = useState("");
   const [messages, setMessages] = useState<api.ApiMessage[]>([]);
@@ -24,29 +28,37 @@ const AdminAudit = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
+
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        const [usersRes, plansRes] = await Promise.all([
-          api.getUsers(),
-          api.getPlans(),
-        ]);
 
-        const logsResPromise = api.getAuditLogs().catch(() => [] as api.AuditLog[]);
+        // Mediators/moderators must never fetch global user lists, plans, messages, or audit logs.
+        // Scope their "Audit / History" view to only the plans assigned to them.
+        const planList = isMediator
+          ? await api.getMyModeratorAssignedPlans()
+          : (await api.getPlans())?.plans ?? [];
 
-        const planList = plansRes?.plans ?? [];
         let allMessages: api.ApiMessage[] = [];
-        try {
-          allMessages = await api.getAdminMessages({ includeDeleted: true });
-        } catch {
-          // Safe fallback: preserve prior behavior if admin endpoint isn't available/authorized
+        if (isMediator) {
           allMessages = await fetchAllPlanMessages(planList, { includeDeleted: true });
+        } else {
+          try {
+            allMessages = await api.getAdminMessages({ includeDeleted: true });
+          } catch {
+            // Safe fallback: preserve prior behavior if admin endpoint isn't available/authorized
+            allMessages = await fetchAllPlanMessages(planList, { includeDeleted: true });
+          }
         }
+
+        const usersRes = isMediator ? ([] as api.SafeUser[]) : await api.getUsers();
+        const logsRes = isMediator ? ([] as api.AuditLog[]) : await api.getAuditLogs().catch(() => [] as api.AuditLog[]);
 
         setUsers(usersRes);
         setMessages(allMessages);
-        setAuditLogs(await logsResPromise);
+        setAuditLogs(logsRes);
 
         const historyEntries = await Promise.all(
           allMessages.slice(0, 200).map(async (msg) =>
@@ -62,7 +74,7 @@ const AdminAudit = () => {
     };
 
     load();
-  }, []);
+  }, [isMediator, user]);
 
   const userMap = useMemo(() => buildUserNameMap(users), [users]);
 
@@ -185,81 +197,83 @@ const AdminAudit = () => {
         Audit / Oversight
       </h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Audit Actions (Sensitive Access & Exports)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Input
-              placeholder="Search by actor, action, target, notes..."
-              value={auditSearch}
-              onChange={(e) => setAuditSearch(e.target.value)}
-            />
-            <div className="flex gap-2 flex-wrap md:justify-end md:col-span-2">
-              {auditActions.slice(0, 8).map((a) => (
-                <button
-                  key={a}
-                  onClick={() => setAuditAction(a)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    auditAction === a
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                  title={a}
-                >
-                  {a === "All" ? "All" : a.replaceAll("_", " ")}
-                </button>
-              ))}
-              {auditActions.length > 8 && (
-                <select
-                  value={auditAction}
-                  onChange={(e) => setAuditAction(e.target.value)}
-                  className="px-3 py-1 rounded-full text-sm bg-muted text-muted-foreground"
-                >
-                  {auditActions.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </select>
-              )}
+      {!isMediator && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Audit Actions (Sensitive Access & Exports)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Input
+                placeholder="Search by actor, action, target, notes..."
+                value={auditSearch}
+                onChange={(e) => setAuditSearch(e.target.value)}
+              />
+              <div className="flex gap-2 flex-wrap md:justify-end md:col-span-2">
+                {auditActions.slice(0, 8).map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setAuditAction(a)}
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      auditAction === a
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                    title={a}
+                  >
+                    {a === "All" ? "All" : a.replaceAll("_", " ")}
+                  </button>
+                ))}
+                {auditActions.length > 8 && (
+                  <select
+                    value={auditAction}
+                    onChange={(e) => setAuditAction(e.target.value)}
+                    className="px-3 py-1 rounded-full text-sm bg-muted text-muted-foreground"
+                  >
+                    {auditActions.map((a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
-          </div>
 
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading audit actions...</p>
-          ) : filteredAuditLogs.length > 0 ? (
-            <div className="space-y-2">
-              {filteredAuditLogs.slice(0, 200).map((log) => (
-                <div key={log.id} className="p-3 border rounded-xl flex flex-col gap-1">
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
-                    <span>{formatDateTime(log.created_at)}</span>
-                    <span className="font-medium">{userMap[log.actor_id] || log.actor_id}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary">
-                      {log.action}
-                    </span>
-                    {log.target_type && (
-                      <span className="px-2 py-0.5 rounded-full bg-muted">
-                        {log.target_type}
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading audit actions...</p>
+            ) : filteredAuditLogs.length > 0 ? (
+              <div className="space-y-2">
+                {filteredAuditLogs.slice(0, 200).map((log) => (
+                  <div key={log.id} className="p-3 border rounded-xl flex flex-col gap-1">
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+                      <span>{formatDateTime(log.created_at)}</span>
+                      <span className="font-medium">{userMap[log.actor_id] || log.actor_id}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-secondary">
+                        {log.action}
                       </span>
-                    )}
-                    {log.target_id && <span className="font-mono text-[10px]">{log.target_id}</span>}
+                      {log.target_type && (
+                        <span className="px-2 py-0.5 rounded-full bg-muted">
+                          {log.target_type}
+                        </span>
+                      )}
+                      {log.target_id && <span className="font-mono text-[10px]">{log.target_id}</span>}
+                    </div>
+                    {log.notes && <p className="text-xs text-muted-foreground">{log.notes}</p>}
                   </div>
-                  {log.notes && <p className="text-xs text-muted-foreground">{log.notes}</p>}
-                </div>
-              ))}
-              {filteredAuditLogs.length > 200 && (
-                <p className="text-xs text-muted-foreground">
-                  Showing first 200 matching audit actions.
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No audit actions to display.</p>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+                {filteredAuditLogs.length > 200 && (
+                  <p className="text-xs text-muted-foreground">
+                    Showing first 200 matching audit actions.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No audit actions to display.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Input
         placeholder="Search by sender, recipient, or content..."

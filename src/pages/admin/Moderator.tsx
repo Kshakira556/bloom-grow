@@ -14,6 +14,7 @@ import * as api from "@/lib/api";
 import type { ReviewHistory } from "@/lib/api";
 import { buildUserNameMap, fetchAllPlanMessages } from "@/lib/adminData";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 const Moderator = () => {
   const { user } = useAuth();
@@ -61,12 +62,19 @@ const Moderator = () => {
   }, []);
 
   const userMap = useMemo(() => buildUserNameMap(users), [users]);
+  const planTitleById = useMemo(() => {
+    return plans.reduce<Record<string, string>>((acc, p) => {
+      acc[p.id] = p.title;
+      return acc;
+    }, {});
+  }, [plans]);
 
   const flaggedMessages = useMemo(() => {
     return messages
       .filter((m) => m.is_flagged && !resolvedFlagIds.includes(m.id))
       .map((msg) => ({
         id: msg.id,
+        plan_id: msg.plan_id,
         from: userMap[msg.sender_id] || msg.sender_id,
         to: userMap[msg.receiver_id] || msg.receiver_id,
         date: new Date(msg.created_at).toLocaleString(),
@@ -75,6 +83,14 @@ const Moderator = () => {
         status: "pending" as const,
       }));
   }, [messages, userMap, resolvedFlagIds]);
+
+  const flaggedByCase = useMemo(() => {
+    return flaggedMessages.reduce<Record<string, typeof flaggedMessages>>((acc, m) => {
+      acc[m.plan_id] = acc[m.plan_id] ?? [];
+      acc[m.plan_id]!.push(m);
+      return acc;
+    }, {});
+  }, [flaggedMessages]);
 
   const handleReview = async (messageId: string, action: "approved" | "rejected", reason?: string) => {
     if (!user?.id) {
@@ -180,32 +196,48 @@ const Moderator = () => {
                     {loading ? (
                       <p className="text-sm text-muted-foreground">Loading flagged messages...</p>
                     ) : flaggedMessages.length > 0 ? (
-                      flaggedMessages.map((msg) => (
-                        <div key={msg.id} className="p-3 border rounded-xl">
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{msg.date}</span>
-                            <span>{msg.from} {'->'} {msg.to}</span>
+                      Object.entries(flaggedByCase).map(([planId, caseMsgs]) => (
+                        <div key={planId} className="p-3 border rounded-xl space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                              <p className="font-medium">{planTitleById[planId] || planId}</p>
+                              <p className="text-xs text-muted-foreground">{caseMsgs.length} flagged message{caseMsgs.length === 1 ? "" : "s"}</p>
+                            </div>
+                            <Button asChild size="sm" variant="outline">
+                              <Link to={`/admin/cases/${planId}`}>Open case</Link>
+                            </Button>
                           </div>
-                          <p className="text-sm mt-1">{msg.preview}</p>
-                          <p className="text-xs text-destructive mt-1">{msg.reason}</p>
-                          <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                            <Button
-                              size="sm"
-                              className="w-full sm:w-auto"
-                              onClick={() => handleReview(msg.id, "approved", msg.reason)}
-                              disabled={reviewingIds[msg.id]}
-                            >
-                              {reviewingIds[msg.id] ? "Saving..." : "Approve"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="w-full sm:w-auto"
-                              onClick={() => handleReview(msg.id, "rejected")}
-                              disabled={reviewingIds[msg.id]}
-                            >
-                              Reject
-                            </Button>
+
+                          <div className="space-y-2">
+                            {caseMsgs.map((msg) => (
+                              <div key={msg.id} className="p-3 border rounded-xl bg-warning/10">
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                  <span>{msg.date}</span>
+                                  <span>{msg.from} {"->"} {msg.to}</span>
+                                </div>
+                                <p className="text-sm mt-1">{msg.preview}</p>
+                                <p className="text-xs text-destructive mt-1">{msg.reason}</p>
+                                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="w-full sm:w-auto"
+                                    onClick={() => handleReview(msg.id, "approved", msg.reason)}
+                                    disabled={reviewingIds[msg.id]}
+                                  >
+                                    {reviewingIds[msg.id] ? "Saving..." : "Approve"}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full sm:w-auto"
+                                    onClick={() => handleReview(msg.id, "rejected")}
+                                    disabled={reviewingIds[msg.id]}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       ))

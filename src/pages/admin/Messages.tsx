@@ -6,13 +6,18 @@ import { MessageSquare, Eye } from "lucide-react";
 import * as api from "@/lib/api";
 import { buildUserNameMap } from "@/lib/adminData";
 import { fetchAllPlanMessages } from "@/lib/api";
+import { Link, useSearchParams } from "react-router-dom";
 
 const AdminMessages = () => {
   const [messages, setMessages] = useState<api.ApiMessage[]>([]);
   const [users, setUsers] = useState<api.SafeUser[]>([]);
-  const [plans, setPlans] = useState<api.Plan[]>([]);
+  const [plans, setPlans] = useState<api.ModeratorAssignedPlanWithClients[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const selectedCaseId = searchParams.get("case") || "";
+  const showAllCases = selectedCaseId === "all";
 
   useEffect(() => {
     const load = async () => {
@@ -21,17 +26,34 @@ const AdminMessages = () => {
         setError(null);
         const [usersRes, plansRes] = await Promise.all([
           api.getUsers(),
-          api.getPlans(),
+          api.getMyModeratorAssignedPlansWithClients(),
         ]);
 
-        const planList = plansRes?.plans ?? [];
-        const allMessages = await fetchAllPlanMessages(planList, {
-          includeDeleted: true,
-        });
+        const planList = plansRes ?? [];
+
+        // Default to first assigned case (case-first). Keep an "all cases" option for power users.
+        if (!searchParams.get("case") && planList[0]?.id) {
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.set("case", planList[0]!.id);
+            return next;
+          });
+        }
+
+        let msgs: api.ApiMessage[] = [];
+        if (showAllCases) {
+          msgs = await fetchAllPlanMessages(planList, { includeDeleted: true });
+        } else {
+          const caseId = selectedCaseId || planList[0]?.id || "";
+          if (caseId) {
+            const res = await api.getMessagesByPlan(caseId, { includeDeleted: true, limit: 200 });
+            msgs = res.messages ?? [];
+          }
+        }
 
         setUsers(usersRes);
         setPlans(planList);
-        setMessages(allMessages);
+        setMessages(msgs);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load messages");
       } finally {
@@ -40,7 +62,8 @@ const AdminMessages = () => {
     };
 
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCaseId]);
 
   const userMap = useMemo(() => buildUserNameMap(users), [users]);
   const planMap = useMemo(() => {
@@ -71,6 +94,32 @@ const AdminMessages = () => {
           <CardContent>
             {error && <p className="text-sm text-destructive mb-3">{error}</p>}
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              <select
+                value={selectedCaseId || (plans[0]?.id ?? "")}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setSearchParams((prev) => {
+                    const p = new URLSearchParams(prev);
+                    p.set("case", next);
+                    return p;
+                  });
+                }}
+                className="px-3 py-2 rounded-md border bg-background text-sm"
+                disabled={loading}
+              >
+                {plans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+                <option value="all">All cases</option>
+              </select>
+              <div className="text-xs text-muted-foreground self-center md:text-right">
+                {showAllCases ? "All cases" : `Case: ${planMap[selectedCaseId] || selectedCaseId || "-"}`}
+              </div>
+            </div>
+
             <div className="space-y-2">
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading messages...</p>
@@ -88,8 +137,10 @@ const AdminMessages = () => {
                         Preview: "{msg.content}"
                       </p>
                     </div>
-                    <Button size="sm" variant="outline" className="gap-1">
-                      <Eye className="w-4 h-4" /> View
+                    <Button asChild size="sm" variant="outline" className="gap-1">
+                      <Link to={`/admin/cases/${msg.plan_id}`}>
+                        <Eye className="w-4 h-4" /> View
+                      </Link>
                     </Button>
                   </div>
                 ))

@@ -52,16 +52,16 @@ const AdminPlans = () => {
       <div className="space-y-6">
         <h1 className="font-display text-2xl font-bold flex items-center gap-2">
           <Calendar className="w-6 h-6 text-primary" />
-          Plans
+          Cases
         </h1>
 
         <Card>
           <CardHeader>
-            <CardTitle>Plan List</CardTitle>
+            <CardTitle>Case List</CardTitle>
           </CardHeader>
           <CardContent>
             <Input
-              placeholder="Search by plan, ID, or creator..."
+              placeholder="Search by case, ID, or creator..."
               className="mb-4"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -87,7 +87,7 @@ const AdminPlans = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">No plans found.</p>
+                <p className="text-sm text-muted-foreground">No cases found.</p>
               )}
             </div>
           </CardContent>

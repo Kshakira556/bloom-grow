@@ -2,17 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Shield,
   Plus,
   AlertTriangle,
   CheckCircle,
   Clock,
-  FileText,
-  User,
-  Calendar,
-  Eye,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as api from "@/lib/api";
@@ -25,10 +20,8 @@ const Moderator = () => {
   const [activeTab, setActiveTab] = useState("flagged");
   const [users, setUsers] = useState<api.SafeUser[]>([]);
   const [plans, setPlans] = useState<api.Plan[]>([]);
-  const [children, setChildren] = useState<api.Child[]>([]);
   const [messages, setMessages] = useState<api.ApiMessage[]>([]);
   const [reviews, setReviews] = useState<ReviewHistory[]>([]);
-  const [proposals, setProposals] = useState<api.Proposal[]>([]);
   const [resolvedFlagIds, setResolvedFlagIds] = useState<string[]>([]);
   const [reviewingIds, setReviewingIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -39,12 +32,10 @@ const Moderator = () => {
       try {
         setLoading(true);
         setError(null);
-        const [usersRes, assignedPlansRes, childrenRes, reviewRes, proposalRes] = await Promise.all([
+        const [usersRes, assignedPlansRes, reviewRes] = await Promise.all([
           api.getUsers(),
           api.getMyModeratorAssignedPlans(),
-          api.getChildren(),
           api.getReviewHistory(),
-          api.getProposals("pending"),
         ]);
 
         const planList = assignedPlansRes ?? [];
@@ -57,10 +48,8 @@ const Moderator = () => {
 
         setUsers(usersRes);
         setPlans(planList);
-        setChildren(childrenRes);
         setMessages(allMessages);
         setReviews(reviewRes);
-        setProposals(proposalRes);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load moderator data");
       } finally {
@@ -132,8 +121,6 @@ const Moderator = () => {
     [messages.length, flaggedMessages.length, users, plans]
   );
 
-  const filteredClients = useMemo(() => users.filter((u) => u.role === "parent"), [users]);
-
   return (
     <ModeratorLayout>
       <div className="space-y-6">
@@ -141,10 +128,10 @@ const Moderator = () => {
           <div>
             <h1 className="font-display text-2xl font-bold flex items-center gap-2">
               <Shield className="w-6 h-6 text-primary" />
-              Moderation Center
+              Triage
             </h1>
             <p className="text-muted-foreground mt-1">
-              Manage communication oversight and conflict resolution
+              Review flagged items and keep cases on track
             </p>
           </div>
           <Button className="gap-2 w-full sm:w-auto">
@@ -181,18 +168,6 @@ const Moderator = () => {
                 </TabsTrigger>
                 <TabsTrigger value="history" className="gap-2">
                   <Clock className="w-4 h-4" /> Review History
-                </TabsTrigger>
-                <TabsTrigger value="clients" className="gap-2">
-                  <User className="w-4 h-4" /> Clients
-                </TabsTrigger>
-                <TabsTrigger value="plans" className="gap-2">
-                  <Calendar className="w-4 h-4" /> Plans
-                </TabsTrigger>
-                <TabsTrigger value="children" className="gap-2">
-                  <User className="w-4 h-4" /> Children
-                </TabsTrigger>
-                <TabsTrigger value="proposals" className="gap-2">
-                  <FileText className="w-4 h-4" /> Proposed Changes
                 </TabsTrigger>
               </TabsList>
 
@@ -260,118 +235,6 @@ const Moderator = () => {
                         ))
                       ) : (
                         <p className="text-sm text-muted-foreground">No review history available.</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="clients">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Clients</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Input placeholder="Search by name or plan ID..." className="mb-4" />
-                    <div className="space-y-2">
-                      {filteredClients.length > 0 ? (
-                        filteredClients.map((client) => (
-                          <div key={client.id} className="p-3 border rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                            <div>
-                              <p className="font-medium">{client.full_name}</p>
-                              <p className="text-xs text-muted-foreground">Role: {client.role}</p>
-                            </div>
-                            <Button size="sm" variant="outline" className="gap-1 w-full sm:w-auto">
-                              <Eye className="w-4 h-4" /> View
-                            </Button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No clients found.</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="plans">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Plans</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Input placeholder="Search by Plan ID or client..." className="mb-4" />
-                    <div className="space-y-2">
-                      {plans.length > 0 ? (
-                        plans.map((plan) => (
-                          <div key={plan.id} className="p-3 border rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                            <div>
-                              <p className="font-medium">{plan.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Created by: {userMap[plan.created_by ?? ""] || plan.created_by || "Unknown"}
-                              </p>
-                            </div>
-                            <Button size="sm" variant="outline" className="gap-1 w-full sm:w-auto">
-                              <Eye className="w-4 h-4" /> View
-                            </Button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No plans found.</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="children">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Children</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Input placeholder="Search by name or plan..." className="mb-4" />
-                    <div className="space-y-2">
-                      {children.length > 0 ? (
-                        children.map((child) => (
-                          <div key={child.id} className="p-3 border rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                            <div>
-                              <p className="font-medium">{child.first_name} {child.last_name ?? ""}</p>
-                              <p className="text-xs text-muted-foreground">
-                                DOB: {child.birth_date ? new Date(child.birth_date).toLocaleDateString() : "-"}
-                              </p>
-                            </div>
-                            <Button size="sm" variant="outline" className="gap-1 w-full sm:w-auto">
-                              <Eye className="w-4 h-4" /> View
-                            </Button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No children found.</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="proposals">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pending Plan Changes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {proposals.length > 0 ? (
-                        proposals.map((proposal) => (
-                          <div key={proposal.id} className="p-3 border rounded-xl">
-                            <div>
-                              <p className="font-medium">{proposal.title}</p>
-                              <p className="text-xs text-muted-foreground">{proposal.description}</p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No pending proposals.</p>
                       )}
                     </div>
                   </CardContent>

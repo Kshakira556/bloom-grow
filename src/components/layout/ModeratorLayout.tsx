@@ -22,13 +22,11 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
   const { user, logout } = useAuth();
 
   const sidebarLinks = [
-    { href: "/admin/clients", label: "Clients", icon: Users },
-    { href: "/admin/children", label: "Children", icon: Users },
-    { href: "/admin/plans", label: "Plans", icon: Calendar },
+    { href: "/admin/plans", label: "Cases", icon: Calendar },
     { href: "/admin/messages", label: "Messages", icon: MessageSquare },
-    { href: "/admin/proposals", label: "Pending Changes", icon: FileText },
-    { href: "/admin/audit", label: "Audit / History", icon: BookOpen },
-    { href: "/admin/moderator", label: "Moderation", icon: Shield },
+    { href: "/admin/proposals", label: "Pending", icon: FileText },
+    { href: "/admin/moderator", label: "Triage", icon: Shield },
+    { href: "/admin/audit", label: "Reports", icon: BookOpen },
   ];
 
   const [sidebarOpen, setSidebarOpen] = useState(true);

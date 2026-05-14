@@ -50,12 +50,12 @@ const AdminProposals = () => {
       <div className="space-y-6">
         <h1 className="font-display text-2xl font-bold flex items-center gap-2">
           <FileText className="w-6 h-6 text-primary" />
-          Proposed Changes
+          Pending Approvals
         </h1>
 
         <Card>
           <CardHeader>
-            <CardTitle>Pending Plan Changes</CardTitle>
+            <CardTitle>Pending Case Changes</CardTitle>
           </CardHeader>
           <CardContent>
             {error && <p className="text-sm text-destructive mb-3">{error}</p>}
@@ -98,7 +98,7 @@ const AdminProposals = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No pending proposals.</p>
+              <p className="text-sm text-muted-foreground">No pending approvals.</p>
             )}
           </CardContent>
         </Card>

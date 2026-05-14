@@ -10,6 +10,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { DateTime } from "luxon";
 import { Pagination, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useAuthContext } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const { toast } = useToast(); 
@@ -272,6 +273,20 @@ export default function Dashboard() {
               <Bookmark className="absolute right-4 w-6 h-10 text-primary" />
             </div>
           </div>
+
+          {!isLoadingPlans && plans.length === 0 && (
+            <div className="bg-card rounded-3xl p-6 shadow-sm border">
+              <h2 className="font-display text-xl font-bold text-primary">Create your first parenting plan</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Start here to invite your co-parent and begin tracking visits, messages, and documents.
+              </p>
+              <div className="mt-4">
+                <Button asChild className="rounded-full">
+                  <Link to="/create-plan">Create plan</Link>
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Quick Action Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

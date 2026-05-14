@@ -16,7 +16,7 @@ import { enUS } from 'date-fns/locale/en-US';
 import { DateTime } from "luxon"
 import { VisitModal } from "@/components/VisitModal";
 import { useAuthContext } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AddChildModal } from "@/components/AddChildModal";
 import { useToast } from "@/hooks/use-toast";
 
@@ -277,7 +277,6 @@ const handleProposalSubmit = async () => {
 
         if (!plans?.length) {
           setActivePlan(null);
-          navigate("/create-plan");
           return;
         }
 
@@ -383,6 +382,36 @@ useEffect(() => {
     document.removeEventListener("visibilitychange", handleVisibility);
   };
 }, [activePlan?.id, fetchPendingRequests]);
+
+  if (!activePlan) {
+    return (
+      <div className="min-h-screen gradient-bg flex flex-col">
+        <Navbar />
+        <main className="flex-1 py-8 px-4">
+          <div className="container max-w-3xl mx-auto">
+            <Card className="rounded-3xl shadow-sm">
+              <CardHeader>
+                <CardTitle>No plan yet</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Create a parenting plan first to start tracking visits and requests.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button asChild className="rounded-full">
+                    <Link to="/">Go to Dashboard</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="rounded-full">
+                    <Link to="/create-plan">Create plan</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">

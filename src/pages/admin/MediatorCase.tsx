@@ -39,6 +39,7 @@ const MediatorCase = () => {
   const [pendingProposals, setPendingProposals] = useState<api.Proposal[]>([]);
   const [messages, setMessages] = useState<api.ApiMessage[]>([]);
   const [stage, setStage] = useState<api.MediatorCaseStage>("active_mediation");
+  const [decisionNotesByProposalId, setDecisionNotesByProposalId] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -166,9 +167,61 @@ const MediatorCase = () => {
                   <p className="text-sm text-muted-foreground">Loading…</p>
                 ) : pendingProposals.length ? (
                   pendingProposals.map((p) => (
-                    <div key={p.id} className="p-3 border rounded-xl">
-                      <p className="font-medium">{p.title}</p>
-                      <p className="text-xs text-muted-foreground">{p.description}</p>
+                    <div key={p.id} className="p-3 border rounded-xl space-y-2">
+                      <div>
+                        <p className="font-medium">{p.title}</p>
+                        <p className="text-xs text-muted-foreground">{p.description}</p>
+                      </div>
+
+                      <input
+                        value={decisionNotesByProposalId[p.id] ?? ""}
+                        onChange={(e) =>
+                          setDecisionNotesByProposalId((prev) => ({ ...prev, [p.id]: e.target.value }))
+                        }
+                        placeholder="Reason / notes (optional)"
+                        className="w-full px-3 py-2 rounded-md border bg-background text-sm"
+                      />
+
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            if (!p.id) return;
+                            const notes = decisionNotesByProposalId[p.id]?.trim() || undefined;
+                            const updated = await api.updateProposalStatus(p.id, { status: "approved", notes });
+                            if (!updated) return;
+                            setPendingProposals((prev) => prev.filter((x) => x.id !== p.id));
+                          }}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            if (!p.id) return;
+                            const notes = decisionNotesByProposalId[p.id]?.trim() || undefined;
+                            const updated = await api.updateProposalStatus(p.id, { status: "changes_requested", notes });
+                            if (!updated) return;
+                            setPendingProposals((prev) => prev.filter((x) => x.id !== p.id));
+                          }}
+                        >
+                          Request edits
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={async () => {
+                            if (!p.id) return;
+                            const notes = decisionNotesByProposalId[p.id]?.trim() || undefined;
+                            const updated = await api.updateProposalStatus(p.id, { status: "rejected", notes });
+                            if (!updated) return;
+                            setPendingProposals((prev) => prev.filter((x) => x.id !== p.id));
+                          }}
+                        >
+                          Reject
+                        </Button>
+                      </div>
                     </div>
                   ))
                 ) : (

@@ -753,11 +753,12 @@ export interface Proposal {
   created_by: string;
   title: string;
   description: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "changes_requested";
   created_at: string;
   updated_at?: string | null;
   reviewed_by?: string | null;
   reviewed_at?: string | null;
+  reviewed_notes?: string | null;
 }
 
 export interface ReviewHistory {
@@ -928,7 +929,7 @@ export const respondToContactInvite = async (
   );
 };
 
-export const getProposals = async (status?: "pending" | "approved" | "rejected") => {
+export const getProposals = async (status?: "pending" | "approved" | "rejected" | "changes_requested") => {
   const query = status ? `?status=${status}` : "";
   const res = await http<{ proposals: Proposal[] }>(`/proposals${query}`, "GET");
   return res?.proposals ?? [];
@@ -945,7 +946,7 @@ export const createProposal = async (payload: {
 
 export const updateProposalStatus = async (
   id: string,
-  payload: { status: "pending" | "approved" | "rejected"; reviewed_by?: string }
+  payload: { status: "pending" | "approved" | "rejected" | "changes_requested"; reviewed_by?: string; notes?: string }
 ) => {
   const res = await http<{ proposal: Proposal }>(`/proposals/${id}`, "PUT", payload);
   return res?.proposal;

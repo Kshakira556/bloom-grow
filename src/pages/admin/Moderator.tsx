@@ -292,14 +292,8 @@ const Moderator = () => {
                 <CardTitle>Quick Access</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button size="sm" className="w-full justify-start gap-2">
-                  <FileText className="w-4 h-4" /> Generate Report
-                </Button>
                 <Button size="sm" variant="outline" className="w-full justify-start gap-2">
                   <AlertTriangle className="w-4 h-4" /> Review Flags
-                </Button>
-                <Button size="sm" variant="outline" className="w-full justify-start gap-2">
-                  <User className="w-4 h-4" /> Manage Clients
                 </Button>
               </CardContent>
             </Card>

@@ -47,6 +47,11 @@ const MediatorCase = () => {
   const [actionItems, setActionItems] = useState<api.MediatorSessionActionItem[]>([]);
   const [newActionText, setNewActionText] = useState("");
   const [sessionOutcomeNotes, setSessionOutcomeNotes] = useState("");
+  const [inviteParentEmail, setInviteParentEmail] = useState("");
+  const [inviteParentNotes, setInviteParentNotes] = useState("");
+  const [invitingParent, setInvitingParent] = useState(false);
+  const [inviteParentError, setInviteParentError] = useState<string | null>(null);
+  const [inviteParentSuccess, setInviteParentSuccess] = useState<string | null>(null);
   const [documents, setDocuments] = useState<api.CaseDocument[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [docsError, setDocsError] = useState<string | null>(null);
@@ -274,6 +279,54 @@ const MediatorCase = () => {
               ) : (
                 <p className="text-sm text-muted-foreground">No clients available for this case.</p>
               )}
+
+              <div className="pt-2 border-t space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Invite parent</p>
+                {inviteParentError && <p className="text-xs text-destructive">{inviteParentError}</p>}
+                {inviteParentSuccess && <p className="text-xs text-muted-foreground">{inviteParentSuccess}</p>}
+                <input
+                  value={inviteParentEmail}
+                  onChange={(e) => setInviteParentEmail(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md border bg-background text-sm"
+                  placeholder="parent@example.com"
+                  disabled={loading || invitingParent || !id}
+                />
+                <textarea
+                  value={inviteParentNotes}
+                  onChange={(e) => setInviteParentNotes(e.target.value)}
+                  className="w-full min-h-20 px-3 py-2 rounded-md border bg-background text-sm"
+                  placeholder="Optional note…"
+                  disabled={loading || invitingParent || !id}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={loading || invitingParent || !id || !inviteParentEmail.trim()}
+                  onClick={async () => {
+                    if (!id) return;
+                    const email = inviteParentEmail.trim();
+                    if (!email) return;
+                    try {
+                      setInvitingParent(true);
+                      setInviteParentError(null);
+                      setInviteParentSuccess(null);
+
+                      await api.inviteToPlan({ planId: id, email });
+                      setInviteParentSuccess(
+                        "Invite sent. The parent can accept via the email link (existing users sign in; new users register).",
+                      );
+                      setInviteParentEmail("");
+                      setInviteParentNotes("");
+                    } catch (e) {
+                      setInviteParentError(e instanceof Error ? e.message : "Failed to send invite");
+                    } finally {
+                      setInvitingParent(false);
+                    }
+                  }}
+                >
+                  {invitingParent ? "Sending…" : "Send invite"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

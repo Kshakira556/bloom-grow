@@ -601,6 +601,9 @@ useEffect(() => {
             placeholder="mediator@example.com"
             disabled={mediationLoading}
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            If they don’t have an account yet, they can register and then accept the request from their Mediator dashboard.
+          </p>
 
           <label className="block text-xs font-medium mb-1 text-muted-foreground">Optional note</label>
           <textarea

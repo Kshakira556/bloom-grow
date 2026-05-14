@@ -1117,6 +1117,23 @@ export const getMyModeratorAssignedPlans = async (): Promise<Plan[]> => {
   return res?.plans ?? [];
 };
 
+export interface ModeratorAssignedPlanWithClients {
+  id: string;
+  title: string;
+  clients: Array<{
+    id: string;
+    full_name: string;
+    email: string;
+  }>;
+}
+
+export const getMyModeratorAssignedPlansWithClients = async (): Promise<ModeratorAssignedPlanWithClients[]> => {
+  // Backend currently returns this structure from the same endpoint used above.
+  // Keep a dedicated helper for mediator pages that need clients grouped per plan.
+  const res = await http<{ plans: ModeratorAssignedPlanWithClients[] }>("/admin/moderator/assigned-plans", "GET");
+  return res?.plans ?? [];
+};
+
 export const getMyModeratorFlaggedMessages = async (options?: { includeDeleted?: boolean }) => {
   const params = new URLSearchParams();
   if (options?.includeDeleted) params.set("include_deleted", "true");

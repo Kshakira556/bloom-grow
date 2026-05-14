@@ -27,6 +27,7 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
     { href: "/admin/messages", label: "Messages", icon: MessageSquare },
     { href: "/admin/schedule", label: "Schedule", icon: Calendar },
     { href: "/admin/proposals", label: "Pending", icon: FileText },
+    { href: "/admin/requests", label: "Requests", icon: Users },
     { href: "/admin/moderator", label: "Triage", icon: Shield },
     { href: "/admin/audit", label: "Reports", icon: BookOpen },
   ];

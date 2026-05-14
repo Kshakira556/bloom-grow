@@ -40,6 +40,7 @@ const AdminAudit = lazy(() => import("./pages/admin/Audit"));
 const Moderator = lazy(() => import("./pages/admin/Moderator"));
 const MediatorCase = lazy(() => import("./pages/admin/MediatorCase"));
 const MediatorSchedule = lazy(() => import("./pages/admin/MediatorSchedule"));
+const MediatorRequests = lazy(() => import("./pages/admin/MediatorRequests"));
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -180,6 +181,11 @@ const App = () => (
             <Route path="/admin/proposals" element={
               <RoleProtectedRoute allowedRoles={["mediator"]}>
                 <AdminProposals />
+              </RoleProtectedRoute>
+            } />
+            <Route path="/admin/requests" element={
+              <RoleProtectedRoute allowedRoles={["mediator"]}>
+                <MediatorRequests />
               </RoleProtectedRoute>
             } />
             <Route path="/admin/audit" element={

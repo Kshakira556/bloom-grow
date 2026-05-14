@@ -1277,6 +1277,41 @@ export const getMyModeratorFlaggedMessages = async (options?: { includeDeleted?:
   return res?.messages ?? [];
 };
 
+export type MediationRequestStatus = "pending" | "accepted" | "rejected" | "cancelled";
+
+export type MediationRequestWithContext = {
+  id: string;
+  plan_id: string;
+  requester_user_id: string;
+  status: MediationRequestStatus;
+  notes: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+  plan_title: string | null;
+  requester_name: string | null;
+  requester_email: string | null;
+};
+
+export const getPendingMediationRequests = async (args?: { limit?: number }) => {
+  const params = new URLSearchParams();
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await http<{ requests: MediationRequestWithContext[] }>(`/admin/moderator/requests${qs}`, "GET");
+  return res?.requests ?? [];
+};
+
+export const acceptMediationRequest = async (id: string) => {
+  const res = await http<{ request: { id: string } }>(`/admin/moderator/requests/${id}/accept`, "POST", {});
+  return res?.request ?? null;
+};
+
+export const rejectMediationRequest = async (id: string) => {
+  const res = await http<{ request: { id: string } }>(`/admin/moderator/requests/${id}/reject`, "POST", {});
+  return res?.request ?? null;
+};
+
 export type CaseDocument = {
   id: string;
   plan_id: string;

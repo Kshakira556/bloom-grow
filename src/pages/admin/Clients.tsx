@@ -12,8 +12,6 @@ const AdminClients = () => {
   const isMediator = user?.role === "mediator";
 
   const [search, setSearch] = useState("");
-  const [users, setUsers] = useState<api.SafeUser[]>([]);
-  const [plans, setPlans] = useState<api.Plan[]>([]);
   const [assignedPlans, setAssignedPlans] = useState<api.ModeratorAssignedPlanWithClients[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,23 +22,10 @@ const AdminClients = () => {
         setLoading(true);
         setError(null);
 
-        if (isMediator) {
-          const [allUsers, mediatorPlans] = await Promise.all([
-            api.getUsers(),
-            api.getMyModeratorAssignedPlansWithClients(),
-          ]);
-          setUsers(allUsers);
-          setAssignedPlans(mediatorPlans);
-          setPlans([]);
-        } else {
-          const [allUsers, plansRes] = await Promise.all([
-            api.getUsers(),
-            api.getPlans(),
-          ]);
-          setUsers(allUsers);
-          setPlans(plansRes?.plans ?? []);
-          setAssignedPlans([]);
-        }
+        // Mediators should never fetch the entire user DB. For now this page is just a
+        // helpful view of assigned cases + their participants.
+        const mediatorPlans = await api.getMyModeratorAssignedPlansWithClients();
+        setAssignedPlans(mediatorPlans);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load clients");
       } finally {
@@ -51,16 +36,17 @@ const AdminClients = () => {
     load();
   }, [isMediator]);
 
-  const clients = useMemo(() => {
-    return users
-      .filter((u) => u.role === "parent")
-      .filter((u) =>
-        search
-          ? u.full_name.toLowerCase().includes(search.toLowerCase()) ||
-            u.id.toLowerCase().includes(search.toLowerCase())
-          : true
+  const filteredAssignedPlans = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return assignedPlans;
+    return assignedPlans.filter((p) => {
+      return (
+        p.title.toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q) ||
+        p.clients.some((c) => c.full_name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
       );
-  }, [users, search]);
+    });
+  }, [assignedPlans, search]);
 
   return (
     <ModeratorLayout>
@@ -72,7 +58,7 @@ const AdminClients = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>{isMediator ? "Assigned Plans & Clients" : "Client List"}</CardTitle>
+            <CardTitle>Assigned Cases & Clients</CardTitle>
           </CardHeader>
           <CardContent>
             <Input
@@ -87,61 +73,38 @@ const AdminClients = () => {
             <div className="space-y-2">
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading clients...</p>
-              ) : isMediator ? (
-                assignedPlans.length > 0 ? (
-                  assignedPlans
-                    .filter((p) => {
-                      if (!search) return true;
-                      const q = search.toLowerCase();
-                      return (
-                        p.title.toLowerCase().includes(q) ||
-                        p.clients.some((c) => c.full_name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
-                      );
-                    })
-                    .map((plan) => (
-                      <div key={plan.id} className="p-3 border rounded-xl space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium">{plan.title}</p>
-                            <p className="text-xs text-muted-foreground">Plan ID: {plan.id}</p>
-                          </div>
-                          <Button size="sm" variant="outline" className="gap-1">
-                            <Eye className="w-4 h-4" /> View
-                          </Button>
-                        </div>
-
-                        <div className="space-y-1">
-                          <p className="text-xs font-medium text-muted-foreground">Clients</p>
-                          {plan.clients.length ? (
-                            plan.clients.map((c) => (
-                              <div key={c.id} className="text-sm flex items-center justify-between gap-3">
-                                <span>{c.full_name}</span>
-                                <span className="text-xs text-muted-foreground">{c.email}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-sm text-muted-foreground">No clients found for this plan.</p>
-                          )}
-                        </div>
+              ) : filteredAssignedPlans.length > 0 ? (
+                filteredAssignedPlans.map((plan) => (
+                  <div key={plan.id} className="p-3 border rounded-xl space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{plan.title}</p>
+                        <p className="text-xs text-muted-foreground">Case ID: {plan.id}</p>
                       </div>
-                    ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No assigned plans found.</p>
-                )
-              ) : clients.length > 0 ? (
-                clients.map((client) => (
-                  <div key={client.id} className="p-3 border rounded-xl flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{client.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{client.email}</p>
+                      <Button asChild size="sm" variant="outline" className="gap-1">
+                        <a href={`/admin/cases/${plan.id}`}>
+                          <Eye className="w-4 h-4" /> View
+                        </a>
+                      </Button>
                     </div>
-                    <Button size="sm" variant="outline" className="gap-1">
-                      <Eye className="w-4 h-4" /> View
-                    </Button>
+
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Clients</p>
+                      {plan.clients.length ? (
+                        plan.clients.map((c) => (
+                          <div key={c.id} className="text-sm flex items-center justify-between gap-3">
+                            <span>{c.full_name}</span>
+                            <span className="text-xs text-muted-foreground">{c.email}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No clients found for this case.</p>
+                      )}
+                    </div>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">No clients found.</p>
+                <p className="text-sm text-muted-foreground">No assigned cases found.</p>
               )}
             </div>
           </CardContent>

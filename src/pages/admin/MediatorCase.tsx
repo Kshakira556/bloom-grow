@@ -4,6 +4,7 @@ import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as api from "@/lib/api";
 
 const stageLabel = (stage?: api.MediatorCaseStage) => {
@@ -60,6 +61,7 @@ const MediatorCase = () => {
   const [previewDownloadUrl, setPreviewDownloadUrl] = useState<string>("");
   const [previewExternalUrl, setPreviewExternalUrl] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [exportingBundle, setExportingBundle] = useState(false);
 
   const [screeningLoading, setScreeningLoading] = useState(false);
   const [screeningError, setScreeningError] = useState<string | null>(null);
@@ -67,6 +69,12 @@ const MediatorCase = () => {
   const [screeningOutcome, setScreeningOutcome] = useState<api.CaseScreeningOutcome>("needs_more_info");
   const [screeningReferralOutcome, setScreeningReferralOutcome] = useState<string>("");
   const [screeningNotes, setScreeningNotes] = useState<string>("");
+
+  const [feedbackItems, setFeedbackItems] = useState<api.CaseFeedback[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [newFeedbackRating, setNewFeedbackRating] = useState<string>("");
+  const [newFeedbackNotes, setNewFeedbackNotes] = useState<string>("");
 
   const openPreviewForDoc = async (doc: api.CaseDocument) => {
     try {
@@ -160,6 +168,18 @@ const MediatorCase = () => {
         } finally {
           setScreeningLoading(false);
         }
+
+        // Close-out feedback (Phase 6)
+        try {
+          setFeedbackLoading(true);
+          setFeedbackError(null);
+          const items = await api.getCaseFeedback(id, { limit: 50 });
+          setFeedbackItems(items);
+        } catch (e) {
+          setFeedbackError(e instanceof Error ? e.message : "Failed to load feedback");
+        } finally {
+          setFeedbackLoading(false);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load case");
       } finally {
@@ -171,6 +191,15 @@ const MediatorCase = () => {
   }, [id]);
 
   const headerTitle = casePlan?.title || "Case";
+  const retentionLabel = casePlan?.legal_hold
+    ? "Legal hold enabled"
+    : casePlan?.redacted_at
+      ? "Redacted"
+      : casePlan?.destruction_due_at
+        ? "Destruction pending"
+        : casePlan?.destruction_requested_at
+          ? "Destruction requested"
+          : "";
 
   const sortedMessages = useMemo(() => {
     return messages
@@ -209,6 +238,11 @@ const MediatorCase = () => {
           <div>
             <h1 className="font-display text-2xl font-bold">{headerTitle}</h1>
             {id && <p className="text-xs text-muted-foreground">Case ID: {id}</p>}
+            {retentionLabel ? (
+              <p className={casePlan?.legal_hold ? "text-xs text-destructive font-medium" : "text-xs text-muted-foreground"}>
+                {retentionLabel}
+              </p>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline">
@@ -243,8 +277,20 @@ const MediatorCase = () => {
             </CardContent>
           </Card>
 
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
+          <div className="lg:col-span-2">
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList className="flex flex-wrap justify-start">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="schedule">Schedule</TabsTrigger>
+                <TabsTrigger value="pending">Pending</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="messages">Messages</TabsTrigger>
+                <TabsTrigger value="screening">Screening</TabsTrigger>
+                <TabsTrigger value="feedback">Feedback</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="schedule" className="space-y-6">
+                <Card>
               <CardHeader>
                 <CardTitle>Schedule</CardTitle>
               </CardHeader>
@@ -359,8 +405,10 @@ const MediatorCase = () => {
                 )}
               </CardContent>
             </Card>
+              </TabsContent>
 
-            <Card>
+              <TabsContent value="overview" className="space-y-6">
+                <Card>
               <CardHeader>
                 <CardTitle>Stage</CardTitle>
               </CardHeader>
@@ -396,8 +444,10 @@ const MediatorCase = () => {
                 </div>
               </CardContent>
             </Card>
+              </TabsContent>
 
-            <Card>
+              <TabsContent value="screening" className="space-y-6">
+                <Card>
               <CardHeader>
                 <CardTitle>Suitability &amp; Screening</CardTitle>
               </CardHeader>
@@ -490,7 +540,93 @@ const MediatorCase = () => {
               </CardContent>
             </Card>
 
-            <Card>
+              </TabsContent>
+
+              <TabsContent value="feedback" className="space-y-6">
+                <Card>
+              <CardHeader>
+                <CardTitle>Close-out Feedback</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {feedbackError && <p className="text-xs text-destructive">{feedbackError}</p>}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-1">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Rating (1–5)</p>
+                    <select
+                      value={newFeedbackRating}
+                      onChange={(e) => setNewFeedbackRating(e.target.value)}
+                      className="px-3 py-2 rounded-md border bg-background text-sm w-full"
+                      disabled={loading || feedbackLoading || !id}
+                    >
+                      <option value="">No rating</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Notes</p>
+                    <input
+                      value={newFeedbackNotes}
+                      onChange={(e) => setNewFeedbackNotes(e.target.value)}
+                      placeholder="Confidential mediator feedback summary…"
+                      className="w-full px-3 py-2 rounded-md border bg-background text-sm"
+                      disabled={loading || feedbackLoading || !id}
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  disabled={loading || feedbackLoading || !id}
+                  onClick={async () => {
+                    if (!id) return;
+                    try {
+                      setFeedbackLoading(true);
+                      setFeedbackError(null);
+                      const rating = newFeedbackRating ? Number(newFeedbackRating) : null;
+                      const item = await api.createCaseFeedback(id, { rating, notes: newFeedbackNotes.trim() || null });
+                      if (item) {
+                        setFeedbackItems((prev) => [item, ...prev]);
+                        setNewFeedbackRating("");
+                        setNewFeedbackNotes("");
+                      }
+                    } catch (e) {
+                      setFeedbackError(e instanceof Error ? e.message : "Failed to save feedback");
+                    } finally {
+                      setFeedbackLoading(false);
+                    }
+                  }}
+                >
+                  Save feedback
+                </Button>
+
+                {feedbackLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading…</p>
+                ) : feedbackItems.length ? (
+                  <div className="space-y-2">
+                    {feedbackItems.map((it) => (
+                      <div key={it.id} className="p-3 border rounded-xl">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{new Date(it.created_at).toLocaleString()}</span>
+                          <span>{it.rating ? `Rating: ${it.rating}/5` : "No rating"}</span>
+                        </div>
+                        {it.notes && <p className="text-sm mt-1">{it.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No feedback yet.</p>
+                )}
+              </CardContent>
+            </Card>
+              </TabsContent>
+
+              <TabsContent value="pending" className="space-y-6">
+                <Card>
               <CardHeader>
                 <CardTitle>Pending Approvals</CardTitle>
               </CardHeader>
@@ -562,9 +698,44 @@ const MediatorCase = () => {
               </CardContent>
             </Card>
 
-            <Card>
+              </TabsContent>
+
+              <TabsContent value="documents" className="space-y-6">
+                <Card>
               <CardHeader>
-                <CardTitle>Documents</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle>Documents</CardTitle>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={loading || exportingBundle || !id}
+                    onClick={async () => {
+                      if (!id) return;
+                      try {
+                        setExportingBundle(true);
+                        const bundle = await api.getCaseExportBundle(id);
+                        if (!bundle) throw new Error("No bundle returned");
+
+                        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        const safeDate = new Date().toISOString().slice(0, 10);
+                        a.href = url;
+                        a.download = `case_${id}_bundle_${safeDate}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      } catch (e) {
+                        setDocsError(e instanceof Error ? e.message : "Failed to export bundle");
+                      } finally {
+                        setExportingBundle(false);
+                      }
+                    }}
+                  >
+                    {exportingBundle ? "Exporting…" : "Export bundle"}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {docsError && <p className="text-xs text-destructive">{docsError}</p>}
@@ -743,7 +914,10 @@ const MediatorCase = () => {
               </CardContent>
             </Card>
 
-            <Card>
+              </TabsContent>
+
+              <TabsContent value="messages" className="space-y-6">
+                <Card>
               <CardHeader>
                 <CardTitle>Recent Messages</CardTitle>
               </CardHeader>
@@ -765,6 +939,8 @@ const MediatorCase = () => {
                 )}
               </CardContent>
             </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

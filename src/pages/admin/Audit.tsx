@@ -251,6 +251,12 @@ const AdminAudit = () => {
           Reports
         </h1>
 
+        {isMediator && (
+          <p className="text-sm text-muted-foreground">
+            Limited view: only activity for cases assigned to you. Exports are disabled for POPIA safety.
+          </p>
+        )}
+
         {!isMediator && (
           <Card>
             <CardHeader>
@@ -361,9 +367,11 @@ const AdminAudit = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Message History</CardTitle>
-            <Button size="sm" onClick={exportAudit} className="gap-2">
-              Export
-            </Button>
+            {!isMediator && (
+              <Button size="sm" onClick={exportAudit} className="gap-2">
+                Export
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="space-y-2">
             {error && <p className="text-sm text-destructive">{error}</p>}

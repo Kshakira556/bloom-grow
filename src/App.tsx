@@ -149,12 +149,12 @@ const App = () => (
             } />
             <Route path="/admin/clients" element={
               <RoleProtectedRoute allowedRoles={["mediator"]}>
-                <AdminClients />
+                <Navigate to="/admin/plans" replace />
               </RoleProtectedRoute>
             } />
             <Route path="/admin/children" element={
               <RoleProtectedRoute allowedRoles={["mediator"]}>
-                <AdminChildren />
+                <Navigate to="/admin/plans" replace />
               </RoleProtectedRoute>
             } />
             <Route path="/admin/plans" element={

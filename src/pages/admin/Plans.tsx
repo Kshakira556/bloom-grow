@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, Calendar } from "lucide-react";
 import * as api from "@/lib/api";
-import { buildUserNameMap } from "@/lib/adminData";
 import { Link } from "react-router-dom";
 
 const stageLabel = (stage?: api.MediatorCaseStage) => {
@@ -33,10 +32,16 @@ const stageLabel = (stage?: api.MediatorCaseStage) => {
   }
 };
 
+const planRetentionLabel = (p: api.ModeratorAssignedPlanWithClients) => {
+  if (p.legal_hold) return "Legal hold";
+  if (p.redacted_at) return "Redacted";
+  if (p.destruction_due_at) return "Destruction pending";
+  if (p.destruction_requested_at) return "Destruction requested";
+  return "";
+};
+
 const AdminPlans = () => {
   const [search, setSearch] = useState("");
-  const [plans, setPlans] = useState<api.Plan[]>([]);
-  const [users, setUsers] = useState<api.SafeUser[]>([]);
   const [assignedPlans, setAssignedPlans] = useState<api.ModeratorAssignedPlanWithClients[]>([]);
   const [pendingProposals, setPendingProposals] = useState<api.Proposal[]>([]);
   const [flaggedMessages, setFlaggedMessages] = useState<api.ApiMessage[]>([]);
@@ -49,15 +54,12 @@ const AdminPlans = () => {
       try {
         setLoading(true);
         setError(null);
-        const [plansRes, allUsers, mediatorPlansRes, proposalsRes, flaggedRes] = await Promise.all([
-          api.getPlans(),
-          api.getUsers(),
+        // Mediators should only see assigned cases; avoid fetching global plans/users.
+        const [mediatorPlansRes, proposalsRes, flaggedRes] = await Promise.all([
           api.getMyModeratorAssignedPlansWithClients().catch(() => [] as api.ModeratorAssignedPlanWithClients[]),
           api.getProposals("pending").catch(() => [] as api.Proposal[]),
           api.getMyModeratorFlaggedMessages({ includeDeleted: true }).catch(() => [] as api.ApiMessage[]),
         ]);
-        setPlans(plansRes?.plans ?? []);
-        setUsers(allUsers);
         setAssignedPlans(mediatorPlansRes);
         setPendingProposals(proposalsRes);
         setFlaggedMessages(flaggedRes);
@@ -71,7 +73,6 @@ const AdminPlans = () => {
     load();
   }, []);
 
-  const userMap = useMemo(() => buildUserNameMap(users), [users]);
   const assignedPlanMap = useMemo(() => {
     return assignedPlans.reduce<Record<string, api.ModeratorAssignedPlanWithClients>>((acc, p) => {
       acc[p.id] = p;
@@ -101,19 +102,19 @@ const AdminPlans = () => {
   }, [assignedPlans]);
 
   const filteredPlans = useMemo(() => {
-    return plans
+    return assignedPlans
       .filter((plan) =>
         search
           ? plan.title.toLowerCase().includes(search.toLowerCase()) ||
             plan.id.toLowerCase().includes(search.toLowerCase()) ||
-            (userMap[plan.created_by ?? ""] || "").toLowerCase().includes(search.toLowerCase())
+            plan.clients.some((c) => c.full_name.toLowerCase().includes(search.toLowerCase()))
           : true
       )
       .filter((plan) => {
         if (stageFilter === "all") return true;
         return (stageByPlanId[plan.id] ?? "active_mediation") === stageFilter;
       });
-  }, [plans, search, userMap, stageFilter, stageByPlanId]);
+  }, [assignedPlans, search, stageFilter, stageByPlanId]);
 
   return (
     <ModeratorLayout>
@@ -165,9 +166,6 @@ const AdminPlans = () => {
                   <div key={plan.id} className="p-3 border rounded-xl flex justify-between items-center">
                     <div>
                       <p className="font-medium">{plan.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Created by: {userMap[plan.created_by ?? ""] || plan.created_by || "Unknown"}
-                      </p>
                       <p className="text-xs text-muted-foreground">Stage: {stageLabel(stageByPlanId[plan.id])}</p>
                       <p className="text-xs text-muted-foreground">
                         Clients: {assignedPlanMap[plan.id]?.clients?.length ?? 0}
@@ -175,6 +173,14 @@ const AdminPlans = () => {
                         Pending: {pendingByPlanId[plan.id] ?? 0}
                         {" • "}
                         Flagged: {flaggedByPlanId[plan.id] ?? 0}
+                        {planRetentionLabel(plan) ? (
+                          <>
+                            {" â€¢ "}
+                            <span className={plan.legal_hold ? "text-destructive font-medium" : ""}>
+                              {planRetentionLabel(plan)}
+                            </span>
+                          </>
+                        ) : null}
                       </p>
                     </div>
                     <Button asChild size="sm" variant="outline" className="gap-1">

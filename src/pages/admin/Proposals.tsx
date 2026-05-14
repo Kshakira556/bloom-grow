@@ -4,12 +4,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, ThumbsUp, ThumbsDown } from "lucide-react";
 import * as api from "@/lib/api";
-import { buildUserNameMap } from "@/lib/adminData";
 import { Link } from "react-router-dom";
 
 const AdminProposals = () => {
   const [proposals, setProposals] = useState<api.Proposal[]>([]);
-  const [users, setUsers] = useState<api.SafeUser[]>([]);
   const [assignedPlans, setAssignedPlans] = useState<api.ModeratorAssignedPlanWithClients[]>([]);
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
@@ -21,13 +19,11 @@ const AdminProposals = () => {
       try {
         setLoading(true);
         setError(null);
-        const [proposalsRes, usersRes, plansRes] = await Promise.all([
+        const [proposalsRes, plansRes] = await Promise.all([
           api.getProposals("pending"),
-          api.getUsers(),
           api.getMyModeratorAssignedPlansWithClients().catch(() => [] as api.ModeratorAssignedPlanWithClients[]),
         ]);
         setProposals(proposalsRes);
-        setUsers(usersRes);
         setAssignedPlans(plansRes);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load proposals");
@@ -39,7 +35,13 @@ const AdminProposals = () => {
     load();
   }, []);
 
-  const userMap = useMemo(() => buildUserNameMap(users), [users]);
+  const userMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of assignedPlans) {
+      for (const c of p.clients) map[c.id] = c.full_name;
+    }
+    return map;
+  }, [assignedPlans]);
   const planMap = useMemo(() => {
     return assignedPlans.reduce<Record<string, string>>((acc, p) => {
       acc[p.id] = p.title;

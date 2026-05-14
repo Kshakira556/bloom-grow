@@ -13,6 +13,8 @@ const MediatorDashboard = () => {
   const [assignedPlans, setAssignedPlans] = useState<api.ModeratorAssignedPlanWithClients[]>([]);
   const [pendingProposals, setPendingProposals] = useState<api.Proposal[]>([]);
   const [flaggedMessages, setFlaggedMessages] = useState<api.ApiMessage[]>([]);
+  const [upcomingSessions, setUpcomingSessions] = useState<api.MediatorSession[]>([]);
+  const [overdueActionItems, setOverdueActionItems] = useState<api.MediatorSessionActionItemWithContext[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -20,15 +22,22 @@ const MediatorDashboard = () => {
         setLoading(true);
         setError(null);
 
-        const [plansRes, proposalsRes, flaggedRes] = await Promise.all([
+        const now = new Date();
+        const in14 = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+        const [plansRes, proposalsRes, flaggedRes, sessionsRes, overdueItemsRes] = await Promise.all([
           api.getMyModeratorAssignedPlansWithClients(),
           api.getProposals("pending"),
           api.getMyModeratorFlaggedMessages({ includeDeleted: true }).catch(() => [] as api.ApiMessage[]),
+          api.getMyMediatorSessions({ from: now.toISOString(), to: in14.toISOString(), limit: 200 }).catch(() => [] as api.MediatorSession[]),
+          api.getMyModeratorActionItems({ due_to: now.toISOString(), limit: 200 }).catch(() => [] as api.MediatorSessionActionItemWithContext[]),
         ]);
 
         setAssignedPlans(plansRes);
         setPendingProposals(proposalsRes);
         setFlaggedMessages(flaggedRes);
+        setUpcomingSessions(sessionsRes);
+        setOverdueActionItems(overdueItemsRes.filter((i) => !i.is_done));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard");
       } finally {
@@ -71,6 +80,13 @@ const MediatorDashboard = () => {
     return assignedPlans.reduce<Record<string, number>>((acc, p) => {
       const s = p.stage ?? "active_mediation";
       acc[s] = (acc[s] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [assignedPlans]);
+
+  const planTitleById = useMemo(() => {
+    return assignedPlans.reduce<Record<string, string>>((acc, p) => {
+      acc[p.id] = p.title ?? "Case";
       return acc;
     }, {});
   }, [assignedPlans]);
@@ -204,6 +220,50 @@ const MediatorDashboard = () => {
             ) : (
               <p className="text-sm text-muted-foreground">No assigned cases found.</p>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Schedule</CardTitle>
+            <Button asChild variant="ghost">
+              <Link to="/admin/schedule">
+                <Calendar className="w-4 h-4 mr-2" />
+                Open schedule
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3 border rounded-xl">
+                <p className="text-sm font-medium">Upcoming sessions (14 days)</p>
+                <p className="text-xs text-muted-foreground mt-1">{loading ? "…" : `${upcomingSessions.length} scheduled`}</p>
+                {!loading && upcomingSessions.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {upcomingSessions.slice(0, 5).map((s) => (
+                      <div key={s.id} className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+                        <span className="truncate">{planTitleById[s.plan_id] ?? "Case"}</span>
+                        <span className="shrink-0">{new Date(s.starts_at).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="p-3 border rounded-xl">
+                <p className="text-sm font-medium">Overdue action items</p>
+                <p className="text-xs text-muted-foreground mt-1">{loading ? "…" : `${overdueActionItems.length} overdue`}</p>
+                {!loading && overdueActionItems.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {overdueActionItems.slice(0, 5).map((i) => (
+                      <div key={i.id} className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+                        <span className="truncate">{planTitleById[i.plan_id] ?? "Case"}</span>
+                        <span className="shrink-0">{i.due_at ? new Date(i.due_at).toLocaleDateString() : "No due date"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

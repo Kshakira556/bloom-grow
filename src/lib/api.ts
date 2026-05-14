@@ -1127,6 +1127,11 @@ export interface ModeratorAssignedPlanWithClients {
     email: string;
   }>;
   stage?: MediatorCaseStage;
+  legal_hold?: boolean | null;
+  destruction_requested_at?: string | null;
+  destruction_due_at?: string | null;
+  redacted_at?: string | null;
+  destruction_status?: string | null;
 }
 
 export const getMyModeratorAssignedPlansWithClients = async (): Promise<ModeratorAssignedPlanWithClients[]> => {
@@ -1222,6 +1227,29 @@ export const getMySessionActionItems = async (sessionId: string) => {
   return res?.items ?? [];
 };
 
+export type MediatorSessionActionItemWithContext = MediatorSessionActionItem & {
+  plan_id: string;
+  session_starts_at: string;
+};
+
+export const getMyModeratorActionItems = async (args?: {
+  plan_id?: string;
+  due_from?: string;
+  due_to?: string;
+  include_done?: boolean;
+  limit?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (args?.plan_id) params.set("plan_id", args.plan_id);
+  if (args?.due_from) params.set("due_from", args.due_from);
+  if (args?.due_to) params.set("due_to", args.due_to);
+  if (args?.include_done) params.set("include_done", "true");
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await http<{ items: MediatorSessionActionItemWithContext[] }>(`/admin/moderator/action-items${qs}`, "GET");
+  return res?.items ?? [];
+};
+
 export const createMySessionActionItem = async (sessionId: string, payload: {
   text: string;
   due_at?: string | null;
@@ -1307,6 +1335,26 @@ export const upsertCaseScreening = async (
   return res?.screening;
 };
 
+export type CaseFeedback = {
+  id: string;
+  plan_id: string;
+  rating: number | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export const getCaseFeedback = async (planId: string, options?: { limit?: number }) => {
+  const q = typeof options?.limit === "number" ? `?limit=${encodeURIComponent(String(options.limit))}` : "";
+  const res = await http<{ items: CaseFeedback[] }>(`/admin/moderator/cases/${planId}/feedback${q}`, "GET");
+  return res?.items ?? [];
+};
+
+export const createCaseFeedback = async (planId: string, payload: { rating?: number | null; notes?: string | null }) => {
+  const res = await http<{ item: CaseFeedback }>(`/admin/moderator/cases/${planId}/feedback`, "POST", payload);
+  return res?.item;
+};
+
 export const getCaseDocuments = async (planId: string) => {
   const res = await http<{ documents: CaseDocument[] }>(`/admin/moderator/cases/${planId}/documents`, "GET");
   return res?.documents ?? [];
@@ -1346,6 +1394,35 @@ export const getCaseDocumentSignedUrl = async (id: string, options?: { expires_i
   const q = typeof options?.expires_in === "number" ? `?expires_in=${encodeURIComponent(String(options.expires_in))}` : "";
   const res = await http<{ signed_url?: string; url?: string }>(`/admin/moderator/documents/${id}/signed-url${q}`, "GET");
   return res?.signed_url ?? res?.url ?? "";
+};
+
+export type CaseExportBundle = {
+  generated_at: string;
+  plan: {
+    id: string;
+    title: string | null;
+    stage: MediatorCaseStage;
+    legal_hold: boolean | null;
+    destruction_requested_at: string | null;
+    destruction_due_at: string | null;
+    destruction_status: string | null;
+    redacted_at: string | null;
+  };
+  participants: Array<{
+    id: string;
+    role: string | null;
+    full_name: string | null;
+    email: string | null;
+  }>;
+  documents: CaseDocument[];
+  screening: CaseScreening | null;
+  feedback: CaseFeedback[];
+  messages: ApiMessage[];
+};
+
+export const getCaseExportBundle = async (planId: string) => {
+  const res = await http<{ bundle: CaseExportBundle }>(`/admin/moderator/cases/${planId}/export-bundle`, "GET");
+  return res?.bundle ?? null;
 };
 
 export const fetchAllPlanMessages = async (

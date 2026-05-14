@@ -4,13 +4,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Eye } from "lucide-react";
 import * as api from "@/lib/api";
-import { buildUserNameMap } from "@/lib/adminData";
 import { fetchAllPlanMessages } from "@/lib/api";
 import { Link, useSearchParams } from "react-router-dom";
 
 const AdminMessages = () => {
   const [messages, setMessages] = useState<api.ApiMessage[]>([]);
-  const [users, setUsers] = useState<api.SafeUser[]>([]);
   const [plans, setPlans] = useState<api.ModeratorAssignedPlanWithClients[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,12 +22,7 @@ const AdminMessages = () => {
       try {
         setLoading(true);
         setError(null);
-        const [usersRes, plansRes] = await Promise.all([
-          api.getUsers(),
-          api.getMyModeratorAssignedPlansWithClients(),
-        ]);
-
-        const planList = plansRes ?? [];
+        const planList = await api.getMyModeratorAssignedPlansWithClients();
 
         // Default to first assigned case (case-first). Keep an "all cases" option for power users.
         if (!searchParams.get("case") && planList[0]?.id) {
@@ -51,7 +44,6 @@ const AdminMessages = () => {
           }
         }
 
-        setUsers(usersRes);
         setPlans(planList);
         setMessages(msgs);
       } catch (err) {
@@ -65,7 +57,13 @@ const AdminMessages = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCaseId]);
 
-  const userMap = useMemo(() => buildUserNameMap(users), [users]);
+  const userMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of plans) {
+      for (const c of p.clients) map[c.id] = c.full_name;
+    }
+    return map;
+  }, [plans]);
   const planMap = useMemo(() => {
     return plans.reduce<Record<string, string>>((acc, plan) => {
       acc[plan.id] = plan.title;
@@ -128,7 +126,7 @@ const AdminMessages = () => {
                   <div key={msg.id} className="p-3 border rounded-xl flex justify-between items-center">
                     <div>
                       <p className="font-medium">
-                        {(userMap[msg.sender_id] || msg.sender_id)} {'->'} {(userMap[msg.receiver_id] || msg.receiver_id)}
+                        {(userMap[msg.sender_id] || msg.sender_id)} {"->"} {(userMap[msg.receiver_id] || msg.receiver_id)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Plan: {planMap[msg.plan_id] || msg.plan_id}

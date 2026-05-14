@@ -12,16 +12,15 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as api from "@/lib/api";
 import type { ReviewHistory } from "@/lib/api";
-import { buildUserNameMap, fetchAllPlanMessages } from "@/lib/adminData";
+import { fetchAllPlanMessages } from "@/lib/adminData";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 
 const Moderator = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("flagged");
-  const [users, setUsers] = useState<api.SafeUser[]>([]);
-  const [plans, setPlans] = useState<api.Plan[]>([]);
-  const [messages, setMessages] = useState<api.ApiMessage[]>([]);
+  const [plans, setPlans] = useState<api.ModeratorAssignedPlanWithClients[]>([]);
+  const [messages, setMessages] = useState<api.ModeratorFlaggedMessage[]>([]);
   const [reviews, setReviews] = useState<ReviewHistory[]>([]);
   const [resolvedFlagIds, setResolvedFlagIds] = useState<string[]>([]);
   const [reviewingIds, setReviewingIds] = useState<Record<string, boolean>>({});
@@ -33,21 +32,19 @@ const Moderator = () => {
       try {
         setLoading(true);
         setError(null);
-        const [usersRes, assignedPlansRes, reviewRes] = await Promise.all([
-          api.getUsers(),
-          api.getMyModeratorAssignedPlans(),
+        const [assignedPlansRes, reviewRes] = await Promise.all([
+          api.getMyModeratorAssignedPlansWithClients(),
           api.getReviewHistory(),
         ]);
 
         const planList = assignedPlansRes ?? [];
-        let allMessages: api.ApiMessage[] = [];
+        let allMessages: api.ModeratorFlaggedMessage[] = [];
         try {
           allMessages = await api.getMyModeratorFlaggedMessages({ includeDeleted: true });
         } catch {
-          allMessages = await fetchAllPlanMessages(planList, { includeDeleted: true });
+          allMessages = (await fetchAllPlanMessages(planList, { includeDeleted: true })) as unknown as api.ModeratorFlaggedMessage[];
         }
 
-        setUsers(usersRes);
         setPlans(planList);
         setMessages(allMessages);
         setReviews(reviewRes);
@@ -60,8 +57,6 @@ const Moderator = () => {
 
     load();
   }, []);
-
-  const userMap = useMemo(() => buildUserNameMap(users), [users]);
   const planTitleById = useMemo(() => {
     return plans.reduce<Record<string, string>>((acc, p) => {
       acc[p.id] = p.title;
@@ -75,14 +70,14 @@ const Moderator = () => {
       .map((msg) => ({
         id: msg.id,
         plan_id: msg.plan_id,
-        from: userMap[msg.sender_id] || msg.sender_id,
-        to: userMap[msg.receiver_id] || msg.receiver_id,
+        from: msg.sender_name || msg.sender_id,
+        to: msg.receiver_name || msg.receiver_id,
         date: new Date(msg.created_at).toLocaleString(),
         preview: msg.content,
         reason: msg.flagged_reason || "Flagged message",
         status: "pending" as const,
       }));
-  }, [messages, userMap, resolvedFlagIds]);
+  }, [messages, resolvedFlagIds]);
 
   const flaggedByCase = useMemo(() => {
     return flaggedMessages.reduce<Record<string, typeof flaggedMessages>>((acc, m) => {
@@ -131,10 +126,10 @@ const Moderator = () => {
     () => [
       { label: "Messages Reviewed", value: messages.length.toString(), trend: "All time" },
       { label: "Active Flags", value: flaggedMessages.length.toString(), trend: "Pending review" },
-      { label: "Clients Managed", value: users.filter((u) => u.role === "parent").length.toString(), trend: "Active" },
+      { label: "Clients Managed", value: plans.reduce((acc, p) => acc + (p.clients?.length ?? 0), 0).toString(), trend: "Across cases" },
       { label: "Active Plans", value: plans.length.toString(), trend: "Current" },
     ],
-    [messages.length, flaggedMessages.length, users, plans]
+    [messages.length, flaggedMessages.length, plans]
   );
 
   return (

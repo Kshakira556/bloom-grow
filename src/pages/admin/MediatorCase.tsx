@@ -58,7 +58,45 @@ const MediatorCase = () => {
   const [previewContentType, setPreviewContentType] = useState<string | null>(null);
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string>("");
   const [previewDownloadUrl, setPreviewDownloadUrl] = useState<string>("");
+  const [previewExternalUrl, setPreviewExternalUrl] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  const openPreviewForDoc = async (doc: api.CaseDocument) => {
+    try {
+      setDocsError(null);
+      setPreviewOpen(true);
+      setPreviewLoading(true);
+      setPreviewDocName(doc.name);
+      setPreviewContentType(doc.content_type);
+      setPreviewExternalUrl("");
+
+      const url = await api.getCaseDocumentSignedUrl(doc.id, { expires_in: 60 * 10 });
+      if (!url) throw new Error("No signed URL returned");
+      setPreviewDownloadUrl(url);
+
+      const isDocx =
+        doc.content_type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        doc.name.toLowerCase().endsWith(".docx");
+
+      if (isDocx) {
+        // Lightweight preview via Office Online viewer. This avoids forcing a download but does send the signed URL to Microsoft.
+        // If you need a fully offline/POPIA-strict preview, we can add a local docx renderer library later.
+        setPreviewExternalUrl(`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`);
+        return;
+      }
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch document (${res.status})`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setPreviewBlobUrl(blobUrl);
+    } catch (err) {
+      setDocsError(err instanceof Error ? err.message : "Failed to preview document");
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -135,7 +173,10 @@ const MediatorCase = () => {
       URL.revokeObjectURL(previewBlobUrl);
       setPreviewBlobUrl("");
     }
-  }, [previewOpen, previewBlobUrl]);
+    if (!previewOpen && previewExternalUrl) {
+      setPreviewExternalUrl("");
+    }
+  }, [previewOpen, previewBlobUrl, previewExternalUrl]);
 
   return (
     <ModeratorLayout>
@@ -456,7 +497,10 @@ const MediatorCase = () => {
                           visibility: "mediator_only",
                         });
 
-                        if (created) setDocuments((prev) => [created, ...prev]);
+                        if (created) {
+                          setDocuments((prev) => [created, ...prev]);
+                          await openPreviewForDoc(created);
+                        }
                         setSelectedDocFile(null);
                       } catch (err) {
                         setDocsError(err instanceof Error ? err.message : "Failed to upload document");
@@ -497,7 +541,10 @@ const MediatorCase = () => {
                           visibility: "shared",
                         });
 
-                        if (created) setDocuments((prev) => [created, ...prev]);
+                        if (created) {
+                          setDocuments((prev) => [created, ...prev]);
+                          await openPreviewForDoc(created);
+                        }
                         setSelectedDocFile(null);
                       } catch (err) {
                         setDocsError(err instanceof Error ? err.message : "Failed to upload document");
@@ -538,26 +585,11 @@ const MediatorCase = () => {
                               onClick={async () => {
                                 try {
                                   setOpeningDocId(d.id);
-                                  setDocsError(null);
-                                  setPreviewOpen(true);
-                                  setPreviewLoading(true);
-                                  setPreviewDocName(d.name);
-                                  setPreviewContentType(d.content_type);
-
-                                  const url = await api.getCaseDocumentSignedUrl(d.id, { expires_in: 60 * 10 });
-                                  if (!url) throw new Error("No signed URL returned");
-                                  setPreviewDownloadUrl(url);
-
-                                  const res = await fetch(url);
-                                  if (!res.ok) throw new Error(`Failed to fetch document (${res.status})`);
-                                  const blob = await res.blob();
-                                  const blobUrl = URL.createObjectURL(blob);
-                                  setPreviewBlobUrl(blobUrl);
+                                  await openPreviewForDoc(d);
                                 } catch (err) {
                                   setDocsError(err instanceof Error ? err.message : "Failed to open document");
                                 } finally {
                                   setOpeningDocId("");
-                                  setPreviewLoading(false);
                                 }
                               }}
                               disabled={openingDocId === d.id}
@@ -649,6 +681,8 @@ const MediatorCase = () => {
           <div className="border rounded-lg bg-muted/20 overflow-hidden h-[70vh]">
             {previewLoading ? (
               <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading preview…</div>
+            ) : previewExternalUrl ? (
+              <iframe title={previewDocName || "Document"} src={previewExternalUrl} className="w-full h-full" />
             ) : previewBlobUrl ? (
               previewContentType?.startsWith("image/") ? (
                 <div className="h-full overflow-auto p-4 flex justify-center">

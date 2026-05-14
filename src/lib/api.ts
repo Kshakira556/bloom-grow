@@ -134,6 +134,17 @@ export const getUserByEmail = async (email: string) => {
   return res;
 };
 
+// Best-effort: fetch a single user by id. Use sparingly (e.g. small known sets like
+// participants in mediator-assigned plans). Server-side must still enforce access control.
+export const getUserById = async (id: string): Promise<SafeUser | null> => {
+  try {
+    const res = await http<{ user: SafeUser }>(`/users/${id}`, "GET");
+    return res?.user ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export const getModerators = async (): Promise<Moderator[]> => {
   const res = await http<{ moderators: Moderator[] }>("/admin/moderators", "GET");
   return res.moderators;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ModeratorLayout } from "@/components/layout/ModeratorLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,23 @@ const AdminAudit = () => {
           }
         }
 
-        const usersRes = isMediator ? ([] as api.SafeUser[]) : await api.getUsers();
+        const usersRes = isMediator
+          ? (await (async () => {
+              const ids = new Set<string>();
+              for (const msg of allMessages) {
+                if (msg.sender_id) ids.add(msg.sender_id);
+                if (msg.receiver_id) ids.add(msg.receiver_id);
+              }
+
+              // Add current user so "You" can resolve without extra calls.
+              if (user) ids.add(user.id);
+
+              const lookups = await Promise.all(
+                Array.from(ids).map(async (id) => api.getUserById(id))
+              );
+              return lookups.filter((u): u is api.SafeUser => Boolean(u));
+            })())
+          : await api.getUsers();
         const logsRes = isMediator ? ([] as api.AuditLog[]) : await api.getAuditLogs().catch(() => [] as api.AuditLog[]);
 
         setUsers(usersRes);
@@ -130,8 +147,8 @@ const AdminAudit = () => {
       .filter((msg) => (purposeFilter === "All" ? true : msg.purpose === purposeFilter))
       .filter((msg) => {
         if (!search) return true;
-        const sender = userMap[msg.sender_id] || msg.sender_id;
-        const receiver = userMap[msg.receiver_id] || msg.receiver_id;
+        const sender = displayUser(msg.sender_id);
+        const receiver = displayUser(msg.receiver_id);
         return (
           sender.toLowerCase().includes(search.toLowerCase()) ||
           receiver.toLowerCase().includes(search.toLowerCase()) ||
@@ -188,8 +205,8 @@ const AdminAudit = () => {
         y = 10;
       }
 
-      const sender = userMap[msg.sender_id] || msg.sender_id;
-      const receiver = userMap[msg.receiver_id] || msg.receiver_id;
+      const sender = displayUser(msg.sender_id);
+      const receiver = displayUser(msg.receiver_id);
       const isDeleted = Boolean(msg.is_deleted);
 
       doc.setFont(undefined, "bold");
@@ -238,173 +255,175 @@ const AdminAudit = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-        <FileText className="w-6 h-6 text-primary" />
-        Audit / Oversight
-      </h1>
+    <ModeratorLayout>
+      <div className="space-y-6">
+        <h1 className="font-display text-2xl font-bold flex items-center gap-2">
+          <FileText className="w-6 h-6 text-primary" />
+          Audit / Oversight
+        </h1>
 
-      {!isMediator && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Audit Actions (Sensitive Access & Exports)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Input
-                placeholder="Search by actor, action, target, notes..."
-                value={auditSearch}
-                onChange={(e) => setAuditSearch(e.target.value)}
-              />
-              <div className="flex gap-2 flex-wrap md:justify-end md:col-span-2">
-                {auditActions.slice(0, 8).map((a) => (
-                  <button
-                    key={a}
-                    onClick={() => setAuditAction(a)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      auditAction === a
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                    title={a}
-                  >
-                    {a === "All" ? "All" : a.replaceAll("_", " ")}
-                  </button>
-                ))}
-                {auditActions.length > 8 && (
-                  <select
-                    value={auditAction}
-                    onChange={(e) => setAuditAction(e.target.value)}
-                    className="px-3 py-1 rounded-full text-sm bg-muted text-muted-foreground"
-                  >
-                    {auditActions.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                )}
+        {!isMediator && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Audit Actions (Sensitive Access & Exports)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Input
+                  placeholder="Search by actor, action, target, notes..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                />
+                <div className="flex gap-2 flex-wrap md:justify-end md:col-span-2">
+                  {auditActions.slice(0, 8).map((a) => (
+                    <button
+                      key={a}
+                      onClick={() => setAuditAction(a)}
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        auditAction === a
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                      title={a}
+                    >
+                      {a === "All" ? "All" : a.replaceAll("_", " ")}
+                    </button>
+                  ))}
+                  {auditActions.length > 8 && (
+                    <select
+                      value={auditAction}
+                      onChange={(e) => setAuditAction(e.target.value)}
+                      className="px-3 py-1 rounded-full text-sm bg-muted text-muted-foreground"
+                    >
+                      {auditActions.map((a) => (
+                        <option key={a} value={a}>
+                          {a}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
-            </div>
+
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading audit actions...</p>
+              ) : filteredAuditLogs.length > 0 ? (
+                <div className="space-y-2">
+                  {filteredAuditLogs.slice(0, 200).map((log) => (
+                    <div key={log.id} className="p-3 border rounded-xl flex flex-col gap-1">
+                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+                        <span>{formatDateTime(log.created_at)}</span>
+                        <span className="font-medium">{displayUser(log.actor_id)}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-secondary">
+                          {log.action}
+                        </span>
+                        {log.target_type && (
+                          <span className="px-2 py-0.5 rounded-full bg-muted">
+                            {log.target_type}
+                          </span>
+                        )}
+                        {log.target_id && (
+                          <span className="text-[10px]">
+                            {displayTarget(log.target_type, log.target_id)}
+                          </span>
+                        )}
+                      </div>
+                      {log.notes && (
+                        <p className="text-xs text-muted-foreground">{redactSecrets(log.notes)}</p>
+                      )}
+                    </div>
+                  ))}
+                  {filteredAuditLogs.length > 200 && (
+                    <p className="text-xs text-muted-foreground">
+                      Showing first 200 matching audit actions.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No audit actions to display.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Input
+          placeholder="Search by sender, recipient, or content..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="mb-4"
+        />
+
+        <div className="flex gap-2 flex-wrap">
+          {(["All", "General", "Legal", "Medical", "Safety", "Emergency", "Financial"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPurposeFilter(p)}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                purposeFilter === p
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Message History</CardTitle>
+            <Button size="sm" onClick={exportAudit} className="gap-2">
+              Export
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             {loading ? (
-              <p className="text-sm text-muted-foreground">Loading audit actions...</p>
-            ) : filteredAuditLogs.length > 0 ? (
-              <div className="space-y-2">
-                {filteredAuditLogs.slice(0, 200).map((log) => (
-                  <div key={log.id} className="p-3 border rounded-xl flex flex-col gap-1">
+              <p className="text-sm text-muted-foreground">Loading audit logs...</p>
+            ) : filteredMessages.length > 0 ? (
+              filteredMessages.map((msg) => {
+                const sender = displayUser(msg.sender_id);
+                const receiver = displayUser(msg.receiver_id);
+                const history = historyById[msg.id] ?? [];
+                const lastEdit = history
+                  .slice()
+                  .reverse()
+                  .find((entry) => entry.action_type === "update");
+
+                return (
+                  <div key={msg.id} className="p-3 border rounded-xl flex flex-col gap-1">
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
-                      <span>{formatDateTime(log.created_at)}</span>
-                      <span className="font-medium">{displayUser(log.actor_id)}</span>
+                      <span>{formatDateTime(msg.created_at)}</span>
+                      <span>{sender} ? {receiver}</span>
                       <span className="px-2 py-0.5 rounded-full bg-secondary">
-                        {log.action}
+                        {msg.purpose || "General"}
                       </span>
-                      {log.target_type && (
-                        <span className="px-2 py-0.5 rounded-full bg-muted">
-                          {log.target_type}
-                        </span>
-                      )}
-                      {log.target_id && (
-                        <span className="text-[10px]">
-                          {displayTarget(log.target_type, log.target_id)}
+                      {msg.is_flagged && <Flag className="w-4 h-4 text-red-500" />}
+                      {msg.is_deleted && (
+                        <span className="px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground">
+                          Deleted
                         </span>
                       )}
                     </div>
-                    {log.notes && (
-                      <p className="text-xs text-muted-foreground">{redactSecrets(log.notes)}</p>
+
+                    {lastEdit && (
+                      <div className="text-xs text-orange-600 italic">
+                        Edited on {formatDateTime(lastEdit.action_at)}
+                      </div>
                     )}
+
+                    <p className="text-sm">{msg.content}</p>
                   </div>
-                ))}
-                {filteredAuditLogs.length > 200 && (
-                  <p className="text-xs text-muted-foreground">
-                    Showing first 200 matching audit actions.
-                  </p>
-                )}
-              </div>
+                );
+              })
             ) : (
-              <p className="text-sm text-muted-foreground">No audit actions to display.</p>
+              <p className="text-sm text-muted-foreground">No messages to display.</p>
             )}
           </CardContent>
         </Card>
-      )}
-
-      <Input
-        placeholder="Search by sender, recipient, or content..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mb-4"
-      />
-
-      <div className="flex gap-2 flex-wrap">
-        {(["All", "General", "Legal", "Medical", "Safety", "Emergency", "Financial"] as const).map((p) => (
-          <button
-            key={p}
-            onClick={() => setPurposeFilter(p)}
-            className={`px-3 py-1 rounded-full text-sm font-medium ${
-              purposeFilter === p
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {p}
-          </button>
-        ))}
       </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Message History</CardTitle>
-          <Button size="sm" onClick={exportAudit} className="gap-2">
-            Export
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading audit logs...</p>
-          ) : filteredMessages.length > 0 ? (
-            filteredMessages.map((msg) => {
-              const sender = userMap[msg.sender_id] || msg.sender_id;
-              const receiver = userMap[msg.receiver_id] || msg.receiver_id;
-              const history = historyById[msg.id] ?? [];
-              const lastEdit = history
-                .slice()
-                .reverse()
-                .find((entry) => entry.action_type === "update");
-
-              return (
-                <div key={msg.id} className="p-3 border rounded-xl flex flex-col gap-1">
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
-                    <span>{formatDateTime(msg.created_at)}</span>
-                    <span>{sender} ? {receiver}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary">
-                      {msg.purpose || "General"}
-                    </span>
-                    {msg.is_flagged && <Flag className="w-4 h-4 text-red-500" />}
-                    {msg.is_deleted && (
-                      <span className="px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground">
-                        Deleted
-                      </span>
-                    )}
-                  </div>
-
-                  {lastEdit && (
-                    <div className="text-xs text-orange-600 italic">
-                      Edited on {formatDateTime(lastEdit.action_at)}
-                    </div>
-                  )}
-
-                  <p className="text-sm">{msg.content}</p>
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-sm text-muted-foreground">No messages to display.</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    </ModeratorLayout>
   );
 };
 

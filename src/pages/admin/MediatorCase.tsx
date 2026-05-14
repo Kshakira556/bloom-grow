@@ -61,6 +61,13 @@ const MediatorCase = () => {
   const [previewExternalUrl, setPreviewExternalUrl] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  const [screeningLoading, setScreeningLoading] = useState(false);
+  const [screeningError, setScreeningError] = useState<string | null>(null);
+  const [screeningChecklist, setScreeningChecklist] = useState<api.CaseScreeningChecklist>({});
+  const [screeningOutcome, setScreeningOutcome] = useState<api.CaseScreeningOutcome>("needs_more_info");
+  const [screeningReferralOutcome, setScreeningReferralOutcome] = useState<string>("");
+  const [screeningNotes, setScreeningNotes] = useState<string>("");
+
   const openPreviewForDoc = async (doc: api.CaseDocument) => {
     try {
       setDocsError(null);
@@ -135,6 +142,23 @@ const MediatorCase = () => {
           setDocsError(e instanceof Error ? e.message : "Failed to load documents");
         } finally {
           setDocsLoading(false);
+        }
+
+        // Suitability & Screening (Phase 6)
+        try {
+          setScreeningLoading(true);
+          setScreeningError(null);
+          const screening = await api.getCaseScreening(id);
+          if (screening) {
+            setScreeningChecklist(screening.checklist ?? {});
+            setScreeningOutcome(screening.outcome ?? "needs_more_info");
+            setScreeningReferralOutcome(screening.referral_outcome ?? "");
+            setScreeningNotes(screening.notes ?? "");
+          }
+        } catch (e) {
+          setScreeningError(e instanceof Error ? e.message : "Failed to load screening");
+        } finally {
+          setScreeningLoading(false);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load case");
@@ -369,6 +393,99 @@ const MediatorCase = () => {
                     <option value="follow_up">Follow-up</option>
                     <option value="closed">Closed</option>
                   </select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Suitability &amp; Screening</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {screeningError && <p className="text-xs text-destructive">{screeningError}</p>}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { key: "domestic_violence", label: "Domestic violence concerns" },
+                    { key: "child_safety_risk", label: "Child safety risk" },
+                    { key: "substance_abuse", label: "Substance abuse concerns" },
+                    { key: "coercive_control", label: "Coercive control / power imbalance" },
+                    { key: "mental_health_concerns", label: "Mental health concerns" },
+                    { key: "urgent_protection_needed", label: "Urgent protection needed" },
+                    { key: "interpreter_needed", label: "Interpreter needed" },
+                  ].map((it) => (
+                    <label key={it.key} className="flex items-start gap-2 p-2 border rounded-lg">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={Boolean((screeningChecklist as any)[it.key])}
+                        onChange={(e) => setScreeningChecklist((prev) => ({ ...prev, [it.key]: e.target.checked }))}
+                        disabled={loading || screeningLoading || !id}
+                      />
+                      <span className="text-sm">{it.label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-1">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Outcome</p>
+                    <select
+                      value={screeningOutcome}
+                      onChange={(e) => setScreeningOutcome(e.target.value as api.CaseScreeningOutcome)}
+                      className="px-3 py-2 rounded-md border bg-background text-sm w-full"
+                      disabled={loading || screeningLoading || !id}
+                    >
+                      <option value="needs_more_info">Needs more info</option>
+                      <option value="suitable">Suitable</option>
+                      <option value="paused_safety">Paused (safety)</option>
+                      <option value="unsuitable_refer">Unsuitable (refer out)</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Referral / notes</p>
+                    <input
+                      value={screeningReferralOutcome}
+                      onChange={(e) => setScreeningReferralOutcome(e.target.value)}
+                      placeholder="Referral outcome (optional)"
+                      className="w-full px-3 py-2 rounded-md border bg-background text-sm"
+                      disabled={loading || screeningLoading || !id}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Notes (mediator-only)</p>
+                  <textarea
+                    value={screeningNotes}
+                    onChange={(e) => setScreeningNotes(e.target.value)}
+                    className="w-full min-h-24 px-3 py-2 rounded-md border bg-background text-sm"
+                    placeholder="Screening notes, safety concerns, next steps…"
+                    disabled={loading || screeningLoading || !id}
+                  />
+                  <Button
+                    size="sm"
+                    disabled={loading || screeningLoading || !id}
+                    onClick={async () => {
+                      if (!id) return;
+                      try {
+                        setScreeningLoading(true);
+                        setScreeningError(null);
+                        await api.upsertCaseScreening(id, {
+                          checklist: screeningChecklist,
+                          outcome: screeningOutcome,
+                          referral_outcome: screeningReferralOutcome.trim() || null,
+                          notes: screeningNotes.trim() || null,
+                        });
+                      } catch (e) {
+                        setScreeningError(e instanceof Error ? e.message : "Failed to save screening");
+                      } finally {
+                        setScreeningLoading(false);
+                      }
+                    }}
+                  >
+                    Save screening
+                  </Button>
                 </div>
               </CardContent>
             </Card>

@@ -1263,6 +1263,50 @@ export type CaseDocument = {
   updated_at: string | null;
 };
 
+export type CaseScreeningOutcome =
+  | "suitable"
+  | "needs_more_info"
+  | "paused_safety"
+  | "unsuitable_refer";
+
+export type CaseScreeningChecklist = {
+  domestic_violence?: boolean;
+  child_safety_risk?: boolean;
+  substance_abuse?: boolean;
+  coercive_control?: boolean;
+  mental_health_concerns?: boolean;
+  urgent_protection_needed?: boolean;
+  interpreter_needed?: boolean;
+};
+
+export type CaseScreening = {
+  plan_id: string;
+  checklist: CaseScreeningChecklist;
+  outcome: CaseScreeningOutcome;
+  referral_outcome: string | null;
+  notes: string | null;
+  updated_by: string | null;
+  updated_at: string;
+};
+
+export const getCaseScreening = async (planId: string) => {
+  const res = await http<{ screening: CaseScreening | null }>(`/admin/moderator/cases/${planId}/screening`, "GET");
+  return res?.screening ?? null;
+};
+
+export const upsertCaseScreening = async (
+  planId: string,
+  payload: {
+    checklist: CaseScreeningChecklist;
+    outcome: CaseScreeningOutcome;
+    referral_outcome?: string | null;
+    notes?: string | null;
+  },
+) => {
+  const res = await http<{ screening: CaseScreening }>(`/admin/moderator/cases/${planId}/screening`, "PUT", payload);
+  return res?.screening;
+};
+
 export const getCaseDocuments = async (planId: string) => {
   const res = await http<{ documents: CaseDocument[] }>(`/admin/moderator/cases/${planId}/documents`, "GET");
   return res?.documents ?? [];

@@ -1152,6 +1152,94 @@ export const setMyMediatorCaseStage = async (planId: string, stage: MediatorCase
   return res?.stage;
 };
 
+export type MediatorSessionMode = "in_person" | "online" | "phone" | "other";
+export type ActionItemVisibility = "shared" | "mediator_only";
+
+export type MediatorSession = {
+  id: string;
+  plan_id: string;
+  starts_at: string;
+  ends_at: string | null;
+  mode: MediatorSessionMode;
+  location: string | null;
+  agenda: string | null;
+  outcome_notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type MediatorSessionActionItem = {
+  id: string;
+  session_id: string;
+  text: string;
+  due_at: string | null;
+  visibility: ActionItemVisibility;
+  is_done: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export const getMyMediatorSessions = async (args?: { plan_id?: string; from?: string; to?: string; limit?: number }) => {
+  const params = new URLSearchParams();
+  if (args?.plan_id) params.set("plan_id", args.plan_id);
+  if (args?.from) params.set("from", args.from);
+  if (args?.to) params.set("to", args.to);
+  if (typeof args?.limit === "number") params.set("limit", String(args.limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await http<{ sessions: MediatorSession[] }>(`/admin/moderator/sessions${qs}`, "GET");
+  return res?.sessions ?? [];
+};
+
+export const createMyMediatorSession = async (payload: {
+  plan_id: string;
+  starts_at: string;
+  ends_at?: string | null;
+  mode?: MediatorSessionMode;
+  location?: string | null;
+  agenda?: string | null;
+}) => {
+  const res = await http<{ session: MediatorSession }>(`/admin/moderator/sessions`, "POST", payload);
+  return res?.session;
+};
+
+export const updateMyMediatorSession = async (id: string, payload: Partial<{
+  starts_at: string;
+  ends_at: string | null;
+  mode: MediatorSessionMode;
+  location: string | null;
+  agenda: string | null;
+  outcome_notes: string | null;
+}>) => {
+  const res = await http<{ session: MediatorSession }>(`/admin/moderator/sessions/${id}`, "PUT", payload);
+  return res?.session;
+};
+
+export const getMySessionActionItems = async (sessionId: string) => {
+  const res = await http<{ items: MediatorSessionActionItem[] }>(`/admin/moderator/sessions/${sessionId}/action-items`, "GET");
+  return res?.items ?? [];
+};
+
+export const createMySessionActionItem = async (sessionId: string, payload: {
+  text: string;
+  due_at?: string | null;
+  visibility?: ActionItemVisibility;
+}) => {
+  const res = await http<{ item: MediatorSessionActionItem }>(`/admin/moderator/sessions/${sessionId}/action-items`, "POST", payload);
+  return res?.item;
+};
+
+export const updateMySessionActionItem = async (actionItemId: string, payload: Partial<{
+  text: string;
+  due_at: string | null;
+  visibility: ActionItemVisibility;
+  is_done: boolean;
+}>) => {
+  const res = await http<{ item: MediatorSessionActionItem }>(`/admin/moderator/action-items/${actionItemId}`, "PUT", payload);
+  return res?.item;
+};
+
 export const getMyModeratorFlaggedMessages = async (options?: { includeDeleted?: boolean }) => {
   const params = new URLSearchParams();
   if (options?.includeDeleted) params.set("include_deleted", "true");

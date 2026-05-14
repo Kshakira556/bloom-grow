@@ -40,6 +40,11 @@ const MediatorCase = () => {
   const [messages, setMessages] = useState<api.ApiMessage[]>([]);
   const [stage, setStage] = useState<api.MediatorCaseStage>("active_mediation");
   const [decisionNotesByProposalId, setDecisionNotesByProposalId] = useState<Record<string, string>>({});
+  const [sessions, setSessions] = useState<api.MediatorSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
+  const [actionItems, setActionItems] = useState<api.MediatorSessionActionItem[]>([]);
+  const [newActionText, setNewActionText] = useState("");
+  const [sessionOutcomeNotes, setSessionOutcomeNotes] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -61,6 +66,12 @@ const MediatorCase = () => {
         // Messages are plan-scoped and should be permitted for assigned mediators.
         const res = await api.getMessagesByPlan(id, { includeDeleted: true, limit: 50 });
         setMessages(res.messages ?? []);
+
+        const sessionsRes = await api.getMyMediatorSessions({ plan_id: id, limit: 200 }).catch(() => [] as api.MediatorSession[]);
+        setSessions(sessionsRes);
+        const firstSessionId = sessionsRes[0]?.id ?? "";
+        setSelectedSessionId(firstSessionId);
+        setSessionOutcomeNotes(sessionsRes[0]?.outcome_notes ?? "");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load case");
       } finally {
@@ -78,6 +89,20 @@ const MediatorCase = () => {
       .slice()
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [messages]);
+
+  useEffect(() => {
+    const loadItems = async () => {
+      if (!selectedSessionId) {
+        setActionItems([]);
+        return;
+      }
+      const items = await api.getMySessionActionItems(selectedSessionId).catch(() => [] as api.MediatorSessionActionItem[]);
+      setActionItems(items);
+      const s = sessions.find((x) => x.id === selectedSessionId);
+      setSessionOutcomeNotes(s?.outcome_notes ?? "");
+    };
+    loadItems();
+  }, [selectedSessionId, sessions]);
 
   return (
     <ModeratorLayout>
@@ -121,6 +146,122 @@ const MediatorCase = () => {
           </Card>
 
           <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Schedule</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="text-sm text-muted-foreground">
+                    Sessions: <span className="text-foreground font-medium">{sessions.length}</span>
+                  </div>
+                  <Button asChild size="sm" variant="outline">
+                    <Link to={`/admin/schedule?case=${id}`}>Open schedule</Link>
+                  </Button>
+                </div>
+
+                {sessions.length ? (
+                  <select
+                    value={selectedSessionId}
+                    onChange={(e) => setSelectedSessionId(e.target.value)}
+                    className="px-3 py-2 rounded-md border bg-background text-sm w-full"
+                    disabled={loading}
+                  >
+                    {sessions
+                      .slice()
+                      .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {new Date(s.starts_at).toLocaleString()} ({s.mode.replaceAll("_", " ")})
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No sessions scheduled yet.</p>
+                )}
+
+                {selectedSessionId && (
+                  <>
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Outcome notes (mediator-only)</p>
+                      <textarea
+                        value={sessionOutcomeNotes}
+                        onChange={(e) => setSessionOutcomeNotes(e.target.value)}
+                        className="w-full min-h-24 px-3 py-2 rounded-md border bg-background text-sm"
+                        placeholder="Session outcomes, agreements reached, next steps…"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          const updated = await api.updateMyMediatorSession(selectedSessionId, { outcome_notes: sessionOutcomeNotes });
+                          if (!updated) return;
+                          setSessions((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                        }}
+                      >
+                        Save notes
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Action items (mediator-only)</p>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          value={newActionText}
+                          onChange={(e) => setNewActionText(e.target.value)}
+                          placeholder="Add an action item…"
+                          className="flex-1 px-3 py-2 rounded-md border bg-background text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const text = newActionText.trim();
+                            if (!text) return;
+                            const item = await api.createMySessionActionItem(selectedSessionId, { text, visibility: "mediator_only" });
+                            if (!item) return;
+                            setActionItems((prev) => [...prev, item]);
+                            setNewActionText("");
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {actionItems.length ? (
+                          actionItems.map((it) => (
+                            <label key={it.id} className="flex items-start gap-3 p-3 border rounded-xl">
+                              <input
+                                type="checkbox"
+                                className="mt-1"
+                                checked={it.is_done}
+                                onChange={async (e) => {
+                                  const next = e.target.checked;
+                                  setActionItems((prev) => prev.map((x) => (x.id === it.id ? { ...x, is_done: next } : x)));
+                                  try {
+                                    const updated = await api.updateMySessionActionItem(it.id, { is_done: next });
+                                    if (updated) setActionItems((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                                  } catch {
+                                    setActionItems((prev) => prev.map((x) => (x.id === it.id ? { ...x, is_done: it.is_done } : x)));
+                                  }
+                                }}
+                              />
+                              <div className="min-w-0">
+                                <p className="text-sm">{it.text}</p>
+                                <p className="text-xs text-muted-foreground">Visibility: {it.visibility.replaceAll("_", " ")}</p>
+                              </div>
+                            </label>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No action items yet.</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Stage</CardTitle>

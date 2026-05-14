@@ -1294,13 +1294,14 @@ export const updateCaseDocument = async (id: string, payload: Partial<{ name: st
 };
 
 export const deleteCaseDocument = async (id: string) => {
-  return http<{ ok: true }>(`/admin/moderator/documents/${id}`, "DELETE");
+  const res = await http<{ document: CaseDocument }>(`/admin/moderator/documents/${id}`, "DELETE");
+  return res?.document;
 };
 
 export const getCaseDocumentSignedUrl = async (id: string, options?: { expires_in?: number }) => {
   const q = typeof options?.expires_in === "number" ? `?expires_in=${encodeURIComponent(String(options.expires_in))}` : "";
-  const res = await http<{ signed_url: string }>(`/admin/moderator/documents/${id}/signed-url${q}`, "GET");
-  return res?.signed_url ?? "";
+  const res = await http<{ signed_url?: string; url?: string }>(`/admin/moderator/documents/${id}/signed-url${q}`, "GET");
+  return res?.signed_url ?? res?.url ?? "";
 };
 
 export const fetchAllPlanMessages = async (

@@ -50,6 +50,8 @@ const MediatorCase = () => {
   const [docsError, setDocsError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadVisibility, setUploadVisibility] = useState<api.CaseDocumentVisibility>("shared");
+  const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
+  const [openingDocId, setOpeningDocId] = useState<string>("");
 
   useEffect(() => {
     const load = async () => {
@@ -415,41 +417,58 @@ const MediatorCase = () => {
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file || !id) return;
-                        try {
-                          setUploading(true);
-                          setDocsError(null);
-
-                          const signed = await api.createCaseDocumentSignedUpload(id, {
-                            filename: file.name,
-                            content_type: file.type || "application/octet-stream",
-                          });
-
-                          await fetch(signed.signed_url, {
-                            method: "PUT",
-                            headers: {
-                              "Content-Type": file.type || "application/octet-stream",
-                            },
-                            body: file,
-                          });
-
-                          const created = await api.createCaseDocument(id, {
-                            name: file.name,
-                            storage_path: signed.path,
-                            content_type: file.type || "application/octet-stream",
-                            visibility: uploadVisibility,
-                          });
-
-                          if (created) setDocuments((prev) => [created, ...prev]);
-                        } catch (err) {
-                          setDocsError(err instanceof Error ? err.message : "Failed to upload document");
-                        } finally {
-                          setUploading(false);
-                          e.target.value = "";
-                        }
+                        setSelectedDocFile(file);
+                        e.target.value = "";
                       }}
                     />
                   </label>
+
+                  <Button
+                    size="sm"
+                    disabled={loading || uploading || !id || !selectedDocFile}
+                    onClick={async () => {
+                      if (!selectedDocFile || !id) return;
+                      const file = selectedDocFile;
+                      try {
+                        setUploading(true);
+                        setDocsError(null);
+
+                        const signed = await api.createCaseDocumentSignedUpload(id, {
+                          filename: file.name,
+                          content_type: file.type || "application/octet-stream",
+                        });
+
+                        await fetch(signed.signed_url, {
+                          method: "PUT",
+                          headers: { "Content-Type": file.type || "application/octet-stream" },
+                          body: file,
+                        });
+
+                        const created = await api.createCaseDocument(id, {
+                          name: file.name,
+                          storage_path: signed.path,
+                          content_type: file.type || "application/octet-stream",
+                          visibility: uploadVisibility,
+                        });
+
+                        if (created) setDocuments((prev) => [created, ...prev]);
+                        setSelectedDocFile(null);
+                      } catch (err) {
+                        setDocsError(err instanceof Error ? err.message : "Failed to upload document");
+                      } finally {
+                        setUploading(false);
+                      }
+                    }}
+                  >
+                    Upload
+                  </Button>
                 </div>
+
+                {selectedDocFile && (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: <span className="text-foreground font-medium">{selectedDocFile.name}</span>
+                  </p>
+                )}
 
                 {docsLoading ? (
                   <p className="text-sm text-muted-foreground">Loading…</p>
@@ -472,14 +491,24 @@ const MediatorCase = () => {
                               variant="outline"
                               onClick={async () => {
                                 try {
+                                  setOpeningDocId(d.id);
                                   const url = await api.getCaseDocumentSignedUrl(d.id, { expires_in: 60 * 10 });
-                                  if (url) window.open(url, "_blank", "noopener,noreferrer");
+                                  if (!url) throw new Error("No signed URL returned");
+
+                                  const opened = window.open(url, "_blank", "noopener,noreferrer");
+                                  if (!opened) {
+                                    // Fallback for popup blockers
+                                    window.location.href = url;
+                                  }
                                 } catch (err) {
                                   setDocsError(err instanceof Error ? err.message : "Failed to open document");
+                                } finally {
+                                  setOpeningDocId("");
                                 }
                               }}
+                              disabled={openingDocId === d.id}
                             >
-                              Open
+                              {openingDocId === d.id ? "Opening…" : "Open"}
                             </Button>
                             <Button
                               size="sm"
@@ -487,8 +516,13 @@ const MediatorCase = () => {
                               onClick={async () => {
                                 if (!confirm("Delete this document?")) return;
                                 try {
-                                  await api.deleteCaseDocument(d.id);
-                                  setDocuments((prev) => prev.filter((x) => x.id !== d.id));
+                                  const deleted = await api.deleteCaseDocument(d.id);
+                                  if (deleted) {
+                                    setDocuments((prev) => prev.map((x) => (x.id === deleted.id ? deleted : x)).filter((x) => !x.is_deleted));
+                                  } else {
+                                    // If server returned no payload, just remove locally.
+                                    setDocuments((prev) => prev.filter((x) => x.id !== d.id));
+                                  }
                                 } catch (err) {
                                   setDocsError(err instanceof Error ? err.message : "Failed to delete document");
                                 }

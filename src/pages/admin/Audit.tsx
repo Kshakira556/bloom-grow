@@ -71,21 +71,10 @@ const AdminAudit = () => {
         }
 
         const usersRes = isMediator
-          ? (await (async () => {
-              const ids = new Set<string>();
-              for (const msg of allMessages) {
-                if (msg.sender_id) ids.add(msg.sender_id);
-                if (msg.receiver_id) ids.add(msg.receiver_id);
-              }
-
-              // Add current user so "You" can resolve without extra calls.
-              if (user) ids.add(user.id);
-
-              const lookups = await Promise.all(
-                Array.from(ids).map(async (id) => api.getUserById(id))
-              );
-              return lookups.filter((u): u is api.SafeUser => Boolean(u));
-            })())
+          ? await api.getUsersByIds([
+              ...(allMessages.flatMap((m) => [m.sender_id, m.receiver_id])),
+              ...(user ? [user.id] : []),
+            ])
           : await api.getUsers();
         const logsRes = isMediator ? ([] as api.AuditLog[]) : await api.getAuditLogs().catch(() => [] as api.AuditLog[]);
 
@@ -428,4 +417,3 @@ const AdminAudit = () => {
 };
 
 export default AdminAudit;
-

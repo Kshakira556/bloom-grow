@@ -145,6 +145,14 @@ export const getUserById = async (id: string): Promise<SafeUser | null> => {
   }
 };
 
+export const getUsersByIds = async (ids: string[]): Promise<SafeUser[]> => {
+  const uniq = Array.from(new Set(ids.filter(Boolean)));
+  if (!uniq.length) return [];
+
+  const results = await Promise.all(uniq.map(async (id) => getUserById(id)));
+  return results.filter((u): u is SafeUser => Boolean(u));
+};
+
 export const getModerators = async (): Promise<Moderator[]> => {
   const res = await http<{ moderators: Moderator[] }>("/admin/moderators", "GET");
   return res.moderators;

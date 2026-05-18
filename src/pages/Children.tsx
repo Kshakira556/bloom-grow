@@ -135,9 +135,12 @@ const Children = () => {
   useEffect(() => {
     const fetchDefaultPlanId = async () => {
       try {
-        const { plans } = await queryClient.fetchQuery({
+        const plans = await queryClient.fetchQuery({
           queryKey: ["plans"],
-          queryFn: () => api.getPlans(),
+          queryFn: async () => {
+            const res = await api.getPlans();
+            return res.plans ?? [];
+          },
           staleTime: 60_000,
         });
         setDefaultPlanId(plans?.[0]?.id ?? null);

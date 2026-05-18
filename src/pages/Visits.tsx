@@ -239,9 +239,12 @@ const handleProposalSubmit = async () => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const { plans } = await queryClient.fetchQuery({
+        const plans = await queryClient.fetchQuery({
           queryKey: ["plans"],
-          queryFn: () => api.getPlans(),
+          queryFn: async () => {
+            const res = await api.getPlans();
+            return res.plans ?? [];
+          },
           staleTime: 60_000,
         });
 

@@ -21,6 +21,7 @@ const csvToList = (raw: string): string[] => {
 };
 
 const BusinessTab = () => {
+  const TERMS_VERSION = "v1";
   const [businessName, setBusinessName] = useState("");
   const [tradingName, setTradingName] = useState("");
   const [registrationNumber, setRegistrationNumber] = useState("");
@@ -49,6 +50,7 @@ const BusinessTab = () => {
   const [typicalSessionLengthMinutes, setTypicalSessionLengthMinutes] = useState<string>("");
 
   const [popiaAcknowledged, setPopiaAcknowledged] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [retentionPolicy, setRetentionPolicy] = useState("");
   const [legalHoldContactEmail, setLegalHoldContactEmail] = useState("");
 
@@ -116,7 +118,8 @@ const BusinessTab = () => {
           );
 
           setPopiaAcknowledged(Boolean(profile.popia_acknowledged_at));
-          setRetentionPolicy(profile.retention_policy ?? "");
+          setTermsAccepted(Boolean(profile.terms_accepted_at));
+          setRetentionPolicy(profile.retention_policy ?? "default");
           setLegalHoldContactEmail(profile.legal_hold_contact_email ?? "");
 
           setBillingEmail(profile.billing_email ?? "");
@@ -188,6 +191,11 @@ const BusinessTab = () => {
         return;
       }
 
+      if (!termsAccepted) {
+        setError("Terms acceptance is required");
+        return;
+      }
+
       const saved = await api.upsertBusinessProfile({
         business_name: name,
         mediator_count: mediatorCountParsed,
@@ -217,7 +225,9 @@ const BusinessTab = () => {
         typical_session_length_minutes: typicalSessionLengthMinutesParsed,
 
         popia_acknowledged_at: popiaAcknowledged ? new Date().toISOString() : null,
-        retention_policy: retentionPolicy.trim() || null,
+        terms_accepted: true,
+        terms_version: TERMS_VERSION,
+        retention_policy: retentionPolicy.trim() || "default",
         legal_hold_contact_email: legalHoldContactEmail.trim() || null,
 
         billing_email: billingEmail.trim() || null,
@@ -270,6 +280,7 @@ const BusinessTab = () => {
           : typicalSessionLengthMinutes
       );
       setPopiaAcknowledged(Boolean(saved.popia_acknowledged_at) || popiaAcknowledged);
+      setTermsAccepted(Boolean(saved.terms_accepted_at) || termsAccepted);
       setRetentionPolicy(saved.retention_policy ?? retentionPolicy);
       setLegalHoldContactEmail(saved.legal_hold_contact_email ?? legalHoldContactEmail);
       setBillingEmail(saved.billing_email ?? billingEmail);
@@ -691,6 +702,14 @@ const BusinessTab = () => {
           <CardTitle>Compliance & consent</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+            />
+            <span className="text-sm text-muted-foreground">Terms acceptance (required)</span>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="checkbox"

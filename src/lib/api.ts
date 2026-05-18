@@ -192,6 +192,8 @@ export type BusinessProfile = {
   popia_acknowledged_at?: string | null;
   retention_policy?: string | null;
   legal_hold_contact_email?: string | null;
+  terms_accepted_at?: string | null;
+  terms_version?: string | null;
 
   billing_email?: string | null;
   purchase_order_reference?: string | null;
@@ -233,6 +235,8 @@ export const upsertBusinessProfile = async (payload: {
   popia_acknowledged_at?: string | null;
   retention_policy?: string | null;
   legal_hold_contact_email?: string | null;
+  terms_accepted?: boolean;
+  terms_version?: string | null;
   billing_email?: string | null;
   purchase_order_reference?: string | null;
   payment_method_preference?: string | null;

@@ -165,6 +165,37 @@ export type BusinessProfile = {
   id: string;
   owner_user_id: string;
   business_name: string;
+  trading_name?: string | null;
+  registration_number?: string | null;
+  vat_number?: string | null;
+  industry?: string | null;
+  website?: string | null;
+
+  primary_contact_full_name?: string | null;
+  primary_contact_title?: string | null;
+  primary_contact_email?: string | null;
+  primary_contact_mobile?: string | null;
+
+  registered_address?: any | null;
+  billing_address?: any | null;
+  billing_same_as_registered?: boolean | null;
+
+  expected_mediator_count?: number | null;
+  plans_per_month?: number | null;
+  expected_plans_per_month?: number | null;
+
+  provinces_served?: string[] | null;
+  languages_offered?: string[] | null;
+  service_modalities?: string[] | null;
+  typical_session_length_minutes?: number | null;
+
+  popia_acknowledged_at?: string | null;
+  retention_policy?: string | null;
+  legal_hold_contact_email?: string | null;
+
+  billing_email?: string | null;
+  purchase_order_reference?: string | null;
+  payment_method_preference?: string | null;
   mediator_count: number | null;
   plan_count: number | null;
   created_at: string;
@@ -180,6 +211,31 @@ export const upsertBusinessProfile = async (payload: {
   business_name: string;
   mediator_count?: number | null;
   plan_count?: number | null;
+  trading_name?: string | null;
+  registration_number?: string | null;
+  vat_number?: string | null;
+  industry?: string | null;
+  website?: string | null;
+  primary_contact_full_name?: string | null;
+  primary_contact_title?: string | null;
+  primary_contact_email?: string | null;
+  primary_contact_mobile?: string | null;
+  registered_address?: any | null;
+  billing_address?: any | null;
+  billing_same_as_registered?: boolean | null;
+  expected_mediator_count?: number | null;
+  plans_per_month?: number | null;
+  expected_plans_per_month?: number | null;
+  provinces_served?: string[] | string | null;
+  languages_offered?: string[] | string | null;
+  service_modalities?: string[] | string | null;
+  typical_session_length_minutes?: number | null;
+  popia_acknowledged_at?: string | null;
+  retention_policy?: string | null;
+  legal_hold_contact_email?: string | null;
+  billing_email?: string | null;
+  purchase_order_reference?: string | null;
+  payment_method_preference?: string | null;
 }): Promise<BusinessProfile> => {
   const res = await http<{ profile: BusinessProfile }>(
     "/admin/business-profile",

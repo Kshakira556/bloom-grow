@@ -6,6 +6,7 @@ import Moderators from "./tabs/Moderators";
 import Roles from "./tabs/Roles";
 import Audit from "./tabs/Audit";
 import SettingsTab from "./tabs/Settings";
+import BusinessTab from "./tabs/Business";
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("moderators");
@@ -19,12 +20,14 @@ const Admin = () => {
             <TabsTrigger value="moderators">Moderators</TabsTrigger>
             <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
             <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+            <TabsTrigger value="business">Business</TabsTrigger>
             <TabsTrigger value="settings">Global Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="moderators"><Moderators /></TabsContent>
           <TabsContent value="roles"><Roles /></TabsContent>
           <TabsContent value="audit"><Audit /></TabsContent>
+          <TabsContent value="business"><BusinessTab /></TabsContent>
           <TabsContent value="settings"><SettingsTab /></TabsContent>
         </Tabs>
       </div>

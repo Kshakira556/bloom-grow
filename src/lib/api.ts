@@ -159,6 +159,37 @@ export const getModerators = async (): Promise<Moderator[]> => {
 };
 
 // --------------------
+// Admin: Business profile
+// --------------------
+export type BusinessProfile = {
+  id: string;
+  owner_user_id: string;
+  business_name: string;
+  mediator_count: number | null;
+  plan_count: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const getBusinessProfile = async (): Promise<BusinessProfile | null> => {
+  const res = await http<{ profile: BusinessProfile | null }>("/admin/business-profile", "GET");
+  return res.profile;
+};
+
+export const upsertBusinessProfile = async (payload: {
+  business_name: string;
+  mediator_count?: number | null;
+  plan_count?: number | null;
+}): Promise<BusinessProfile> => {
+  const res = await http<{ profile: BusinessProfile }>(
+    "/admin/business-profile",
+    "PUT",
+    payload
+  );
+  return res.profile;
+};
+
+// --------------------
 // Privacy Requests
 // --------------------
 export type PrivacyRequestType = "access" | "correction" | "deletion" | "objection";

@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import * as api from "@/lib/api";
-import { buildUserNameMap } from "@/lib/adminData";
 
 const Audit = () => {
   const [logs, setLogs] = useState<api.AuditLog[]>([]);
-  const [users, setUsers] = useState<api.SafeUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,12 +12,8 @@ const Audit = () => {
       try {
         setLoading(true);
         setError(null);
-        const [logsRes, usersRes] = await Promise.all([
-          api.getAuditLogs(),
-          api.getUsers(),
-        ]);
+        const logsRes = await api.getAuditLogs();
         setLogs(logsRes);
-        setUsers(usersRes);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load audit logs");
       } finally {
@@ -30,7 +24,9 @@ const Audit = () => {
     load();
   }, []);
 
-  const userMap = useMemo(() => buildUserNameMap(users), [users]);
+  const fmtName = useMemo(() => {
+    return (log: api.AuditLog) => log.actor_name || log.actor_id;
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -52,7 +48,7 @@ const Audit = () => {
               >
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-2 w-full">
                   <p className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString()}</p>
-                  <p className="text-xs font-medium">{userMap[log.actor_id] || log.actor_id}</p>
+                  <p className="text-xs font-medium">{fmtName(log)}</p>
                   <p className="text-xs">{log.action}</p>
                   <p className="text-xs">{log.target_type || "-"}</p>
                   <p className="text-xs italic text-muted-foreground">{log.notes || "-"}</p>

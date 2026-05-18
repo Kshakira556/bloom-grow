@@ -1268,9 +1268,11 @@ export const createReview = async (payload: {
 export interface AuditLog {
   id: string;
   actor_id: string;
+  actor_name?: string | null;
   action: string;
   target_type?: string | null;
   target_id?: string | null;
+  plan_id?: string | null;
   notes?: string | null;
   created_at: string;
 }

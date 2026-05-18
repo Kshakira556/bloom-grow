@@ -376,7 +376,7 @@ useEffect(() => {
       const apiMessages = await api.getMessagesByPlan(activePlan.id, {
         includeDeleted: true,
       });
-      const allMessages = apiMessages.map((msg) => mapApiMessageToMessage(msg, userId));
+      const allMessages = apiMessages.messages.map((msg) => mapApiMessageToMessage(msg, userId));
 
       const conversationMessages = allMessages.filter(
         (m) =>

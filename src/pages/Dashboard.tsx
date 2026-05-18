@@ -151,7 +151,10 @@ export default function Dashboard() {
     // Warm caches for likely next navigation targets.
     void queryClient.prefetchQuery({
       queryKey: ["plan", activePlanId],
-      queryFn: () => api.getPlanById(activePlanId),
+      queryFn: async () => {
+        const res = await api.getPlanById(activePlanId);
+        return res.plan;
+      },
       staleTime: 2 * 60_000,
     });
 

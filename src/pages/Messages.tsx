@@ -158,9 +158,12 @@ const Messages = () => {
           (storedPlanId && plans?.some((p) => p.id === storedPlanId) ? storedPlanId : plans?.[0]?.id) ?? "";
 
         if (selectedId) {
-          const { plan: fullPlan } = await queryClient.fetchQuery({
+          const fullPlan = await queryClient.fetchQuery({
             queryKey: ["plan", selectedId],
-            queryFn: () => api.getPlanById(selectedId),
+            queryFn: async () => {
+              const res = await api.getPlanById(selectedId);
+              return res.plan;
+            },
             staleTime: 2 * 60_000,
           });
           try {
@@ -176,7 +179,7 @@ const Messages = () => {
     };
 
     fetchPlans();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!activePlan || !activePlan.invites || invitesResolved) return;

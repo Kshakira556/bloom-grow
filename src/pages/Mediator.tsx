@@ -61,9 +61,12 @@ export default function Mediator() {
           (storedPlanId && plans?.some((p) => p.id === storedPlanId) ? storedPlanId : plans?.[0]?.id) ?? "";
 
         if (selectedId) {
-          const { plan } = await queryClient.fetchQuery({
+          const plan = await queryClient.fetchQuery({
             queryKey: ["plan", selectedId],
-            queryFn: () => api.getPlanById(selectedId),
+            queryFn: async () => {
+              const res = await api.getPlanById(selectedId);
+              return res.plan;
+            },
             staleTime: 2 * 60_000,
           });
           try {
@@ -166,9 +169,12 @@ export default function Mediator() {
                   onChange={async (e) => {
                     const id = e.target.value;
                     if (!id) return;
-                    const { plan } = await queryClient.fetchQuery({
+                    const plan = await queryClient.fetchQuery({
                       queryKey: ["plan", id],
-                      queryFn: () => api.getPlanById(id),
+                      queryFn: async () => {
+                        const res = await api.getPlanById(id);
+                        return res.plan;
+                      },
                       staleTime: 2 * 60_000,
                     });
                     try {

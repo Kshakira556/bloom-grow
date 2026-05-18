@@ -266,9 +266,12 @@ const handleProposalSubmit = async () => {
           (storedPlanId && plans?.some((p) => p.id === storedPlanId) ? storedPlanId : plans?.[0]?.id) ?? "";
 
         if (selectedId) {
-          const full = await queryClient.fetchQuery({
+          const fullPlan = await queryClient.fetchQuery({
             queryKey: ["plan", selectedId],
-            queryFn: () => api.getPlanById(selectedId),
+            queryFn: async () => {
+              const res = await api.getPlanById(selectedId);
+              return res.plan;
+            },
             staleTime: 2 * 60_000,
           });
           try {
@@ -276,7 +279,7 @@ const handleProposalSubmit = async () => {
           } catch {
             // ignore
           }
-          setActivePlan(full.plan);
+          setActivePlan(fullPlan);
         } else {
           setActivePlan(null);
         }
@@ -287,7 +290,7 @@ const handleProposalSubmit = async () => {
     };
 
     fetchPlans();
-  }, [navigate]);
+  }, [navigate, user?.id, queryClient]);
 
 const refreshVisits = useCallback(async () => {
   if (!activePlan?.id) {
@@ -452,9 +455,12 @@ useEffect(() => {
           onClick={async () => {
             setPlansOpen(false);
             try {
-              const { plan: fullPlan } = await queryClient.fetchQuery({
+              const fullPlan = await queryClient.fetchQuery({
                 queryKey: ["plan", plan.id],
-                queryFn: () => api.getPlanById(plan.id),
+                queryFn: async () => {
+                  const res = await api.getPlanById(plan.id);
+                  return res.plan;
+                },
                 staleTime: 2 * 60_000,
               });
               try {

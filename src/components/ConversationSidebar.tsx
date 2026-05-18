@@ -324,9 +324,12 @@ const ConversationSidebar = ({
                     return;
                   }
                   try {
-                    const { plan: fullPlan } = await queryClient.fetchQuery({
+                    const fullPlan = await queryClient.fetchQuery({
                       queryKey: ["plan", plan.id],
-                      queryFn: () => api.getPlanById(plan.id),
+                      queryFn: async () => {
+                        const res = await api.getPlanById(plan.id);
+                        return res.plan;
+                      },
                       staleTime: 2 * 60_000,
                     });
                     try {

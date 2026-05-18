@@ -219,7 +219,20 @@ export default function Mediator() {
                 </CardContent>
               </Card>
 
-              <MediationRequestCard planId={activePlan?.id ?? null} disabled={loading || !user?.id} />
+              {activePlan?.id && mediators.length > 0 ? (
+                <Card className="rounded-3xl shadow-sm">
+                  <CardHeader>
+                    <CardTitle>Request a mediator</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      A mediator is already assigned to this plan. Requesting another mediator is disabled.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <MediationRequestCard planId={activePlan?.id ?? null} disabled={loading || !user?.id} />
+              )}
             </TabsContent>
 
             <TabsContent value="documents" className="space-y-4">

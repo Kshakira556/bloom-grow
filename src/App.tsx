@@ -143,11 +143,7 @@ const App = () => (
             } />
 
             {/* Admin / Moderator protected routes */}
-            <Route path="/admin/dashboard" element={
-              <RoleProtectedRoute allowedRoles={["admin"]}>
-                <AdminDashboard />
-              </RoleProtectedRoute>
-            } />
+            <Route path="/admin/dashboard" element={<Navigate to="/admin/system" replace />} />
             <Route path="/admin" element={<Navigate to="/admin/mediator" replace />} />
             <Route path="/admin/mediator" element={
               <RoleProtectedRoute allowedRoles={["mediator"]}>

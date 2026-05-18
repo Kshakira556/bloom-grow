@@ -23,7 +23,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const sidebarLinks = [
     { href: "/admin/system", label: "System Admin", icon: LayoutDashboard },
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   ];
 
   const [sidebarOpen, setSidebarOpen] = useState(true);

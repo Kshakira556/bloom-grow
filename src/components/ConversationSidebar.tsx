@@ -6,6 +6,7 @@ import { toast } from "@/lib/toastHelper";
 import { useState, useEffect } from "react";
 import { Message } from "@/types/messages";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Conversation = {
   user_id: string;
@@ -83,6 +84,7 @@ const ConversationSidebar = ({
   className,
 }: Props) => {
   const { user: authUser } = useAuth();
+  const queryClient = useQueryClient();
   const userId = authUser?.id || "";
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState("");
@@ -322,7 +324,16 @@ const ConversationSidebar = ({
                     return;
                   }
                   try {
-                    const { plan: fullPlan } = await api.getPlanById(plan.id);
+                    const { plan: fullPlan } = await queryClient.fetchQuery({
+                      queryKey: ["plan", plan.id],
+                      queryFn: () => api.getPlanById(plan.id),
+                      staleTime: 2 * 60_000,
+                    });
+                    try {
+                      localStorage.setItem("active_plan_id", plan.id);
+                    } catch {
+                      // ignore
+                    }
                     setActivePlan(fullPlan);
                     setPlansOpen(false);
                   } catch (err) {

@@ -278,6 +278,47 @@ export interface PlanInvite {
 }
 
 // --------------------
+// Dashboard
+// --------------------
+export type DashboardSummary = {
+  plan_id: string;
+  unread_messages: {
+    count: number;
+    preview: Array<{
+      id: string;
+      sender_id: string;
+      content: string;
+      created_at: string;
+    }>;
+  };
+  pending_visit_requests_count: number;
+  shared_documents_count: number;
+  upcoming_shared_sessions_count: number;
+  next_shared_session: null | {
+    id: string;
+    starts_at: string;
+    ends_at: string | null;
+    mode: string;
+    location: string | null;
+    agenda: string | null;
+  };
+};
+
+export const getDashboardSummary = async (args: {
+  plan_id: string;
+  unread_limit?: number;
+  unread_offset?: number;
+}): Promise<DashboardSummary> => {
+  const params = new URLSearchParams();
+  params.set("plan_id", args.plan_id);
+  if (typeof args.unread_limit === "number") params.set("unread_limit", String(args.unread_limit));
+  if (typeof args.unread_offset === "number") params.set("unread_offset", String(args.unread_offset));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await http<{ summary: DashboardSummary }>(`/dashboard/summary${qs}`, "GET");
+  return res.summary;
+};
+
+// --------------------
 // CUB internal: Privacy requests workflow
 // --------------------
 

@@ -11,182 +11,225 @@ import { DateTime } from "luxon";
 import { Pagination, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useAuthContext } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Dashboard() {
   const { toast } = useToast(); 
-  const [plans, setPlans] = useState<api.Plan[]>([]);
-  const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
-  const [events, setEvents] = useState<VisitEvent[]>([]);
-  const [unreadMessages, setUnreadMessages] = useState<
-    { message: string; time: string; href: string; description: string }[]
-  >([]);
-  const [allUnreadMessages, setAllUnreadMessages] = useState<
-    { message: string; created_at: string }[]
-  >([]);
+  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const messagesPerPage = 5; 
-
-  const [isLoadingPlans, setIsLoadingPlans] = useState(false); 
-  const [isLoadingVisits, setIsLoadingVisits] = useState(false);
   const { user } = useAuthContext();
 
+  const [activePlanId, setActivePlanId] = useState<string>(() => {
+    try {
+      return localStorage.getItem("active_plan_id") ?? "";
+    } catch {
+      return "";
+    }
+  });
+
+  const plansQuery = useQuery({
+    queryKey: ["plans"],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const { plans } = await api.getPlans();
+      return plans ?? [];
+    },
+  });
+
   useEffect(() => {
-  const fetchUnreadMessages = async (retry = 0) => {
-    if (!activePlan || !user) {
-      setUnreadMessages([]);
+    const plans = plansQuery.data ?? [];
+    if (!plans.length) {
+      setActivePlanId("");
       return;
     }
 
-    try {
-      const { messages } = await api.getMessagesByPlan(activePlan.id);
+    const stored = activePlanId;
+    const exists = stored && plans.some((p) => p.id === stored);
+    const next = exists ? stored : plans[0]!.id;
 
-      // Only unread messages
-      const unreadAll = messages
-        .filter(msg => !msg.is_seen)
-        .sort((a,b) => DateTime.fromISO(b.created_at).toMillis() - DateTime.fromISO(a.created_at).toMillis());
-
-      setAllUnreadMessages(unreadAll.map(msg => ({
-        message: msg.content,
-        created_at: msg.created_at
-      })));
-
-      // Apply pagination
-      const startIdx = (currentPage - 1) * messagesPerPage;
-      const pagedUnread = unreadAll.slice(startIdx, startIdx + messagesPerPage).map(msg => ({
-        message: msg.content,
-        time: DateTime.fromISO(msg.created_at).setZone("local").toFormat("hh:mm a"),
-        href: "/messages",
-        description: "Unread Messages"
-      }));
-
-      setUnreadMessages(pagedUnread);
-
-    } catch (err) {
-      if (err instanceof Error && err.message === "Unauthorized") {
-        setUnreadMessages([]);
-        return;
-      }
-      console.error("Failed to fetch unread messages:", err);
-      toast({
-        title: "Failed to load messages",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-        action: retry < 3 ? (
-          <ToastAction
-            onClick={() => fetchUnreadMessages(retry + 1)}
-            altText="Retry fetching messages"
-          >
-            Retry
-          </ToastAction>
-        ) : undefined,
-      });
-      setUnreadMessages([]);
-    }
-  };
-
-  setCurrentPage(1);
-  fetchUnreadMessages();
-}, [activePlan, toast, currentPage, user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchPlans = async (retry = 0) => {
-      setIsLoadingPlans(true);
+    if (next !== activePlanId) {
+      setActivePlanId(next);
       try {
-        const { plans } = await api.getPlans();
-        setPlans(plans);
-
-        if (plans[0]) {
-          const { plan: fullPlan } = await api.getPlanById(plans[0].id);
-          setActivePlan(fullPlan);
-        } else {
-          setActivePlan(null);
-        }
-      } catch (err: unknown) {
-          if (err instanceof Error && err.message === "Unauthorized") return;
-
-          console.error("Failed to load plans:", err);
-
-        toast({
-          title: "Failed to load plans",
-          description: "Something went wrong. Please try again.",
-          variant: "destructive",
-          action: retry < 3 ? (
-            <ToastAction
-              onClick={() => fetchPlans(retry + 1)}
-              altText="Retry fetching plans"
-            >
-              Retry
-            </ToastAction>
-          ) : undefined,
-        });
-      } finally {
-        setIsLoadingPlans(false);
+        localStorage.setItem("active_plan_id", next);
+      } catch {
+        // ignore
       }
-    };
-
-    fetchPlans();
-  }, [toast, user]);
-
-  useEffect(() => {
-  const fetchVisits = async (retry = 0) => {
-    if (!activePlan || !user) {
-      setEvents([]);
-      return;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plansQuery.data]);
 
-    setIsLoadingVisits(true);
-    try {
-      const { data } = await api.getVisitsByPlan(activePlan.id);
-      setEvents(mapVisitsToEvents(data, user.id));
-    } catch (err) {
-      if (err instanceof Error && err.message === "Unauthorized") {
-        setEvents([]);
-        return;
-      }
-      console.error("Failed to load visits:", err);
+  const activePlanQuery = useQuery({
+    queryKey: ["plan", activePlanId],
+    enabled: Boolean(user) && Boolean(activePlanId),
+    staleTime: 2 * 60_000,
+    queryFn: async () => {
+      const { plan } = await api.getPlanById(activePlanId);
+      return plan;
+    },
+  });
 
-      toast({
-        title: "Failed to load visits",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-        action: retry < 3 ? (
-          <ToastAction
-            onClick={() => fetchVisits(retry + 1)}
-            altText="Retry fetching visits"
-          >
-            Retry
-          </ToastAction>
-        ) : undefined,
+  const childrenQuery = useQuery({
+    queryKey: ["children"],
+    enabled: Boolean(user),
+    staleTime: 5 * 60_000,
+    queryFn: async () => await api.getChildren(),
+  });
+
+  const visitsQuery = useQuery({
+    queryKey: ["visits", activePlanId, user?.id],
+    enabled: Boolean(user) && Boolean(activePlanId),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await api.getVisitsByPlan(activePlanId);
+      return data ?? [];
+    },
+  });
+
+  const events: VisitEvent[] = useMemo(() => {
+    if (!user) return [];
+    const data = visitsQuery.data ?? [];
+    return mapVisitsToEvents(data, user.id);
+  }, [visitsQuery.data, user]);
+
+  const dashboardSummaryQuery = useQuery({
+    queryKey: ["dashboardSummary", activePlanId, currentPage],
+    enabled: Boolean(user) && Boolean(activePlanId),
+    staleTime: 15_000,
+    queryFn: async () => {
+      return api.getDashboardSummary({
+        plan_id: activePlanId,
+        unread_limit: messagesPerPage,
+        unread_offset: (currentPage - 1) * messagesPerPage,
       });
-    } finally {
-      setIsLoadingVisits(false);
-    }
-  };
+    },
+  });
 
-  fetchVisits();
-}, [activePlan, toast, user]);
+  const plans = plansQuery.data ?? [];
+  const activePlan = activePlanQuery.data ?? null;
+  const children = childrenQuery.data ?? [];
 
   const remainingVisitsCount = events.length;
-  const [children, setChildren] = useState<api.Child[]>([]);
-  const [journalEntriesCount, setJournalEntriesCount] = useState(0);
 
-  // Fetch children along with plans
+  const firstChildId = children[0]?.id ?? "";
+  const journalCountQuery = useQuery({
+    queryKey: ["journalCount", firstChildId],
+    enabled: Boolean(user) && Boolean(activePlanId) && Boolean(firstChildId),
+    staleTime: 2 * 60_000,
+    queryFn: async () => {
+      const entries = await api.getJournalEntriesByChild(firstChildId);
+      return entries.length;
+    },
+  });
+  const journalEntriesCount = journalCountQuery.data ?? 0;
+
+  const allUnreadMessages = useMemo(() => {
+    const total = dashboardSummaryQuery.data?.unread_messages?.count ?? 0;
+    // Only used for pagination sizing.
+    return Array.from({ length: total }, () => ({ message: "", created_at: "" }));
+  }, [dashboardSummaryQuery.data?.unread_messages?.count]);
+
+  const unreadMessages = useMemo(() => {
+    const preview = dashboardSummaryQuery.data?.unread_messages?.preview ?? [];
+    return preview.map((msg) => ({
+      message: msg.content,
+      time: DateTime.fromISO(msg.created_at).setZone("local").toFormat("hh:mm a"),
+      href: "/messages",
+      description: "Unread Messages",
+    }));
+  }, [dashboardSummaryQuery.data]);
+
   useEffect(() => {
-    if (!user) return;
+    setCurrentPage(1);
+  }, [activePlanId]);
 
-    const fetchChildren = async () => {
-      try {
-        const allChildren = await api.getChildren();
-        setChildren(allChildren);
-      } catch (err) {
-        console.error("Failed to load children:", err);
-      }
-    };
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!activePlanId) return;
 
-    fetchChildren();
-  }, [user]);
+    // Warm caches for likely next navigation targets.
+    void queryClient.prefetchQuery({
+      queryKey: ["plan", activePlanId],
+      queryFn: () => api.getPlanById(activePlanId),
+      staleTime: 2 * 60_000,
+    });
+
+    void queryClient.prefetchQuery({
+      queryKey: ["dashboardSummary", activePlanId, 1],
+      queryFn: () =>
+        api.getDashboardSummary({
+          plan_id: activePlanId,
+          unread_limit: messagesPerPage,
+          unread_offset: 0,
+        }),
+      staleTime: 15_000,
+    });
+
+    // Parent mediator shared workspace prefetch (safe: returns [] if none).
+    void queryClient.prefetchQuery({
+      queryKey: ["planMediators", activePlanId],
+      queryFn: () => api.getPlanMediators(activePlanId),
+      staleTime: 60_000,
+    });
+    void queryClient.prefetchQuery({
+      queryKey: ["sharedDocs", activePlanId],
+      queryFn: () => api.getSharedCaseDocuments(activePlanId),
+      staleTime: 60_000,
+    });
+    void queryClient.prefetchQuery({
+      queryKey: ["sharedSessions", activePlanId],
+      queryFn: () => api.getSharedMediatorSessions(activePlanId),
+      staleTime: 30_000,
+    });
+    void queryClient.prefetchQuery({
+      queryKey: ["planDecisions", activePlanId],
+      queryFn: () => api.getPlanDecisions(activePlanId),
+      staleTime: 60_000,
+    });
+  }, [activePlanId, queryClient, user?.id]);
+
+  useEffect(() => {
+    const err =
+      plansQuery.error ||
+      activePlanQuery.error ||
+      visitsQuery.error ||
+      dashboardSummaryQuery.error ||
+      childrenQuery.error ||
+      journalCountQuery.error;
+
+    if (!err) return;
+    if (err instanceof Error && err.message === "Unauthorized") return;
+
+    toast({
+      title: "Some dashboard data failed to load",
+      description: err instanceof Error ? err.message : "Something went wrong. Please try again.",
+      variant: "destructive",
+      action: (
+        <ToastAction
+          onClick={() => {
+            plansQuery.refetch();
+            activePlanQuery.refetch();
+            visitsQuery.refetch();
+            dashboardSummaryQuery.refetch();
+            childrenQuery.refetch();
+            journalCountQuery.refetch();
+          }}
+          altText="Retry loading"
+        >
+          Retry
+        </ToastAction>
+      ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    plansQuery.error,
+    activePlanQuery.error,
+    visitsQuery.error,
+    dashboardSummaryQuery.error,
+    childrenQuery.error,
+    journalCountQuery.error,
+  ]);
 
   const quickLinks = [
     {
@@ -236,26 +279,8 @@ export default function Dashboard() {
       )[0]; // take first
   }, [events]);
 
-    useEffect(() => {
-      const fetchJournalCount = async () => {
-        if (!activePlan || children.length === 0) {
-          setJournalEntriesCount(0);
-          return;
-        }
-
-        try {
-          // For simplicity, count entries of first child
-          const firstChildId = children[0].id;
-          const entries = await api.getJournalEntriesByChild(firstChildId);
-          setJournalEntriesCount(entries.length);
-        } catch (err) {
-          console.error("Failed to fetch journal entries count:", err);
-          setJournalEntriesCount(0);
-        }
-      };
-
-      fetchJournalCount();
-    }, [activePlan, children]);
+  const isLoadingPlans = plansQuery.isLoading;
+  const isLoadingVisits = visitsQuery.isLoading;
 
   return (
     <div className="min-h-screen gradient-bg flex flex-col">

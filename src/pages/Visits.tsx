@@ -19,6 +19,7 @@ import { useAuthContext } from "@/context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { AddChildModal } from "@/components/AddChildModal";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 const daysOfWeek = ["Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun"];
 const locales = { 'en-US': enUS };
@@ -92,6 +93,7 @@ const getVisitRequestSummary = (request: api.VisitChangeRequest): string => {
 };
 
 const Visits = () => {
+  const queryClient = useQueryClient();
   const [plansOpen, setPlansOpen] = useState(false);
   const { user } = useAuthContext();
   const [proposalTitle, setProposalTitle] = useState("");
@@ -237,7 +239,11 @@ const handleProposalSubmit = async () => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const { plans } = await api.getPlans();
+        const { plans } = await queryClient.fetchQuery({
+          queryKey: ["plans"],
+          queryFn: () => api.getPlans(),
+          staleTime: 60_000,
+        });
 
         if (!plans?.length) {
           setActivePlan(null);
@@ -246,8 +252,31 @@ const handleProposalSubmit = async () => {
 
         setPlans(plans);
 
-        const full = await api.getPlanById(plans[0].id);
-        setActivePlan(full.plan);
+        const storedPlanId = (() => {
+          try {
+            return localStorage.getItem("active_plan_id") ?? "";
+          } catch {
+            return "";
+          }
+        })();
+        const selectedId =
+          (storedPlanId && plans?.some((p) => p.id === storedPlanId) ? storedPlanId : plans?.[0]?.id) ?? "";
+
+        if (selectedId) {
+          const full = await queryClient.fetchQuery({
+            queryKey: ["plan", selectedId],
+            queryFn: () => api.getPlanById(selectedId),
+            staleTime: 2 * 60_000,
+          });
+          try {
+            localStorage.setItem("active_plan_id", selectedId);
+          } catch {
+            // ignore
+          }
+          setActivePlan(full.plan);
+        } else {
+          setActivePlan(null);
+        }
 
       } catch (err) {
         console.error("Failed to load plans:", err);
@@ -264,12 +293,16 @@ const refreshVisits = useCallback(async () => {
   }
 
   try {
-    const { data } = await api.getVisitsByPlan(activePlan.id, { includeDeleted: true });
+    const { data } = await queryClient.fetchQuery({
+      queryKey: ["visits", activePlan.id, "includeDeleted"],
+      queryFn: () => api.getVisitsByPlan(activePlan.id, { includeDeleted: true }),
+      staleTime: 30_000,
+    });
     setEvents(mapVisitsToEvents(data, user?.id));
   } catch (err) {
     console.warn("Failed to fetch visits:", err);
   }
-}, [activePlan?.id, user?.id]);
+}, [activePlan?.id, user?.id, queryClient]);
 
 useEffect(() => {
   void refreshVisits();
@@ -416,7 +449,16 @@ useEffect(() => {
           onClick={async () => {
             setPlansOpen(false);
             try {
-              const { plan: fullPlan } = await api.getPlanById(plan.id);
+              const { plan: fullPlan } = await queryClient.fetchQuery({
+                queryKey: ["plan", plan.id],
+                queryFn: () => api.getPlanById(plan.id),
+                staleTime: 2 * 60_000,
+              });
+              try {
+                localStorage.setItem("active_plan_id", plan.id);
+              } catch {
+                // ignore
+              }
               setActivePlan(fullPlan);
             } catch (err) {
               console.error("Failed to fetch full plan:", err);

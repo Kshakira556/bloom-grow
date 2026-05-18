@@ -8,10 +8,12 @@ import { JournalEntry } from "@/types/journal";
 import * as api from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import ViewJournalModal from "@/components/ViewJournalModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 const moods = ["😊", "😢", "😴", "🤒", "😤", "🥰"];
 
 const Journal = () => {
+  const queryClient = useQueryClient();
   const [plans, setPlans] = useState<api.Plan[]>([]);
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
   const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
@@ -37,11 +39,34 @@ const Journal = () => {
     // Fetch plans & resolve first child
     useEffect(() => {
       const fetchPlans = async () => {
-        const { plans } = await api.getPlans();
+        const { plans } = await queryClient.fetchQuery({
+          queryKey: ["plans"],
+          queryFn: () => api.getPlans(),
+          staleTime: 60_000,
+        });
         setPlans(plans);
 
-        if (plans[0]) {
-          const { plan: fullPlan } = await api.getPlanById(plans[0].id);
+        const storedPlanId = (() => {
+          try {
+            return localStorage.getItem("active_plan_id") ?? "";
+          } catch {
+            return "";
+          }
+        })();
+        const selectedId =
+          (storedPlanId && plans?.some((p) => p.id === storedPlanId) ? storedPlanId : plans?.[0]?.id) ?? "";
+
+        if (selectedId) {
+          const { plan: fullPlan } = await queryClient.fetchQuery({
+            queryKey: ["plan", selectedId],
+            queryFn: () => api.getPlanById(selectedId),
+            staleTime: 2 * 60_000,
+          });
+          try {
+            localStorage.setItem("active_plan_id", selectedId);
+          } catch {
+            // ignore
+          }
           setActivePlan(fullPlan);
 
           const firstChild = fullPlan.children?.[0] || null;

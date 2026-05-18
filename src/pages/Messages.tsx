@@ -20,6 +20,8 @@ import { toast } from "@/lib/toastHelper";
 import { isUserParticipantOfPlan, mapApiMessageToMessage } from "@/lib/messages";
 import { exportConversation } from "@/lib/exportConversation";
 import { PURPOSES } from "@/constants/purposes";
+import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 // Types
 import { Message, DraftMessage, MessagePurpose } from "@/types/messages";
@@ -42,6 +44,7 @@ type Conversation = {
 };
 
 const Messages = () => {
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
@@ -134,11 +137,34 @@ const Messages = () => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const { plans } = await api.getPlans();
+        const { plans } = await queryClient.fetchQuery({
+          queryKey: ["plans"],
+          queryFn: () => api.getPlans(),
+          staleTime: 60_000,
+        });
         setPlans(plans);
 
-        if (plans[0]) {
-          const { plan: fullPlan } = await api.getPlanById(plans[0].id);
+        const storedPlanId = (() => {
+          try {
+            return localStorage.getItem("active_plan_id") ?? "";
+          } catch {
+            return "";
+          }
+        })();
+        const selectedId =
+          (storedPlanId && plans?.some((p) => p.id === storedPlanId) ? storedPlanId : plans?.[0]?.id) ?? "";
+
+        if (selectedId) {
+          const { plan: fullPlan } = await queryClient.fetchQuery({
+            queryKey: ["plan", selectedId],
+            queryFn: () => api.getPlanById(selectedId),
+            staleTime: 2 * 60_000,
+          });
+          try {
+            localStorage.setItem("active_plan_id", selectedId);
+          } catch {
+            // ignore
+          }
           setActivePlan(fullPlan);
         }
       } catch (err) {
@@ -177,34 +203,31 @@ const Messages = () => {
     resolveInvites();
   }, [activePlan, invitesResolved]);
 
-useEffect(() => {
-  const activePlanId = activePlan?.id;
-  if (!activePlanId || !userId) return;
+  const planMessagesQuery = useQuery({
+    queryKey: ["planMessages", activePlan?.id, userId],
+    enabled: Boolean(activePlan?.id) && Boolean(userId),
+    staleTime: 10_000,
+    refetchInterval: 12_000,
+    queryFn: async () => {
+      const planId = activePlan?.id;
+      if (!planId || !userId) return { messages: [] as Message[], hasMore: false };
+      return fetchByPlan(planId, userId, { limit: paginationLimitRef.current });
+    },
+  });
 
-  const fetchMessages = async () => {
-    try {
-      const mappedMessages = await fetchByPlan(activePlanId, userId, {
-        limit: paginationLimitRef.current,
-      });
-      const hasMore = mappedMessages.hasMore;
-      setMessages((prev) => {
-        if (!prev.length) return mappedMessages.messages;
+  useEffect(() => {
+    const data = planMessagesQuery.data;
+    if (!data) return;
 
-        const byId = new Map(prev.map((m) => [m.id, m]));
-        for (const msg of mappedMessages.messages) byId.set(msg.id, msg);
-        return Array.from(byId.values());
-      });
-      setHasMoreMessages(hasMore);
-    } catch (err) {
-      console.error("Failed to fetch messages:", err);
-    }
-  };
+    setMessages((prev) => {
+      if (!prev.length) return data.messages;
 
-  fetchMessages();
-
-  const interval = window.setInterval(fetchMessages, 12000);
-  return () => window.clearInterval(interval);
-}, [activePlan?.id, userId, fetchByPlan]);
+      const byId = new Map(prev.map((m) => [m.id, m]));
+      for (const msg of data.messages) byId.set(msg.id, msg);
+      return Array.from(byId.values());
+    });
+    setHasMoreMessages(Boolean(data.hasMore));
+  }, [planMessagesQuery.data]);
 
 useEffect(() => {
   setHasMoreMessages(true);
@@ -618,6 +641,23 @@ useEffect(() => {
                         prev.some((m) => m.id === sentMessage.id)
                           ? prev
                           : [...prev, sentMessage]
+                      );
+
+                      // Keep cached plan messages in sync (stale-while-revalidate).
+                      queryClient.setQueryData(
+                        ["planMessages", activePlan.id, userId],
+                        (prev: any) => {
+                          if (!prev || !Array.isArray(prev.messages)) {
+                            return { messages: [sentMessage], hasMore: true };
+                          }
+
+                          const exists = prev.messages.some((m: any) => m.id === sentMessage.id);
+                          if (exists) return prev;
+                          return {
+                            ...prev,
+                            messages: [...prev.messages, sentMessage],
+                          };
+                        },
                       );
 
                       setDraft({

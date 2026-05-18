@@ -11,6 +11,7 @@ import { vaultReadService } from "@/lib/vaultReadService";
 import { VaultAggregate } from "@/types/vaultAggregate";
 import { vaultSaveService } from "@/lib/vaultSaveService";
 import { AddChildModal } from "@/components/AddChildModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 
 type VaultAggregateWithMissing = VaultAggregate & {
@@ -34,6 +35,7 @@ const getExportTimeZoneLabel = () => {
 };
 
 const Children = () => {  
+  const queryClient = useQueryClient();
   // New state
   const [selectedChild, setSelectedChild] = useState<VaultAggregateWithMissing | null>(null);
   const [children, setChildren] = useState<{ id: string; name: string; birth_date?: string }[]>([]);
@@ -133,7 +135,11 @@ const Children = () => {
   useEffect(() => {
     const fetchDefaultPlanId = async () => {
       try {
-        const { plans } = await api.getPlans();
+        const { plans } = await queryClient.fetchQuery({
+          queryKey: ["plans"],
+          queryFn: () => api.getPlans(),
+          staleTime: 60_000,
+        });
         setDefaultPlanId(plans?.[0]?.id ?? null);
       } catch (err) {
         console.warn("Unable to resolve default plan for add-child flow:", err);

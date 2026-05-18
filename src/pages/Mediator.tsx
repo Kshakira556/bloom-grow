@@ -8,9 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Mediator() {
   const { user } = useAuthContext();
+  const queryClient = useQueryClient();
   const [plans, setPlans] = useState<api.Plan[]>([]);
   const [activePlan, setActivePlan] = useState<api.FullPlan | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,10 +39,35 @@ export default function Mediator() {
     const load = async () => {
       try {
         setLoading(true);
-        const { plans } = await api.getPlans();
+        const { plans } = await queryClient.fetchQuery({
+          queryKey: ["plans"],
+          queryFn: () => api.getPlans(),
+          staleTime: 60_000,
+        });
         setPlans(plans ?? []);
-        if (plans?.[0]?.id) {
-          const { plan } = await api.getPlanById(plans[0].id);
+
+        const storedPlanId = (() => {
+          try {
+            return localStorage.getItem("active_plan_id") ?? "";
+          } catch {
+            return "";
+          }
+        })();
+
+        const selectedId =
+          (storedPlanId && plans?.some((p) => p.id === storedPlanId) ? storedPlanId : plans?.[0]?.id) ?? "";
+
+        if (selectedId) {
+          const { plan } = await queryClient.fetchQuery({
+            queryKey: ["plan", selectedId],
+            queryFn: () => api.getPlanById(selectedId),
+            staleTime: 2 * 60_000,
+          });
+          try {
+            localStorage.setItem("active_plan_id", selectedId);
+          } catch {
+            // ignore
+          }
           setActivePlan(plan);
         } else {
           setActivePlan(null);
@@ -136,7 +163,16 @@ export default function Mediator() {
                   onChange={async (e) => {
                     const id = e.target.value;
                     if (!id) return;
-                    const { plan } = await api.getPlanById(id);
+                    const { plan } = await queryClient.fetchQuery({
+                      queryKey: ["plan", id],
+                      queryFn: () => api.getPlanById(id),
+                      staleTime: 2 * 60_000,
+                    });
+                    try {
+                      localStorage.setItem("active_plan_id", id);
+                    } catch {
+                      // ignore
+                    }
                     setActivePlan(plan);
                   }}
                   className="w-full px-3 py-2 rounded-lg border bg-background text-sm"

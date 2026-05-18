@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as api from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 
 const stageLabel = (stage?: api.MediatorCaseStage) => {
   switch (stage) {
@@ -34,6 +36,8 @@ const stageLabel = (stage?: api.MediatorCaseStage) => {
 
 const MediatorCase = () => {
   const { id } = useParams<{ id: string }>();
+  const { user: authUser } = useAuth();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +71,11 @@ const MediatorCase = () => {
   const [previewExternalUrl, setPreviewExternalUrl] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [exportingBundle, setExportingBundle] = useState(false);
+
+  const [messageRecipientId, setMessageRecipientId] = useState<string>("");
+  const [newMessageContent, setNewMessageContent] = useState<string>("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [sendMessageError, setSendMessageError] = useState<string | null>(null);
 
   const [screeningLoading, setScreeningLoading] = useState(false);
   const [screeningError, setScreeningError] = useState<string | null>(null);
@@ -706,16 +715,20 @@ const MediatorCase = () => {
                       <div className="flex flex-col sm:flex-row gap-2">
                         <Button
                           size="sm"
-                          onClick={async () => {
-                            if (!p.id) return;
-                            const notes = decisionNotesByProposalId[p.id]?.trim() || undefined;
-                            const updated = await api.updateProposalStatus(p.id, { status: "approved", notes });
-                            if (!updated) return;
-                            setPendingProposals((prev) => prev.filter((x) => x.id !== p.id));
-                          }}
-                        >
-                          Approve
-                        </Button>
+                        onClick={async () => {
+                          if (!p.id) return;
+                          const notes = decisionNotesByProposalId[p.id]?.trim() || undefined;
+                          const updated = await api.updateProposalStatus(p.id, { status: "approved", notes });
+                          if (!updated) return;
+                          setPendingProposals((prev) => prev.filter((x) => x.id !== p.id));
+                          if (id) {
+                            queryClient.invalidateQueries({ queryKey: ["planDecisions", id] });
+                            queryClient.invalidateQueries({ queryKey: ["dashboardSummary", id] });
+                          }
+                        }}
+                      >
+                        Approve
+                      </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -725,6 +738,10 @@ const MediatorCase = () => {
                             const updated = await api.updateProposalStatus(p.id, { status: "changes_requested", notes });
                             if (!updated) return;
                             setPendingProposals((prev) => prev.filter((x) => x.id !== p.id));
+                            if (id) {
+                              queryClient.invalidateQueries({ queryKey: ["planDecisions", id] });
+                              queryClient.invalidateQueries({ queryKey: ["dashboardSummary", id] });
+                            }
                           }}
                         >
                           Request edits
@@ -738,6 +755,10 @@ const MediatorCase = () => {
                             const updated = await api.updateProposalStatus(p.id, { status: "rejected", notes });
                             if (!updated) return;
                             setPendingProposals((prev) => prev.filter((x) => x.id !== p.id));
+                            if (id) {
+                              queryClient.invalidateQueries({ queryKey: ["planDecisions", id] });
+                              queryClient.invalidateQueries({ queryKey: ["dashboardSummary", id] });
+                            }
                           }}
                         >
                           Reject
@@ -841,6 +862,11 @@ const MediatorCase = () => {
                         if (created) {
                           setDocuments((prev) => [created, ...prev]);
                           await openPreviewForDoc(created);
+
+                          if (created.visibility === "shared") {
+                            queryClient.invalidateQueries({ queryKey: ["sharedDocs", id] });
+                            queryClient.invalidateQueries({ queryKey: ["dashboardSummary", id] });
+                          }
                         }
                         setSelectedDocFile(null);
                       } catch (err) {
@@ -885,6 +911,11 @@ const MediatorCase = () => {
                         if (created) {
                           setDocuments((prev) => [created, ...prev]);
                           await openPreviewForDoc(created);
+
+                          if (created.visibility === "shared") {
+                            queryClient.invalidateQueries({ queryKey: ["sharedDocs", id] });
+                            queryClient.invalidateQueries({ queryKey: ["dashboardSummary", id] });
+                          }
                         }
                         setSelectedDocFile(null);
                       } catch (err) {
@@ -950,6 +981,11 @@ const MediatorCase = () => {
                                     // If server returned no payload, just remove locally.
                                     setDocuments((prev) => prev.filter((x) => x.id !== d.id));
                                   }
+
+                                  if (d.visibility === "shared" && id) {
+                                    queryClient.invalidateQueries({ queryKey: ["sharedDocs", id] });
+                                    queryClient.invalidateQueries({ queryKey: ["dashboardSummary", id] });
+                                  }
                                 } catch (err) {
                                   setDocsError(err instanceof Error ? err.message : "Failed to delete document");
                                 }
@@ -970,6 +1006,88 @@ const MediatorCase = () => {
               </TabsContent>
 
               <TabsContent value="messages" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Send Message</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {sendMessageError && <p className="text-sm text-destructive">{sendMessageError}</p>}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="md:col-span-1">
+                        <label className="text-xs text-muted-foreground">To</label>
+                        <select
+                          value={messageRecipientId}
+                          onChange={(e) => setMessageRecipientId(e.target.value)}
+                          className="w-full px-3 py-2 rounded-md border bg-background text-sm"
+                          disabled={loading || sendingMessage || !casePlan?.clients?.length}
+                        >
+                          <option value="">Select a parent…</option>
+                          {(casePlan?.clients ?? []).map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.full_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="text-xs text-muted-foreground">Message</label>
+                        <textarea
+                          value={newMessageContent}
+                          onChange={(e) => setNewMessageContent(e.target.value)}
+                          className="w-full min-h-20 px-3 py-2 rounded-md border bg-background text-sm"
+                          placeholder="Write a message…"
+                          disabled={loading || sendingMessage}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        disabled={
+                          loading ||
+                          sendingMessage ||
+                          !id ||
+                          !authUser?.id ||
+                          !messageRecipientId ||
+                          !newMessageContent.trim()
+                        }
+                        onClick={async () => {
+                          if (!id) return;
+                          if (!authUser?.id) return;
+                          const content = newMessageContent.trim();
+                          if (!content) return;
+                          if (!messageRecipientId) return;
+
+                          try {
+                            setSendingMessage(true);
+                            setSendMessageError(null);
+
+                            const sent = await api.sendMessage({
+                              sender_id: authUser.id,
+                              receiver_id: messageRecipientId,
+                              plan_id: id,
+                              content,
+                              purpose: "General",
+                            });
+
+                            setMessages((prev) => [sent, ...prev]);
+                            setNewMessageContent("");
+                          } catch (e) {
+                            setSendMessageError(e instanceof Error ? e.message : "Failed to send message");
+                          } finally {
+                            setSendingMessage(false);
+                          }
+                        }}
+                      >
+                        {sendingMessage ? "Sending…" : "Send"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
               <CardHeader>
                 <CardTitle>Recent Messages</CardTitle>

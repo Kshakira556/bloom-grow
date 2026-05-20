@@ -20,16 +20,16 @@ export default function Register() {
   const PRIVACY_VERSION = "2026-05-04";
 
   const [fullName, setFullName] = useState("");
-const [email, setEmail] = useState(invitedEmail);
-const [password, setPassword] = useState("");
-const [role, setRole] = useState<"parent" | "mediator" | "admin">("parent");
-const [phone, setPhone] = useState("");
-const [error, setError] = useState("");
-const [accountType, setAccountType] = useState<"trial" | "paid">(
-  invitedAccountType === "paid" ? "paid" : "trial"
-);
-const accountTypeLocked = Boolean(invitedAccountType);
-const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [email, setEmail] = useState(invitedEmail);
+  const [password, setPassword] = useState("");
+  const [registerAs, setRegisterAs] = useState<"parent" | "practice">("parent");
+  const [phone, setPhone] = useState("");
+  const [error, setError] = useState("");
+  const [accountType, setAccountType] = useState<"trial" | "paid">(
+    invitedAccountType === "paid" ? "paid" : "trial"
+  );
+  const accountTypeLocked = Boolean(invitedAccountType);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
 useEffect(() => {
   if (invitedEmail) setEmail(invitedEmail);
@@ -50,12 +50,13 @@ const handleRegister = async (e: React.FormEvent) => {
     }
 
     const inviteId = searchParams.get("invite_id")?.trim() || undefined;
+    const derivedRole = inviteId ? "parent" : registerAs === "practice" ? "admin" : "parent";
 
     const user = await register({
       full_name: fullName,
       email,
       password,
-      role,
+      role: derivedRole,
       phone,
       account_type: accountType,
       invite_id: inviteId,
@@ -106,15 +107,6 @@ const fields: AuthField[] = [
     onChange: (e) => setPassword(e.target.value),
   },
   {
-    name: "role",
-    type: "select",
-    placeholder: "Role (parent / mediator / admin)",
-    icon: <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />,
-    value: role,
-    onChange: (e) =>
-      setRole(e.target.value as "parent" | "mediator" | "admin"),
-  },
-  {
     name: "phone",
     type: "text",
     placeholder: "Phone (optional)",
@@ -135,6 +127,38 @@ const fields: AuthField[] = [
 
   return (
     <AuthPage title="Register" illustration={RegisterPng}>
+      {!searchParams.get("invite_id") && (
+        <div className="space-y-3 mb-4">
+          <label className="text-sm font-medium">Register as</label>
+
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setRegisterAs("parent")}
+              className={`px-4 py-2 rounded-full border ${
+                registerAs === "parent" ? "bg-primary text-white" : ""
+              }`}
+            >
+              Parent
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRegisterAs("practice")}
+              className={`px-4 py-2 rounded-full border ${
+                registerAs === "practice" ? "bg-primary text-white" : ""
+              }`}
+            >
+              Mediator / Practice
+            </button>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Parent accounts are for co-parents using a plan. Mediator/Practice creates a business admin account.
+          </p>
+        </div>
+      )}
+
       <AuthForm fields={fields} onSubmit={handleRegister} buttonLabel="Register" error={error} />
       <div className="flex items-start gap-2 text-sm mb-4">
         <input

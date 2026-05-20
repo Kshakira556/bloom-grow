@@ -82,13 +82,13 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
     };
   }, [allowedRoles, user]);
 
-  if (!user) return <Navigate to="/dashboard" replace />;
+  if (!user) return <Navigate to="/signin" replace />;
 
   if (!allowedRoles.includes(user.role)) {
     // Allow global admins into mediator UI routes (backend already allows admin on mediator endpoints).
     if (allowedRoles.includes("mediator") && user.role === "admin") {
       if (mediatorCapable === null) return null;
-      if (!mediatorCapable) return <Navigate to="/dashboard" replace />;
+      if (!mediatorCapable) return <Navigate to="/access-revoked" replace />;
       return <>{children}</>;
     }
 
@@ -97,13 +97,16 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
       if (adminCapable) return <>{children}</>;
     }
 
+    // Fallback: send user to their default area instead of an infinite /dashboard redirect.
+    if (user.role === "mediator") return <Navigate to="/admin/mediator" replace />;
+    if (user.role === "admin") return <Navigate to="/admin/system" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
   // User role matches, but business access may be revoked (e.g. mediator removed/disabled).
   if (allowedRoles.includes("mediator") && user.role === "mediator") {
     if (mediatorCapable === null) return null;
-    if (!mediatorCapable) return <Navigate to="/dashboard" replace />;
+    if (!mediatorCapable) return <Navigate to="/access-revoked" replace />;
   }
 
   return <>{children}</>;

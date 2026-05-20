@@ -28,6 +28,7 @@ const Children = lazy(() => import("./pages/Children"));
 const Admin = lazy(() => import("./pages/admin/System"));
 const CreatePlan = lazy(() => import("./pages/CreatePlan"));
 const Mediator = lazy(() => import("./pages/Mediator"));
+const AccessRevoked = lazy(() => import("./pages/AccessRevoked"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -140,6 +141,11 @@ const App = () => (
               <RoleProtectedRoute allowedRoles={["parent"]}>
                 <CreatePlan />
               </RoleProtectedRoute>
+            } />
+            <Route path="/access-revoked" element={
+              <ProtectedRoute>
+                <AccessRevoked />
+              </ProtectedRoute>
             } />
 
             {/* Admin / Moderator protected routes */}

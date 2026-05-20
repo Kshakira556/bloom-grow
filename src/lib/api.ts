@@ -67,6 +67,11 @@ export const acceptInvite = async (invite_id: string) => {
   return res.json();
 };
 
+export const acceptBusinessInvite = async (token: string) => {
+  const res = await http<{ member: any }>("/business/invites/accept", "POST", { token });
+  return res;
+};
+
 export interface Moderator extends SafeUser {
   isActive: boolean;
   assignedClients: string[];

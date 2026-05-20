@@ -5,10 +5,11 @@ import { User, Mail, Lock, Shield, Phone } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import * as api from "@/lib/api";
 import RegisterPng from "@/assets/images/register-page.jpeg"
 
 export default function Register() {
-  const { register } = useAuth();
+  const { register, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const invitedEmail = useMemo(() => searchParams.get("email")?.trim() ?? "", [searchParams]);
@@ -34,6 +35,7 @@ export default function Register() {
   );
   const accountTypeLocked = Boolean(invitedAccountType);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [autoAcceptTried, setAutoAcceptTried] = useState(false);
 
 useEffect(() => {
   if (invitedEmail) setEmail(invitedEmail);
@@ -43,6 +45,25 @@ useEffect(() => {
   if (invitedAccountType === "paid") setAccountType("paid");
   else if (invitedAccountType === "trial") setAccountType("trial");
 }, [invitedAccountType]);
+
+  // If a logged-in user clicks a business invite link, accept it without forcing re-registration.
+  useEffect(() => {
+    if (!businessInviteToken) return;
+    if (!user?.id) return;
+    if (autoAcceptTried) return;
+
+    setAutoAcceptTried(true);
+
+    (async () => {
+      try {
+        await api.acceptBusinessInvite(businessInviteToken);
+        navigate("/admin/moderator", { replace: true });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to accept invite";
+        setError(msg);
+      }
+    })();
+  }, [autoAcceptTried, businessInviteToken, navigate, user?.id]);
 
 const handleRegister = async (e: React.FormEvent) => {
   e.preventDefault();

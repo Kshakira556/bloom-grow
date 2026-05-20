@@ -16,6 +16,10 @@ export default function Register() {
     () => (searchParams.get("account_type")?.trim() as "trial" | "paid" | "") || "",
     [searchParams]
   );
+  const businessInviteToken = useMemo(
+    () => searchParams.get("business_invite_token")?.trim() ?? "",
+    [searchParams],
+  );
   const TERMS_VERSION = "2026-05-04";
   const PRIVACY_VERSION = "2026-05-04";
 
@@ -50,7 +54,13 @@ const handleRegister = async (e: React.FormEvent) => {
     }
 
     const inviteId = searchParams.get("invite_id")?.trim() || undefined;
-    const derivedRole = inviteId ? "parent" : registerAs === "practice" ? "admin" : "parent";
+    const derivedRole = inviteId
+      ? "parent"
+      : businessInviteToken
+        ? "mediator"
+        : registerAs === "practice"
+          ? "admin"
+          : "parent";
 
     const user = await register({
       full_name: fullName,
@@ -60,6 +70,7 @@ const handleRegister = async (e: React.FormEvent) => {
       phone,
       account_type: accountType,
       invite_id: inviteId,
+      business_invite_token: businessInviteToken || undefined,
       terms_accepted: true,
       terms_version: TERMS_VERSION,
       privacy_version: PRIVACY_VERSION,
@@ -127,7 +138,7 @@ const fields: AuthField[] = [
 
   return (
     <AuthPage title="Register" illustration={RegisterPng}>
-      {!searchParams.get("invite_id") && (
+      {!searchParams.get("invite_id") && !businessInviteToken && (
         <div className="space-y-3 mb-4">
           <label className="text-sm font-medium">Register as</label>
 
@@ -155,6 +166,15 @@ const fields: AuthField[] = [
 
           <p className="text-xs text-muted-foreground">
             Parent accounts are for co-parents using a plan. Mediator/Practice creates a business admin account.
+          </p>
+        </div>
+      )}
+
+      {businessInviteToken && (
+        <div className="space-y-2 mb-4">
+          <p className="text-sm font-medium">You’ve been invited as a mediator.</p>
+          <p className="text-xs text-muted-foreground">
+            Create your account to join the practice.
           </p>
         </div>
       )}

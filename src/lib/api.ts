@@ -85,6 +85,7 @@ type RegisterPayload = {
   phone?: string;
   account_type?: "trial" | "paid";
   invite_id?: string;
+  business_invite_token?: string;
   terms_accepted?: boolean;
   terms_version?: string;
   privacy_version?: string;
@@ -161,6 +162,34 @@ export const getModerators = async (): Promise<Moderator[]> => {
 // --------------------
 // Admin: Business profile
 // --------------------
+export type BusinessMemberStatus = "active" | "invited" | "disabled";
+export type BusinessRoleInBusiness = "mediator" | "staff" | "admin";
+
+export type BusinessMember = {
+  id: string;
+  owner_user_id: string;
+  member_user_id: string;
+  role_in_business: BusinessRoleInBusiness;
+  status: BusinessMemberStatus;
+  created_at: string;
+  user?: SafeUser | null;
+};
+
+export const getBusinessMembers = async (): Promise<BusinessMember[]> => {
+  const res = await http<{ members: BusinessMember[] }>("/admin/business/members", "GET");
+  return res?.members ?? [];
+};
+
+export const inviteBusinessMemberByEmail = async (payload: {
+  email: string;
+  role_in_business?: BusinessRoleInBusiness;
+}): Promise<
+  | { member: BusinessMember; linked_existing: true }
+  | { invite: { id: string; email: string; expires_at?: string | null }; invite_sent: true }
+> => {
+  return http("/admin/business/members/invite", "POST", payload);
+};
+
 export type BusinessProfile = {
   id: string;
   owner_user_id: string;

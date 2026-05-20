@@ -68,6 +68,15 @@ const BusinessTab = () => {
       try {
         setLoading(true);
         setError(null);
+
+        // Defensive: avoid calling admin-only endpoints if this user's business-admin
+        // capability was revoked (or is otherwise unavailable) mid-session.
+        const canAdmin = await api.canAccessBusinessAdmin();
+        if (!canAdmin) {
+          setError("Admin access is not available for this account.");
+          return;
+        }
+
         const profile = await api.getBusinessProfile();
         if (profile) {
           setBusinessName(profile.business_name ?? "");

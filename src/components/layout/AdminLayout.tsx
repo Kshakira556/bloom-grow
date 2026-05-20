@@ -5,12 +5,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
   Shield, Settings, LogOut, Menu, FileText } from "lucide-react"; 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { TrialStatusPill } from "./TrialStatusPill";
 import TrialBanner from "./TrialBanner";
 import { Footer } from "@/components/layout/Footer";
+import * as api from "@/lib/api";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [canMediator, setCanMediator] = useState(false);
 
   const sidebarLinks = [
     { href: "/admin/system", label: "System Admin", icon: LayoutDashboard },
@@ -38,6 +40,28 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     logout();
     navigate("/signin", { replace: true });
   };
+
+  // Safe view switch: show when this admin can access mediator endpoints/UI.
+  // Global admins always can; business-admin-capable users will also pass.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!user) {
+        if (mounted) setCanMediator(false);
+        return;
+      }
+      if (user.role === "admin") {
+        if (mounted) setCanMediator(true);
+        return;
+      }
+      const ok = await api.canAccessBusinessAdmin();
+      if (mounted) setCanMediator(ok);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id, user?.role]);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -88,6 +112,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </Link>
             );
           })}
+
+          {canMediator && (
+            <Link
+              to="/admin/mediator"
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                location.pathname === "/admin/mediator"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              )}
+            >
+              <Shield className="w-5 h-5 flex-shrink-0" />
+              {sidebarOpen && <span className="font-medium">Switch to Mediator</span>}
+            </Link>
+          )}
         </nav>
 
         {/* Bottom Section */}

@@ -61,6 +61,11 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
   if (!user) return <Navigate to="/dashboard" replace />;
 
   if (!allowedRoles.includes(user.role)) {
+    // Allow global admins into mediator UI routes (backend already allows admin on mediator endpoints).
+    if (allowedRoles.includes("mediator") && user.role === "admin") {
+      return <>{children}</>;
+    }
+
     if (allowedRoles.includes("admin")) {
       if (adminCapable === null) return null; // brief gate while checking
       if (adminCapable) return <>{children}</>;

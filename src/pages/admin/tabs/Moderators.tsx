@@ -7,6 +7,7 @@ import * as api from "@/lib/api";
 
 const Moderators = () => {
   const [moderators, setModerators] = useState<api.SafeUser[]>([]);
+  const [members, setMembers] = useState<api.BusinessMember[]>([]);
   const [assignments, setAssignments] = useState<api.ModeratorAssignment[]>([]);
   const [plans, setPlans] = useState<api.Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,7 @@ const Moderators = () => {
           api.getPlans(),
         ]);
 
+        setMembers(membersRes);
         const memberUsers = membersRes
           .filter((m) => m.role_in_business === "mediator" && m.status === "active")
           .map((m) => m.user)
@@ -86,6 +88,7 @@ const Moderators = () => {
 
       // Refresh list (safe + simple)
       const membersRes = await api.getBusinessMembers();
+      setMembers(membersRes);
       const memberUsers = membersRes
         .filter((m) => m.role_in_business === "mediator" && m.status === "active")
         .map((m) => m.user)
@@ -96,6 +99,38 @@ const Moderators = () => {
       setError(err instanceof Error ? err.message : "Failed to invite moderator");
     } finally {
       setInviting(false);
+    }
+  };
+
+  const onDisable = async (memberUserId: string) => {
+    try {
+      setError(null);
+      await api.updateBusinessMemberStatus(memberUserId, { status: "disabled" });
+      const refreshed = await api.getBusinessMembers();
+      setMembers(refreshed);
+      const memberUsers = refreshed
+        .filter((m) => m.role_in_business === "mediator" && m.status === "active")
+        .map((m) => m.user)
+        .filter((u): u is api.SafeUser => Boolean(u));
+      setModerators(memberUsers);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to disable moderator");
+    }
+  };
+
+  const onEnable = async (memberUserId: string) => {
+    try {
+      setError(null);
+      await api.updateBusinessMemberStatus(memberUserId, { status: "active" });
+      const refreshed = await api.getBusinessMembers();
+      setMembers(refreshed);
+      const memberUsers = refreshed
+        .filter((m) => m.role_in_business === "mediator" && m.status === "active")
+        .map((m) => m.user)
+        .filter((u): u is api.SafeUser => Boolean(u));
+      setModerators(memberUsers);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to enable moderator");
     }
   };
 
@@ -143,6 +178,7 @@ const Moderators = () => {
           ) : filtered.length > 0 ? (
             filtered.map((mod) => {
               const assignedPlans = assignments.filter((a) => a.moderator_id === mod.id);
+              const member = members.find((m) => m.member_user_id === mod.id);
               return (
                 <div key={mod.id} className="p-3 border rounded-xl flex justify-between items-center">
                   <div>
@@ -151,6 +187,11 @@ const Moderators = () => {
                     <p className="text-xs text-muted-foreground">
                       Assigned plans: {assignedPlans.length}
                     </p>
+                    {member?.status && (
+                      <p className="text-xs text-muted-foreground">
+                        Status: <span className="font-medium">{member.status}</span>
+                      </p>
+                    )}
                     {assignedPlans.length > 0 && (
                       <div className="text-xs text-muted-foreground mt-1">
                         {assignedPlans.slice(0, 3).map((assignment) => (
@@ -161,9 +202,20 @@ const Moderators = () => {
                       </div>
                     )}
                   </div>
-                  <Button size="sm" variant="outline" className="gap-1">
-                    <Eye className="w-4 h-4" /> View
-                  </Button>
+                  <div className="flex gap-2">
+                    {member?.status === "active" ? (
+                      <Button size="sm" variant="outline" onClick={() => onDisable(mod.id)}>
+                        Disable
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => onEnable(mod.id)}>
+                        Enable
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" className="gap-1">
+                      <Eye className="w-4 h-4" /> View
+                    </Button>
+                  </div>
                 </div>
               );
             })

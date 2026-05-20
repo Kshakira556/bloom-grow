@@ -26,6 +26,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRouteProps) => {
   const { user, isAuthenticated } = useAuth();
   const [adminCapable, setAdminCapable] = useState<boolean | null>(null);
+  const [mediatorCapable, setMediatorCapable] = useState<boolean | null>(null);
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
@@ -58,11 +59,36 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
     };
   }, [allowedRoles, user]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const shouldCheckMediator =
+      Boolean(user) &&
+      allowedRoles.includes("mediator") &&
+      (user?.role === "mediator" || user?.role === "admin");
+
+    if (!shouldCheckMediator) {
+      setMediatorCapable(null);
+      return;
+    }
+
+    (async () => {
+      const ok = await api.canAccessMediatorTools();
+      if (mounted) setMediatorCapable(ok);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [allowedRoles, user]);
+
   if (!user) return <Navigate to="/dashboard" replace />;
 
   if (!allowedRoles.includes(user.role)) {
     // Allow global admins into mediator UI routes (backend already allows admin on mediator endpoints).
     if (allowedRoles.includes("mediator") && user.role === "admin") {
+      if (mediatorCapable === null) return null;
+      if (!mediatorCapable) return <Navigate to="/dashboard" replace />;
       return <>{children}</>;
     }
 
@@ -72,6 +98,12 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
     }
 
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // User role matches, but business access may be revoked (e.g. mediator removed/disabled).
+  if (allowedRoles.includes("mediator") && user.role === "mediator") {
+    if (mediatorCapable === null) return null;
+    if (!mediatorCapable) return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

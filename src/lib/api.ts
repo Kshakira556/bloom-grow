@@ -77,6 +77,19 @@ export interface Moderator extends SafeUser {
   assignedClients: string[];
 }
 
+export const getPlanMediatorStatus = async (planId: string) => {
+  return http<{
+    mediator: { id: string; full_name: string | null; email: string | null } | null;
+    latestEvent: { id: string; event_type: string; notes?: string | null; created_at: string } | null;
+    needsDecision: boolean;
+    continueWithoutPlan?: boolean;
+  }>(`/plans/${planId}/mediator/status`, "GET");
+};
+
+export const postPlanMediatorDecision = async (planId: string, payload: { event_id: string; decision: "choose_new" | "continue_without" }) => {
+  return http<{ decision: any }>(`/plans/${planId}/mediator/decision`, "POST", payload);
+};
+
 type LoginResponse = {
   user: SafeUser;
   token: string;
@@ -196,6 +209,14 @@ export const inviteBusinessMemberByEmail = async (payload: {
   return http("/admin/business/members/invite", "POST", payload);
 };
 
+export const updateBusinessMemberStatus = async (memberUserId: string, payload: { status: "active" | "disabled"; reason?: string | null }) => {
+  return http<{ member_user_id: string; status: "active" | "disabled" }>(
+    `/admin/business/members/${memberUserId}/status`,
+    "PUT",
+    payload,
+  );
+};
+
 export const updateBusinessMemberRole = async (
   memberUserId: string,
   payload: { roles: Array<"admin" | "mediator"> } | { role: "admin" | "mediator" },
@@ -259,6 +280,16 @@ export const canAccessBusinessAdmin = async (): Promise<boolean> => {
   try {
     // Any 200 response implies business-admin capability (profile may be null).
     await http<{ profile: BusinessProfile | null }>("/admin/business-profile", "GET");
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const canAccessMediatorTools = async (): Promise<boolean> => {
+  try {
+    // Any 200 response implies mediator capability (business-scoped).
+    await http<{ plans: any[] }>("/admin/moderator/assigned-plans", "GET");
     return true;
   } catch {
     return false;

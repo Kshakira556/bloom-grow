@@ -24,6 +24,10 @@ export default function Mediator() {
   const [docsError, setDocsError] = useState<string | null>(null);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [decisionsError, setDecisionsError] = useState<string | null>(null);
+  const [mediatorStatusEventId, setMediatorStatusEventId] = useState<string | null>(null);
+  const [mediatorNeedsDecision, setMediatorNeedsDecision] = useState(false);
+  const [mediatorContinueWithoutPlan, setMediatorContinueWithoutPlan] = useState(false);
+  const [mediatorPromptOpen, setMediatorPromptOpen] = useState(false);
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDocName, setPreviewDocName] = useState("");
@@ -93,6 +97,10 @@ export default function Mediator() {
       setSessions([]);
       setDecisions([]);
       setLatestMessage(null);
+      setMediatorStatusEventId(null);
+      setMediatorNeedsDecision(false);
+      setMediatorContinueWithoutPlan(false);
+      setMediatorPromptOpen(false);
       return;
     }
 
@@ -136,6 +144,26 @@ export default function Mediator() {
   }, [activePlan?.id, user?.id]);
 
   useEffect(() => {
+    const planId = activePlan?.id;
+    if (!user?.id || !planId) return;
+
+    (async () => {
+      try {
+        const status = await api.getPlanMediatorStatus(planId);
+        setMediatorStatusEventId(status.latestEvent?.id ?? null);
+        setMediatorNeedsDecision(Boolean(status.needsDecision));
+        setMediatorContinueWithoutPlan(Boolean(status.continueWithoutPlan));
+        setMediatorPromptOpen(Boolean(status.needsDecision));
+      } catch {
+        setMediatorStatusEventId(null);
+        setMediatorNeedsDecision(false);
+        setMediatorContinueWithoutPlan(false);
+        setMediatorPromptOpen(false);
+      }
+    })();
+  }, [activePlan?.id, user?.id]);
+
+  useEffect(() => {
     if (!previewOpen && previewBlobUrl) {
       URL.revokeObjectURL(previewBlobUrl);
       setPreviewBlobUrl("");
@@ -155,6 +183,51 @@ export default function Mediator() {
           <p className="text-sm text-muted-foreground">
             Request and manage mediator oversight for a specific parenting plan.
           </p>
+
+          <Dialog open={mediatorPromptOpen} onOpenChange={setMediatorPromptOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Mediator action needed</DialogTitle>
+                <DialogDescription>
+                  Your mediator is no longer active for this case. Choose how you want to continue.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <Button
+                  className="w-full"
+                  onClick={async () => {
+                    if (!activePlan?.id || !mediatorStatusEventId) return;
+                    await api.postPlanMediatorDecision(activePlan.id, {
+                      event_id: mediatorStatusEventId,
+                      decision: "choose_new",
+                    });
+                    setMediatorPromptOpen(false);
+                    setMediatorNeedsDecision(false);
+                  }}
+                >
+                  Choose a new mediator
+                </Button>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={async () => {
+                    if (!activePlan?.id || !mediatorStatusEventId) return;
+                    await api.postPlanMediatorDecision(activePlan.id, {
+                      event_id: mediatorStatusEventId,
+                      decision: "continue_without",
+                    });
+                    setMediatorPromptOpen(false);
+                    setMediatorNeedsDecision(false);
+                  }}
+                >
+                  Continue without a mediator
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Continuing without a mediator requires both parents to confirm.
+                </p>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Card className="rounded-3xl shadow-sm">
             <CardHeader>
@@ -250,7 +323,7 @@ export default function Mediator() {
                     >
                       View sessions
                     </Button>
-                    <Button asChild variant="outline" className="rounded-full">
+                    <Button asChild variant="outline" className="rounded-full" disabled={mediatorNeedsDecision || mediators.length === 0}>
                       <Link to="/messages">Message mediator</Link>
                     </Button>
                   </div>
@@ -273,6 +346,22 @@ export default function Mediator() {
                     <p className="text-sm text-muted-foreground">
                       A mediator is already assigned to this plan. Requesting another mediator is disabled.
                     </p>
+                  </CardContent>
+                </Card>
+              ) : mediatorContinueWithoutPlan ? (
+                <Card className="rounded-3xl shadow-sm">
+                  <CardHeader>
+                    <CardTitle>Continuing without a mediator</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Both parents confirmed. You can still assign a mediator later if you choose.
+                    </p>
+                    <div className="mt-3">
+                      <Button onClick={() => setMediatorPromptOpen(true)} variant="outline" className="rounded-full">
+                        Assign a mediator
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ) : (

@@ -175,6 +175,7 @@ export type BusinessMember = {
   owner_user_id: string;
   member_user_id: string;
   role_in_business: BusinessRoleInBusiness;
+  roles?: Array<"admin" | "mediator">;
   status: BusinessMemberStatus;
   created_at: string;
   user?: SafeUser | null;
@@ -195,11 +196,14 @@ export const inviteBusinessMemberByEmail = async (payload: {
   return http("/admin/business/members/invite", "POST", payload);
 };
 
-export const updateBusinessMemberRole = async (memberUserId: string, role: "admin" | "mediator") => {
-  return http<{ member_user_id: string; role: "admin" | "mediator" }>(
+export const updateBusinessMemberRole = async (
+  memberUserId: string,
+  payload: { roles: Array<"admin" | "mediator"> } | { role: "admin" | "mediator" },
+) => {
+  return http<{ member_user_id: string; roles?: Array<"admin" | "mediator">; role?: "admin" | "mediator" }>(
     `/admin/business/members/${memberUserId}/role`,
     "PUT",
-    { role },
+    payload,
   );
 };
 

@@ -1,23 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import * as api from "@/lib/api";
 
 const ROLE_PRIVILEGES: Record<"admin" | "mediator", string[]> = {
   admin: ["Manage Business", "Assign Mediators", "View Audit Logs"],
   mediator: ["Case Oversight", "View Messages"],
 };
-
-const AVAILABLE_ROLES: Array<{ label: string; value: "admin" | "mediator" }> = [
-  { label: "Admin", value: "admin" },
-  { label: "Mediator", value: "mediator" },
-];
 
 const Roles = () => {
   const [members, setMembers] = useState<api.BusinessMember[]>([]);
@@ -47,6 +37,13 @@ const Roles = () => {
       .filter((m) => m.status === "active")
       .filter((m) => m.user?.role === "admin" || m.user?.role === "mediator");
   }, [members]);
+
+  const getMemberRoles = (m: api.BusinessMember): Array<"admin" | "mediator"> => {
+    const roles = Array.isArray(m.roles) ? m.roles : [];
+    if (roles.length) return roles;
+    const fallback = m.user?.role === "admin" ? (["admin"] as const) : (["mediator"] as const);
+    return [...fallback];
+  };
 
   return (
     <div className="space-y-6">
@@ -83,36 +80,82 @@ const Roles = () => {
                   )}
                 </div>
 
-                <Select
-                  value={(member.user?.role as "admin" | "mediator" | undefined) ?? ""}
-                  onValueChange={async (newRole) => {
-                    if (newRole !== "admin" && newRole !== "mediator") return;
-                    if (!member.user?.id) return;
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={getMemberRoles(member).includes("admin")}
+                      onCheckedChange={async (checked) => {
+                        if (!member.user?.id) return;
+                        const current = getMemberRoles(member);
+                        const next = checked
+                          ? Array.from(new Set([...current, "admin"])) as Array<"admin" | "mediator">
+                          : (current.filter((r) => r !== "admin") as Array<"admin" | "mediator">);
+                        if (!next.length) return; // cannot clear all roles
+                        try {
+                          setSavingId(member.user.id);
+                          setError(null);
+                          await api.updateBusinessMemberRole(member.user.id, { roles: next });
+                          const refreshed = await api.getBusinessMembers();
+                          setMembers(refreshed);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Failed to update roles");
+                        } finally {
+                          setSavingId(null);
+                        }
+                      }}
+                    />
+                    <span>Admin</span>
+                  </label>
 
-                    try {
-                      setSavingId(member.user.id);
-                      await api.updateBusinessMemberRole(member.user.id, newRole);
-                      const refreshed = await api.getBusinessMembers();
-                      setMembers(refreshed);
-                    } catch (err) {
-                      setError(err instanceof Error ? err.message : "Failed to update role");
-                    } finally {
-                      setSavingId(null);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="Assign role" />
-                  </SelectTrigger>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={getMemberRoles(member).includes("mediator")}
+                      onCheckedChange={async (checked) => {
+                        if (!member.user?.id) return;
+                        const current = getMemberRoles(member);
+                        const next = checked
+                          ? Array.from(new Set([...current, "mediator"])) as Array<"admin" | "mediator">
+                          : (current.filter((r) => r !== "mediator") as Array<"admin" | "mediator">);
+                        if (!next.length) return; // cannot clear all roles
+                        try {
+                          setSavingId(member.user.id);
+                          setError(null);
+                          await api.updateBusinessMemberRole(member.user.id, { roles: next });
+                          const refreshed = await api.getBusinessMembers();
+                          setMembers(refreshed);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Failed to update roles");
+                        } finally {
+                          setSavingId(null);
+                        }
+                      }}
+                    />
+                    <span>Mediator</span>
+                  </label>
 
-                  <SelectContent>
-                    {AVAILABLE_ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label} — {ROLE_PRIVILEGES[role.value].join(", ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!member.user?.id || savingId === member.user?.id}
+                    onClick={async () => {
+                      if (!member.user?.id) return;
+                      try {
+                        setSavingId(member.user.id);
+                        setError(null);
+                        // Reset to mediator-only
+                        await api.updateBusinessMemberRole(member.user.id, { roles: ["mediator"] });
+                        const refreshed = await api.getBusinessMembers();
+                        setMembers(refreshed);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "Failed to update roles");
+                      } finally {
+                        setSavingId(null);
+                      }
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
               </div>
             ))
           )}
@@ -129,4 +172,3 @@ const Roles = () => {
 };
 
 export default Roles;
-

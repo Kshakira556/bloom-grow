@@ -71,8 +71,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     })();
   }, [queryClient]);
 
+  const clearUserScopedQueries = useCallback(() => {
+    // Treat login/register as a session boundary: clear all user-scoped caches so we never
+    // show data from a previous account (especially important for multi-tenant admin views).
+    const keys: Array<unknown[]> = [
+      ["me"],
+      ["plans"],
+      ["plan"],
+      ["messages"],
+      ["planMessages"],
+      ["visits"],
+      ["children"],
+      ["journalCount"],
+      ["dashboardSummary"],
+      ["planMediators"],
+      ["sharedDocs"],
+      ["sharedSessions"],
+      ["planDecisions"],
+    ];
+
+    for (const queryKey of keys) {
+      queryClient.removeQueries({ queryKey });
+    }
+  }, [queryClient]);
+
   const login = useCallback(async (email: string, password: string) => {
     const { user } = await loginApi(email, password);
+
+    clearUserScopedQueries();
 
     // Persist only user profile; auth is stored in an HttpOnly cookie set by the backend.
     sessionStorage.setItem("user", JSON.stringify(user));
@@ -82,11 +108,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     queryClient.setQueryData(["me"], user);
 
     return user; 
-  }, [queryClient]);
+  }, [clearUserScopedQueries, queryClient]);
 
   const register = useCallback(
   async (data) => {
     const { user } = await registerApi(data);
+
+    clearUserScopedQueries();
 
     // Persist only user profile; auth is stored in an HttpOnly cookie set by the backend.
     sessionStorage.setItem("user", JSON.stringify(user));
@@ -97,23 +125,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return user;
   },
-  [queryClient]
+  [clearUserScopedQueries, queryClient]
 );
 
   const logout = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem("user");
     sessionStorage.removeItem("has_session");
-    queryClient.removeQueries({ queryKey: ["me"] });
-    // Keep plans cached for fast relogin? Safer to clear user-scoped data on logout.
-    queryClient.removeQueries({ queryKey: ["plans"] });
-    queryClient.removeQueries({ queryKey: ["plan"] });
-    queryClient.removeQueries({ queryKey: ["messages"] });
-    queryClient.removeQueries({ queryKey: ["planMessages"] });
-    queryClient.removeQueries({ queryKey: ["visits"] });
-    queryClient.removeQueries({ queryKey: ["children"] });
-    queryClient.removeQueries({ queryKey: ["journalCount"] });
-  }, [queryClient]);
+    clearUserScopedQueries();
+  }, [clearUserScopedQueries]);
 
   return (
     <AuthContext.Provider

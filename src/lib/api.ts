@@ -277,23 +277,23 @@ export const getBusinessProfile = async (): Promise<BusinessProfile | null> => {
 };
 
 export const canAccessBusinessAdmin = async (): Promise<boolean> => {
-  try {
-    // Any 200 response implies business-admin capability (profile may be null).
-    await http<{ profile: BusinessProfile | null }>("/admin/business-profile", "GET");
-    return true;
-  } catch {
-    return false;
-  }
+  // Avoid noisy console errors: 403 simply means "not admin-capable".
+  if (!API_URL) return false;
+  const res = await fetch(`${API_URL}/admin/business-profile`, {
+    method: "GET",
+    credentials: "include",
+  }).catch(() => null);
+  return Boolean(res && res.ok);
 };
 
 export const canAccessMediatorTools = async (): Promise<boolean> => {
-  try {
-    // Any 200 response implies mediator capability (business-scoped).
-    await http<{ plans: any[] }>("/admin/moderator/assigned-plans", "GET");
-    return true;
-  } catch {
-    return false;
-  }
+  // Avoid noisy console errors: 403 simply means "not mediator-capable".
+  if (!API_URL) return false;
+  const res = await fetch(`${API_URL}/admin/moderator/assigned-plans`, {
+    method: "GET",
+    credentials: "include",
+  }).catch(() => null);
+  return Boolean(res && res.ok);
 };
 
 export const upsertBusinessProfile = async (payload: {

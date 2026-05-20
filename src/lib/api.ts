@@ -195,6 +195,14 @@ export const inviteBusinessMemberByEmail = async (payload: {
   return http("/admin/business/members/invite", "POST", payload);
 };
 
+export const updateBusinessMemberRole = async (memberUserId: string, role: "admin" | "mediator") => {
+  return http<{ member_user_id: string; role: "admin" | "mediator" }>(
+    `/admin/business/members/${memberUserId}/role`,
+    "PUT",
+    { role },
+  );
+};
+
 export type BusinessProfile = {
   id: string;
   owner_user_id: string;

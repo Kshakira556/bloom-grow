@@ -255,6 +255,16 @@ export const getBusinessProfile = async (): Promise<BusinessProfile | null> => {
   return res.profile;
 };
 
+export const canAccessBusinessAdmin = async (): Promise<boolean> => {
+  try {
+    // Any 200 response implies business-admin capability (profile may be null).
+    await http<{ profile: BusinessProfile | null }>("/admin/business-profile", "GET");
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const upsertBusinessProfile = async (payload: {
   business_name: string;
   mediator_count?: number | null;

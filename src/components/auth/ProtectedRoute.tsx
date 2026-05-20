@@ -1,7 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { requiresPaywall } from "@/lib/billing";
+import * as api from "@/lib/api";
 
 type ProtectedRouteProps = {
   children: ReactNode;
@@ -24,6 +25,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
 export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRouteProps) => {
   const { user, isAuthenticated } = useAuth();
+  const [adminCapable, setAdminCapable] = useState<boolean | null>(null);
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
@@ -33,7 +35,37 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
     return <Navigate to="/paywall" replace />;
   }
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  useEffect(() => {
+    let mounted = true;
+
+    const shouldCheckBusinessAdmin =
+      Boolean(user) &&
+      !allowedRoles.includes(user?.role) &&
+      allowedRoles.includes("admin");
+
+    if (!shouldCheckBusinessAdmin) {
+      setAdminCapable(null);
+      return;
+    }
+
+    (async () => {
+      const ok = await api.canAccessBusinessAdmin();
+      if (mounted) setAdminCapable(ok);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [allowedRoles, user]);
+
+  if (!user) return <Navigate to="/dashboard" replace />;
+
+  if (!allowedRoles.includes(user.role)) {
+    if (allowedRoles.includes("admin")) {
+      if (adminCapable === null) return null; // brief gate while checking
+      if (adminCapable) return <>{children}</>;
+    }
+
     return <Navigate to="/dashboard" replace />;
   }
 

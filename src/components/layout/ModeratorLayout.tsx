@@ -5,12 +5,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Baby, LayoutDashboard, Calendar, BookOpen, Users, MessageSquare,
   Shield, Settings, LogOut, Menu, FileText, X } from "lucide-react"; 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Footer } from "@/components/layout/Footer";
 import { TrialStatusPill } from "./TrialStatusPill";
 import TrialBanner from "./TrialBanner";
+import * as api from "@/lib/api";
 
 interface ModeratorLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [canAdmin, setCanAdmin] = useState(false);
 
   const sidebarLinks = [
     { href: "/admin/mediator", label: "Dashboard", icon: LayoutDashboard },
@@ -46,6 +48,25 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
     logout();
     navigate("/signin", { replace: true });
   };
+
+  // Show "Switch to Admin" only when user can access business admin endpoints.
+  // This is a safe "view switch" (no impersonation / no session mutation).
+  // Best-effort: uses an authorized endpoint; failures hide the link.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!user) {
+        if (mounted) setCanAdmin(false);
+        return;
+      }
+      const ok = await api.canAccessBusinessAdmin();
+      if (mounted) setCanAdmin(ok);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -111,6 +132,22 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
                     </Link>
                   );
                 })}
+
+                {canAdmin && (
+                  <Link
+                    to="/admin/system"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                      location.pathname === "/admin/system"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    )}
+                  >
+                    <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+                    <span className="font-medium">Switch to Admin</span>
+                  </Link>
+                )}
               </nav>
 
               <div className="mt-auto p-4 border-t border-border flex flex-col gap-2">
@@ -191,6 +228,21 @@ export function ModeratorLayout({ children }: ModeratorLayoutProps) {
                 </Link>
               );
             })}
+
+            {canAdmin && (
+              <Link
+                to="/admin/system"
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                  location.pathname === "/admin/system"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+                {sidebarOpen && <span className="font-medium">Switch to Admin</span>}
+              </Link>
+            )}
           </nav>
 
           {/* Bottom Section */}
